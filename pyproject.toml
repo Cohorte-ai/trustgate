@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "trustgate"
+version = "0.1.0"
+description = "Black-box AI reliability certification via self-consistency sampling and conformal calibration"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "Charafeddine Mouzouni", email = "charafeddine@cohorte.co" },
+]
+keywords = ["conformal-prediction", "reliability", "llm-evaluation", "certification", "self-consistency"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.27",
+    "click>=8.0",
+    "pyyaml>=6.0",
+    "numpy>=1.24",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+serve = ["flask>=3.0"]
+judge = ["openai>=1.0"]
+embedding = ["sentence-transformers>=3.0", "hdbscan>=0.8"]
+all = ["trustgate[serve,judge,embedding]"]
+dev = ["pytest>=8.0", "ruff>=0.4", "mypy>=1.10"]
+
+[project.scripts]
+trustgate = "trustgate.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Cohorte-ai/trustgate"
+Documentation = "https://github.com/Cohorte-ai/trustgate/tree/main/docs"
+Repository = "https://github.com/Cohorte-ai/trustgate"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
