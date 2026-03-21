@@ -239,6 +239,7 @@ def compare(
 @click.option("--config", "-c", "config_path", default="trustgate.yaml")
 @click.option("--questions", "-q", "questions_path", help="Questions file (CSV or JSON)")
 @click.option("--serve", is_flag=True, help="Start local calibration web UI")
+@click.option("--export", "export_path", help="Export questionnaire as shareable HTML file")
 @click.option("--port", type=int, default=8080, help="Port for calibration UI")
 @click.option("--output", "-o", default="calibration_labels.json", help="Output labels file")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
@@ -250,6 +251,7 @@ def calibrate(
     config_path: str,
     questions_path: str | None,
     serve: bool,
+    export_path: str | None,
     port: int,
     output: str,
     yes: bool,
@@ -318,8 +320,19 @@ def calibrate(
             click.echo(click.style(f"WARNING: {w}", fg="yellow"), err=True)
         click.echo()
 
+    # --export: generate shareable HTML questionnaire
+    if export_path:
+        from theaios.trustgate.questionnaire import generate_questionnaire
+
+        out = generate_questionnaire(questions, profiles, output_path=export_path)
+        click.echo(f"Questionnaire exported to {out}")
+        click.echo("Share this file with your reviewer (email, Slack, Drive).")
+        click.echo("They open it in a browser, review answers, and download labels.json.")
+        click.echo("Then run: trustgate certify --ground-truth labels.json")
+        return
+
     if not serve:
-        # Without --serve, dump profiles for inspection
+        # Without --serve or --export, dump profiles for inspection
         import json as _json
 
         data = {}

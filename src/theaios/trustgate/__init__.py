@@ -11,6 +11,8 @@ from theaios.trustgate.certification import (
     sample_and_rank,
 )
 from theaios.trustgate.config import load_config
+from theaios.trustgate.gate import GateResponse, TrustGate
+from theaios.trustgate.questionnaire import generate_questionnaire
 from theaios.trustgate.sampler import sample
 from theaios.trustgate.types import (
     CalibrationConfig,
@@ -35,6 +37,9 @@ __all__ = [
     "Canonicalizer",
     "register_canonicalizer",
     "get_canonicalizer",
+    "TrustGate",
+    "GateResponse",
+    "generate_questionnaire",
     "TrustGateConfig",
     "CertificationResult",
     "Question",
