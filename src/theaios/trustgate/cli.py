@@ -375,16 +375,16 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
         arb_table.add_column("Resolution", justify="center")
 
         for row in arbitrage:
-            rk = row["k"]
+            rk: int = row["k"]  # type: ignore[assignment]
             # Higher K = finer resolution of self-consistency → tighter guarantees
-            if rk <= 3:  # type: ignore[operator]
+            if rk <= 3:
                 resolution = "[red]coarse[/red]"
-            elif rk <= 7:  # type: ignore[operator]
+            elif rk <= 7:
                 resolution = "[yellow]moderate[/yellow]"
             else:
                 resolution = "[green]fine[/green]"
 
-            marker = " ←" if rk == k else ""  # type: ignore[operator]
+            marker = " ←" if rk == k else ""
             arb_table.add_row(
                 f"{rk}{marker}",
                 f"~{row['est_requests']:,}" if estimate["sequential_stopping"] else f"{row['total_requests']:,}",

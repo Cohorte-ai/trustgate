@@ -201,7 +201,7 @@ def estimate_cost(
 
     # Use user-provided cost_per_request if available
     if config.endpoint.cost_per_request is not None:
-        return n_calls * config.endpoint.cost_per_request
+        return float(n_calls * config.endpoint.cost_per_request)
 
     # Fall back to known model pricing
     model = config.endpoint.model

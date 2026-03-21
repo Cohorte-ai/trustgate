@@ -82,10 +82,11 @@ class SequentialSampler:
                 self.sampler.sampling_config.max_concurrent,
             )
 
+        assert client is not None
         try:
             for i in range(k_max):
                 resp = await self.sampler._sample_one(
-                    client=client,  # type: ignore[arg-type]
+                    client=client,
                     question=question,
                     index=i,
                     semaphore=semaphore,
@@ -98,7 +99,7 @@ class SequentialSampler:
                     break
         finally:
             if own_client:
-                await client.aclose()  # type: ignore[union-attr]
+                await client.aclose()
 
         return responses
 

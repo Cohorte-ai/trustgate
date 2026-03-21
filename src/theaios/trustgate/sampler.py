@@ -277,7 +277,7 @@ class Sampler:
     @property
     def k(self) -> int:
         """Effective K (k_fixed if set, otherwise k_max)."""
-        return self.sampling_config.k_fixed or self.sampling_config.k_max
+        return int(self.sampling_config.k_fixed or self.sampling_config.k_max)
 
     async def sample_question(
         self,
@@ -391,7 +391,7 @@ class Sampler:
         self,
         client: httpx.AsyncClient,
         prompt: str,
-        temperature: float,
+        temperature: float | None,
     ) -> str:
         """Send a request with exponential-backoff retries."""
         last_error: Exception | None = None
