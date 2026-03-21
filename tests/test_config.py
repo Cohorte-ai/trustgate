@@ -78,6 +78,30 @@ class TestLoadConfig:
         assert config.canonicalization.type == "mcq"
         assert config.calibration.n_cal == 500
 
+    def test_generic_endpoint_config(self, tmp_path: Path) -> None:
+        content = textwrap.dedent("""\
+            endpoint:
+              url: "https://my-agent.example.com/ask"
+              temperature: null
+              headers:
+                X-Custom: "value"
+              request_template:
+                query: "{{question}}"
+              response_path: "answer"
+              cost_per_request: 0.05
+            questions:
+              file: "q.csv"
+        """)
+        p = tmp_path / "generic.yaml"
+        p.write_text(content)
+        config = load_config(str(p))
+        assert config.endpoint.temperature is None
+        assert config.endpoint.model == ""
+        assert config.endpoint.headers == {"X-Custom": "value"}
+        assert config.endpoint.request_template == {"query": "{{question}}"}
+        assert config.endpoint.response_path == "answer"
+        assert config.endpoint.cost_per_request == 0.05
+
     def test_applies_overrides(self, sample_yaml: Path) -> None:
         config = load_config(
             str(sample_yaml),

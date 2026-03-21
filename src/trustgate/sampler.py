@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import re
 from abc import ABC, abstractmethod
+from typing import Any
 
 import httpx
 
@@ -18,6 +21,53 @@ from trustgate.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Template helpers (for generic endpoints)
+# ---------------------------------------------------------------------------
+
+_ENV_VAR_RE = re.compile(r"\$\{(\w+)\}")
+
+
+def _substitute_template(template: Any, question: str) -> Any:
+    """Recursively replace ``{{question}}`` in template values."""
+    if isinstance(template, str):
+        return template.replace("{{question}}", question)
+    if isinstance(template, dict):
+        return {k: _substitute_template(v, question) for k, v in template.items()}
+    if isinstance(template, list):
+        return [_substitute_template(item, question) for item in template]
+    return template
+
+
+def _extract_json_path(data: Any, path: str) -> str:
+    """Extract a value from nested JSON using dot notation.
+
+    Supports dict keys and integer list indices:
+    ``"choices.0.message.content"`` → ``data["choices"][0]["message"]["content"]``
+    """
+    if not path:
+        return str(data)
+    current = data
+    for part in path.split("."):
+        if isinstance(current, list):
+            current = current[int(part)]
+        elif isinstance(current, dict):
+            current = current[part]
+        else:
+            raise ValueError(
+                f"Cannot traverse path '{path}' at '{part}': got {type(current).__name__}"
+            )
+    return str(current)
+
+
+def _expand_headers(headers: dict[str, str]) -> dict[str, str]:
+    """Expand ``${VAR_NAME}`` in header values using environment variables."""
+    return {
+        k: _ENV_VAR_RE.sub(lambda m: os.environ.get(m.group(1), ""), v)
+        for k, v in headers.items()
+    }
+
 
 # ---------------------------------------------------------------------------
 # Endpoint adapters
@@ -44,14 +94,14 @@ class EndpointAdapter(ABC):
         self,
         client: httpx.AsyncClient,
         prompt: str,
-        temperature: float,
+        temperature: float | None,
     ) -> str:
         """Send a single prompt and return the raw text response."""
 
     @classmethod
     def from_config(cls, config: EndpointConfig) -> EndpointAdapter:
         """Factory: pick the right adapter based on config.provider."""
-        provider = config.provider or _infer_provider(config.url)
+        provider = config.provider or _infer_provider(config)
         adapter_cls = _PROVIDER_MAP.get(provider, GenericOpenAIAdapter)
         return adapter_cls(config)
 
@@ -63,14 +113,15 @@ class OpenAIAdapter(EndpointAdapter):
         self,
         client: httpx.AsyncClient,
         prompt: str,
-        temperature: float,
+        temperature: float | None,
     ) -> str:
         body: dict[str, object] = {
             "model": self.config.model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
             "max_tokens": self.config.max_tokens,
         }
+        if temperature is not None:
+            body["temperature"] = temperature
         resp = await client.post(
             self.config.url,
             json=body,
@@ -91,14 +142,15 @@ class AnthropicAdapter(EndpointAdapter):
         self,
         client: httpx.AsyncClient,
         prompt: str,
-        temperature: float,
+        temperature: float | None,
     ) -> str:
         body: dict[str, object] = {
             "model": self.config.model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
             "max_tokens": self.config.max_tokens,
         }
+        if temperature is not None:
+            body["temperature"] = temperature
         resp = await client.post(
             self.config.url,
             json=body,
@@ -120,14 +172,15 @@ class GenericOpenAIAdapter(EndpointAdapter):
         self,
         client: httpx.AsyncClient,
         prompt: str,
-        temperature: float,
+        temperature: float | None,
     ) -> str:
         body: dict[str, object] = {
             "model": self.config.model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
             "max_tokens": self.config.max_tokens,
         }
+        if temperature is not None:
+            body["temperature"] = temperature
         resp = await client.post(
             self.config.url,
             json=body,
@@ -141,6 +194,36 @@ class GenericOpenAIAdapter(EndpointAdapter):
         return str(data["choices"][0]["message"]["content"])
 
 
+class GenericHTTPAdapter(EndpointAdapter):
+    """Generic HTTP adapter for any endpoint (agents, RAG, custom APIs).
+
+    Uses ``request_template`` to build the request body (with ``{{question}}``
+    substitution) and ``response_path`` to extract the answer from the JSON
+    response.  Supports ``${VAR}`` expansion in headers.
+    """
+
+    async def send(
+        self,
+        client: httpx.AsyncClient,
+        prompt: str,
+        temperature: float | None,
+    ) -> str:
+        template = self.config.request_template or {"input": prompt}
+        body = _substitute_template(template, prompt)
+
+        headers = _expand_headers(self.config.headers)
+        headers.setdefault("Content-Type", "application/json")
+
+        # Auto-add Bearer auth if api_key_env is set and no auth header present
+        if self.config.api_key_env and "Authorization" not in headers:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        resp = await client.post(self.config.url, json=body, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        return _extract_json_path(data, self.config.response_path or "output")
+
+
 # Provider map (filled now that classes are defined)
 _PROVIDER_MAP.update(
     {
@@ -148,15 +231,18 @@ _PROVIDER_MAP.update(
         "anthropic": AnthropicAdapter,
         "together": GenericOpenAIAdapter,
         "generic": GenericOpenAIAdapter,
+        "generic_http": GenericHTTPAdapter,
     }
 )
 
 
-def _infer_provider(url: str) -> str:
-    """Infer the provider from the endpoint URL."""
-    if "api.openai.com" in url:
+def _infer_provider(config: EndpointConfig) -> str:
+    """Infer the provider from the endpoint config."""
+    if config.request_template is not None:
+        return "generic_http"
+    if "api.openai.com" in config.url:
         return "openai"
-    if "api.anthropic.com" in url:
+    if "api.anthropic.com" in config.url:
         return "anthropic"
     return "generic"
 
@@ -186,7 +272,7 @@ class Sampler:
         self.cache = cache or DiskCache()
         self.endpoint_config = config.endpoint
         self.sampling_config = config.sampling
-        self._provider = config.endpoint.provider or _infer_provider(config.endpoint.url)
+        self._provider = config.endpoint.provider or _infer_provider(config.endpoint)
 
     @property
     def k(self) -> int:
@@ -255,6 +341,7 @@ class Sampler:
     ) -> SampleResponse:
         """Fetch a single sample (with cache check and retry)."""
         cache_key = self.cache.key(
+            self.endpoint_config.url,
             self._provider,
             self.endpoint_config.model,
             question.text,

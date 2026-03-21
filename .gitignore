@@ -11,3 +11,4 @@ build/
 .ruff_cache/
 .trustgate_cache/
 startup/
+scripts/

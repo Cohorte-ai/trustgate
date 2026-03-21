@@ -93,13 +93,20 @@ def cache(tmp_path: Path) -> DiskCache:
 
 class TestProviderInference:
     def test_openai(self) -> None:
-        assert _infer_provider(OPENAI_URL) == "openai"
+        assert _infer_provider(_endpoint(OPENAI_URL, "")) == "openai"
 
     def test_anthropic(self) -> None:
-        assert _infer_provider(ANTHROPIC_URL) == "anthropic"
+        assert _infer_provider(_endpoint(ANTHROPIC_URL, "")) == "anthropic"
 
     def test_generic(self) -> None:
-        assert _infer_provider(GENERIC_URL) == "generic"
+        assert _infer_provider(_endpoint(GENERIC_URL, "")) == "generic"
+
+    def test_generic_http_from_request_template(self) -> None:
+        cfg = EndpointConfig(
+            url="https://my-agent.example.com/ask",
+            request_template={"input": "{{question}}"},
+        )
+        assert _infer_provider(cfg) == "generic_http"
 
 
 # ---------------------------------------------------------------------------

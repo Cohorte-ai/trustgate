@@ -1,0 +1,7 @@
+[
+  {"id": "q001", "question": "What is 2+2?", "acceptable_answers": ["4"]},
+  {"id": "q002", "question": "What is the capital of France?", "acceptable_answers": ["Paris"]},
+  {"id": "q003", "question": "Which planet is the largest?", "acceptable_answers": ["Jupiter"]},
+  {"id": "q004", "question": "What is the boiling point of water in Celsius?", "acceptable_answers": ["100"]},
+  {"id": "q005", "question": "Who wrote Romeo and Juliet?", "acceptable_answers": ["Shakespeare"]}
+]

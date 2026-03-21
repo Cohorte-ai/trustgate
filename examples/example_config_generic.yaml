@@ -1,0 +1,45 @@
+# Example: certifying a generic AI endpoint (agent, RAG, custom API)
+#
+# TrustGate works with ANY endpoint you can ask a question to.
+# You don't need to control the model or temperature — the endpoint
+# handles its own randomness internally.
+
+endpoint:
+  url: "https://my-agent.example.com/api/ask"
+
+  # No model or temperature — the endpoint is a black box.
+  # Set temperature to null to tell TrustGate not to send it.
+  temperature: null
+
+  # Custom headers (supports ${VAR} expansion from environment)
+  headers:
+    Authorization: "Bearer ${AGENT_API_KEY}"
+    X-Custom-Header: "some-value"
+
+  # How to send the question. {{question}} is replaced with the question text.
+  request_template:
+    query: "{{question}}"
+    context: "Answer the question concisely."
+
+  # Where to find the answer in the JSON response.
+  # Supports dot notation: "data.answer", "choices.0.text", etc.
+  response_path: "answer"
+
+  # Cost per request in USD (used for pre-flight cost estimate).
+  # Required for generic endpoints since TrustGate can't infer pricing.
+  cost_per_request: 0.03
+
+sampling:
+  k_fixed: 10
+  sequential_stopping: true
+
+canonicalization:
+  type: "mcq"
+
+calibration:
+  alpha_values: [0.05, 0.10, 0.20]
+  n_cal: 100
+  n_test: 100
+
+questions:
+  file: "examples/example_questions.csv"

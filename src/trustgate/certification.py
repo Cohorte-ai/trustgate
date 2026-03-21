@@ -84,7 +84,7 @@ def load_ground_truth(file_path: str) -> dict[str, str]:
 # Cost estimation
 # ---------------------------------------------------------------------------
 
-# Approximate pricing per token (USD). Output tokens only for simplicity.
+# Approximate pricing per token (USD).
 _PRICING: dict[str, dict[str, float]] = {
     "gpt-4.1": {"input": 2.00 / 1_000_000, "output": 8.00 / 1_000_000},
     "gpt-4.1-mini": {"input": 0.40 / 1_000_000, "output": 1.60 / 1_000_000},
@@ -98,16 +98,116 @@ _PRICING: dict[str, dict[str, float]] = {
 # Rough chars-per-token estimate
 _CHARS_PER_TOKEN = 4
 
+# Rough per-request cost for known models (200 input + 500 output tokens)
+_AVG_INPUT_TOKENS = 200
+_AVG_OUTPUT_TOKENS = 500
+
+
+def _per_request_cost(model: str) -> float | None:
+    """Estimate per-request cost for a known model."""
+    pricing = _PRICING.get(model)
+    if pricing is None:
+        return None
+    return (
+        _AVG_INPUT_TOKENS * pricing["input"]
+        + _AVG_OUTPUT_TOKENS * pricing["output"]
+    )
+
+
+def estimate_preflight_cost(
+    config: TrustGateConfig,
+    n_questions: int,
+) -> dict[str, object]:
+    """Estimate cost *before* running the pipeline.
+
+    Returns a dict with request counts, per-request cost, and totals.
+    If cost cannot be estimated (unknown model, no cost_per_request), the
+    cost fields are None.
+    """
+    k = config.sampling.k_fixed or config.sampling.k_max
+    total_requests = n_questions * k
+
+    if config.sampling.sequential_stopping:
+        est_requests = int(total_requests * 0.5)
+    else:
+        est_requests = total_requests
+
+    # Resolve per-request cost
+    cost_per_req = config.endpoint.cost_per_request
+    if cost_per_req is None:
+        cost_per_req = _per_request_cost(config.endpoint.model)
+
+    est_cost = est_requests * cost_per_req if cost_per_req is not None else None
+    max_cost = total_requests * cost_per_req if cost_per_req is not None else None
+
+    return {
+        "n_questions": n_questions,
+        "k": k,
+        "total_requests": total_requests,
+        "sequential_stopping": config.sampling.sequential_stopping,
+        "est_requests": est_requests,
+        "cost_per_request": cost_per_req,
+        "est_cost": est_cost,
+        "max_cost": max_cost,
+    }
+
+
+def estimate_cost_reliability_arbitrage(
+    config: TrustGateConfig,
+    n_questions: int,
+    k_values: list[int] | None = None,
+) -> list[dict[str, object]]:
+    """Show the cost/reliability tradeoff across different K values.
+
+    Higher K = more samples per question = better self-consistency signal
+    = tighter reliability estimates, but higher cost.
+
+    Returns a list of rows, one per K value.
+    """
+    if k_values is None:
+        k_values = [3, 5, 10, 15, 20]
+
+    cost_per_req = config.endpoint.cost_per_request
+    if cost_per_req is None:
+        cost_per_req = _per_request_cost(config.endpoint.model)
+
+    rows: list[dict[str, object]] = []
+    for k in k_values:
+        total = n_questions * k
+        if config.sampling.sequential_stopping:
+            est = int(total * 0.5)
+        else:
+            est = total
+
+        est_cost = est * cost_per_req if cost_per_req is not None else None
+        max_cost = total * cost_per_req if cost_per_req is not None else None
+
+        rows.append({
+            "k": k,
+            "total_requests": total,
+            "est_requests": est,
+            "est_cost": est_cost,
+            "max_cost": max_cost,
+        })
+    return rows
+
 
 def estimate_cost(
     responses: dict[str, list[SampleResponse]],
     config: TrustGateConfig,
 ) -> float:
-    """Rough cost estimate based on provider pricing and response length."""
+    """Actual cost estimate after the pipeline has run."""
+    n_calls = sum(1 for resps in responses.values() for r in resps if not r.cached)
+
+    # Use user-provided cost_per_request if available
+    if config.endpoint.cost_per_request is not None:
+        return n_calls * config.endpoint.cost_per_request
+
+    # Fall back to known model pricing
     model = config.endpoint.model
     pricing = _PRICING.get(model)
     if pricing is None:
-        return 0.0  # unknown model — can't estimate
+        return 0.0
 
     total_output_chars = sum(
         len(r.raw_response)
@@ -116,10 +216,7 @@ def estimate_cost(
         if not r.cached
     )
     total_output_tokens = total_output_chars / _CHARS_PER_TOKEN
-
-    # Rough input estimate: each prompt ~200 tokens
-    n_calls = sum(1 for resps in responses.values() for r in resps if not r.cached)
-    total_input_tokens = n_calls * 200
+    total_input_tokens = n_calls * _AVG_INPUT_TOKENS
 
     return (
         total_input_tokens * pricing["input"]

@@ -1,0 +1,6 @@
+id,question,acceptable_answers
+q001,"What is 2+2? (A) 3 (B) 4 (C) 5 (D) 6","B"
+q002,"What is the capital of France? (A) London (B) Paris (C) Berlin (D) Madrid","B"
+q003,"Which planet is the largest? (A) Earth (B) Mars (C) Jupiter (D) Venus","C"
+q004,"What is the boiling point of water in Celsius? (A) 50 (B) 75 (C) 100 (D) 150","C"
+q005,"Who wrote Romeo and Juliet? (A) Dickens (B) Shakespeare (C) Austen (D) Twain","B"

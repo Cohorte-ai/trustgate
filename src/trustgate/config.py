@@ -78,13 +78,33 @@ def _parse_config(raw: dict[str, object]) -> TrustGateConfig:
     if not isinstance(endpoint_raw, dict):
         raise ConfigError(["'endpoint' section is required and must be a mapping"])
 
+    # Temperature: None means the endpoint controls its own randomness
+    temp_raw = endpoint_raw.get("temperature", 0.7)
+    temperature = None if temp_raw is None else float(temp_raw)
+
+    # Headers for generic endpoints (support ${VAR} expansion at request time)
+    headers_raw = endpoint_raw.get("headers")
+    headers = dict(headers_raw) if isinstance(headers_raw, dict) else {}
+
+    # Request template and response path for generic endpoints
+    request_template = endpoint_raw.get("request_template")
+    response_path = str(endpoint_raw.get("response_path", ""))
+
+    # Per-request cost for pre-flight estimation
+    cost_raw = endpoint_raw.get("cost_per_request")
+    cost_per_request = float(cost_raw) if cost_raw is not None else None
+
     endpoint = EndpointConfig(
         url=str(endpoint_raw.get("url", "")),
         model=str(endpoint_raw.get("model", "")),
-        temperature=float(endpoint_raw.get("temperature", 0.7)),
+        temperature=temperature,
         api_key_env=str(endpoint_raw.get("api_key_env", "")),
         max_tokens=int(endpoint_raw.get("max_tokens", 4096)),
         provider=str(endpoint_raw.get("provider", "")),
+        headers=headers,
+        request_template=request_template,
+        response_path=response_path,
+        cost_per_request=cost_per_request,
     )
 
     sampling_raw = raw.get("sampling", {})

@@ -8,7 +8,14 @@ import click
 
 import trustgate
 from trustgate.cache import DiskCache
-from trustgate.certification import ConfigError, LabelsRequired, certify, load_ground_truth
+from trustgate.certification import (
+    ConfigError,
+    LabelsRequired,
+    certify,
+    estimate_cost_reliability_arbitrage,
+    estimate_preflight_cost,
+    load_ground_truth,
+)
 from trustgate.config import load_config, load_questions
 from trustgate.reporting import export_csv, export_json, print_certification_result
 from trustgate.types import (
@@ -63,6 +70,11 @@ def version() -> None:
 @click.option("--output-file", help="Write output to file instead of stdout")
 @click.option("--no-cache", is_flag=True, help="Disable response cache")
 @click.option("--verbose", "-v", is_flag=True, help="Detailed output")
+@click.option(
+    "--cost-per-request", type=float,
+    help="Cost per API request in USD (for generic/agent endpoints)",
+)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 def certify_cmd(
     config_path: str,
     endpoint: str | None,
@@ -77,8 +89,10 @@ def certify_cmd(
     output_file: str | None,
     no_cache: bool,
     verbose: bool,
+    cost_per_request: float | None,
+    yes: bool,
 ) -> None:
-    """Certify an AI model's reliability."""
+    """Certify an AI endpoint's reliability."""
     try:
         config = _build_config(
             config_path, endpoint, api_key_env, model, task_type, k_fixed, alpha,
@@ -86,6 +100,9 @@ def certify_cmd(
     except (FileNotFoundError, ValueError) as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
+
+    if cost_per_request is not None:
+        config.endpoint.cost_per_request = cost_per_request
 
     questions = None
     if questions_path:
@@ -95,6 +112,13 @@ def certify_cmd(
             click.echo(f"Error loading questions: {exc}", err=True)
             sys.exit(1)
 
+    # Try loading from config for pre-flight estimate (best-effort)
+    if questions is None:
+        try:
+            questions = load_questions(config.questions)
+        except Exception:
+            pass  # pipeline will handle loading or raise later
+
     labels = None
     if ground_truth_path:
         try:
@@ -102,6 +126,12 @@ def certify_cmd(
         except (FileNotFoundError, ValueError) as exc:
             click.echo(f"Error loading ground truth: {exc}", err=True)
             sys.exit(1)
+
+    # --- Pre-flight cost estimate ---
+    if questions is not None and not yes:
+        _show_preflight(config, len(questions))
+        if not click.confirm("Proceed?", default=True):
+            sys.exit(0)
 
     try:
         result = certify(
@@ -297,6 +327,78 @@ def cache_clear(cache_dir: str) -> None:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
+    """Show pre-flight cost estimate and cost/reliability arbitrage."""
+    from rich.console import Console
+    from rich.table import Table
+
+    console = Console()
+
+    estimate = estimate_preflight_cost(config, n_questions)
+
+    # --- Summary ---
+    table = Table(title="Pre-flight Estimate", show_header=False, padding=(0, 1))
+    table.add_column("Metric", style="bold")
+    table.add_column("Value")
+
+    k = estimate["k"]
+    table.add_row("Questions", str(n_questions))
+    table.add_row("Samples per question (K)", str(k))
+    table.add_row("Max requests", f"{estimate['total_requests']:,}")
+    if estimate["sequential_stopping"]:
+        table.add_row("Sequential stopping", "enabled (~50% savings)")
+        table.add_row("Est. requests", f"~{estimate['est_requests']:,}")
+
+    cost_per_req = estimate["cost_per_request"]
+    if cost_per_req is not None:
+        table.add_row("Cost per request", f"${cost_per_req:.4f}")
+        table.add_row("Est. cost", f"${estimate['est_cost']:.2f}")
+        table.add_row("Max cost", f"${estimate['max_cost']:.2f}")
+    else:
+        table.add_row(
+            "Cost",
+            "[dim]unknown (use --cost-per-request or set cost_per_request in config)[/dim]",
+        )
+
+    console.print(table)
+
+    # --- Cost / Reliability arbitrage ---
+    if cost_per_req is not None:
+        arbitrage = estimate_cost_reliability_arbitrage(config, n_questions)
+        arb_table = Table(title="Cost / Reliability Tradeoff")
+        arb_table.add_column("K", justify="right")
+        arb_table.add_column("Requests", justify="right")
+        arb_table.add_column("Est. Cost", justify="right")
+        arb_table.add_column("Max Cost", justify="right")
+        arb_table.add_column("Resolution", justify="center")
+
+        for row in arbitrage:
+            rk = row["k"]
+            # Higher K = finer resolution of self-consistency → tighter guarantees
+            if rk <= 3:  # type: ignore[operator]
+                resolution = "[red]coarse[/red]"
+            elif rk <= 7:  # type: ignore[operator]
+                resolution = "[yellow]moderate[/yellow]"
+            else:
+                resolution = "[green]fine[/green]"
+
+            marker = " ←" if rk == k else ""  # type: ignore[operator]
+            arb_table.add_row(
+                f"{rk}{marker}",
+                f"~{row['est_requests']:,}" if estimate["sequential_stopping"] else f"{row['total_requests']:,}",
+                f"${row['est_cost']:.2f}" if row["est_cost"] is not None else "?",
+                f"${row['max_cost']:.2f}" if row["max_cost"] is not None else "?",
+                resolution,
+            )
+
+        console.print(arb_table)
+        console.print(
+            "[dim]Higher K → more samples per question → finer self-consistency signal → "
+            "tighter reliability guarantee.[/dim]"
+        )
+    console.print()
 
 
 def _build_config(

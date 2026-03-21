@@ -32,15 +32,17 @@ class DiskCache:
 
     @staticmethod
     def key(
+        url: str,
         provider: str,
         model: str,
         prompt: str,
-        temperature: float,
+        temperature: float | None,
         index: int,
     ) -> str:
         """Deterministic SHA-256 hash of all request parameters."""
         blob = json.dumps(
             {
+                "url": url,
                 "provider": provider,
                 "model": model,
                 "prompt": prompt,
@@ -77,7 +79,7 @@ class DiskCache:
         *,
         provider: str = "",
         model: str = "",
-        temperature: float = 0.0,
+        temperature: float | None = 0.0,
         index: int = 0,
     ) -> None:
         """Write a response to the cache (atomic via tempfile + rename)."""

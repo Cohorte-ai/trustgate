@@ -7,14 +7,22 @@ from dataclasses import dataclass, field
 
 @dataclass
 class EndpointConfig:
-    """Configuration for an AI endpoint."""
+    """Configuration for an AI endpoint (LLM, agent, or any AI system)."""
 
     url: str
     model: str = ""
-    temperature: float = 0.7
+    temperature: float | None = 0.7  # None = endpoint controls its own randomness
     api_key_env: str = ""
     max_tokens: int = 4096
-    provider: str = ""  # openai, anthropic, together, generic (auto-detected if empty)
+    provider: str = ""  # openai, anthropic, together, generic, generic_http
+
+    # Generic endpoint support (agents, RAG, custom APIs)
+    headers: dict[str, str] = field(default_factory=dict)
+    request_template: dict[str, object] | None = None  # {{question}} placeholder
+    response_path: str = ""  # dot-notation path to extract answer from JSON response
+
+    # Cost estimation
+    cost_per_request: float | None = None  # USD per request (for pre-flight estimate)
 
 
 @dataclass
