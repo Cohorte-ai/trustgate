@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from trustgate.reporting.json_export import export_json
-from trustgate.types import CertificationResult
+from theaios.trustgate.reporting.json_export import export_json
+from theaios.trustgate.types import CertificationResult
 
 
 def _sample_result() -> CertificationResult:

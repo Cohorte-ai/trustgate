@@ -6,9 +6,9 @@ import sys
 
 import click
 
-import trustgate
-from trustgate.cache import DiskCache
-from trustgate.certification import (
+from theaios import trustgate
+from theaios.trustgate.cache import DiskCache
+from theaios.trustgate.certification import (
     ConfigError,
     LabelsRequired,
     certify,
@@ -16,9 +16,9 @@ from trustgate.certification import (
     estimate_preflight_cost,
     load_ground_truth,
 )
-from trustgate.config import load_config, load_questions
-from trustgate.reporting import export_csv, export_json, print_certification_result
-from trustgate.types import (
+from theaios.trustgate.config import load_config, load_questions
+from theaios.trustgate.reporting import export_csv, export_json, print_certification_result
+from theaios.trustgate.types import (
     CalibrationConfig,
     CanonConfig,
     EndpointConfig,
@@ -180,7 +180,7 @@ def compare(
     output: str,
 ) -> None:
     """Compare reliability across multiple models."""
-    from trustgate.reporting import print_comparison_result
+    from theaios.trustgate.reporting import print_comparison_result
 
     model_list = [m.strip() for m in models.split(",")]
 
@@ -193,7 +193,7 @@ def compare(
     questions = load_questions(questions_path)
     labels = load_ground_truth(ground_truth_path) if ground_truth_path else None
 
-    from trustgate.types import CertificationResult
+    from theaios.trustgate.types import CertificationResult
 
     results: list[tuple[str, CertificationResult]] = []
     for model_name in model_list:
@@ -444,7 +444,7 @@ def _output_result(
     verbose: bool,
 ) -> None:
     """Route the certification result to the correct reporter."""
-    from trustgate.types import CertificationResult
+    from theaios.trustgate.types import CertificationResult
 
     if not isinstance(result, CertificationResult):
         return

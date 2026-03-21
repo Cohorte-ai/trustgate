@@ -173,7 +173,7 @@ Jenkins. A typical workflow:
 You can also export results to JSON or CSV for artifact storage:
 
 ```python
-from trustgate.reporting.json_export import export_json
+from theaios.trustgate.reporting.json_export import export_json
 
 result = trustgate.certify(config_path="trustgate.yaml")
 export_json(result, path="trustgate-report.json")

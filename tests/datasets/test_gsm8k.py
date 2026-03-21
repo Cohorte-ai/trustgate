@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from trustgate.datasets.gsm8k import _extract_answer, load_gsm8k
+from theaios.trustgate.datasets.gsm8k import _extract_answer, load_gsm8k
 
 
 class TestExtractAnswer:
@@ -36,7 +36,7 @@ class TestLoadGsm8k:
 
     def test_returns_questions(self, tmp_path: Path) -> None:
         mock_path = self._mock_data(tmp_path)
-        with patch("trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
+        with patch("theaios.trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
             questions = load_gsm8k()
 
         assert len(questions) == 20
@@ -45,7 +45,7 @@ class TestLoadGsm8k:
 
     def test_acceptable_answers(self, tmp_path: Path) -> None:
         mock_path = self._mock_data(tmp_path)
-        with patch("trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
+        with patch("theaios.trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
             questions = load_gsm8k()
 
         assert questions[0].acceptable_answers == ["0"]
@@ -53,14 +53,14 @@ class TestLoadGsm8k:
 
     def test_subsample(self, tmp_path: Path) -> None:
         mock_path = self._mock_data(tmp_path)
-        with patch("trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
+        with patch("theaios.trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
             questions = load_gsm8k(n=5)
 
         assert len(questions) == 5
 
     def test_metadata(self, tmp_path: Path) -> None:
         mock_path = self._mock_data(tmp_path)
-        with patch("trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
+        with patch("theaios.trustgate.datasets.gsm8k._download_jsonl", return_value=mock_path):
             questions = load_gsm8k()
 
         assert questions[0].metadata.get("source") == "gsm8k"

@@ -7,7 +7,7 @@ import random
 
 import pytest
 
-from trustgate.calibration import (
+from theaios.trustgate.calibration import (
     calibrate,
     compute_capability_gap,
     compute_conditional_coverage,

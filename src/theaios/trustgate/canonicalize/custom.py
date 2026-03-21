@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib
 
-from trustgate.canonicalize import Canonicalizer
+from theaios.trustgate.canonicalize import Canonicalizer
 
 
 def load_custom_canonicalizer(dotted_path: str) -> Canonicalizer:

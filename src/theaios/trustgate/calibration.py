@@ -6,7 +6,7 @@ import math
 import random
 from collections import Counter
 
-from trustgate.types import CertificationResult
+from theaios.trustgate.types import CertificationResult
 
 
 def compute_profile(canonical_answers: list[str]) -> list[tuple[str, float]]:

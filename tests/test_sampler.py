@@ -10,8 +10,8 @@ import httpx
 import pytest
 import respx
 
-from trustgate.cache import DiskCache
-from trustgate.sampler import (
+from theaios.trustgate.cache import DiskCache
+from theaios.trustgate.sampler import (
     AnthropicAdapter,
     EndpointAdapter,
     GenericOpenAIAdapter,
@@ -22,7 +22,7 @@ from trustgate.sampler import (
     _infer_provider,
     sample,
 )
-from trustgate.types import (
+from theaios.trustgate.types import (
     EndpointConfig,
     Question,
     SamplingConfig,

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "trustgate"
+name = "theaios-trustgate"
 version = "0.1.0"
 description = "Black-box AI reliability certification via self-consistency sampling and conformal calibration"
 readme = "README.md"
@@ -32,16 +32,19 @@ dependencies = [
 serve = ["flask>=3.0"]
 judge = ["openai>=1.0"]
 embedding = ["sentence-transformers>=3.0", "hdbscan>=0.8"]
-all = ["trustgate[serve,judge,embedding]"]
+all = ["theaios-trustgate[serve,judge,embedding]"]
 dev = ["pytest>=8.0", "ruff>=0.4", "mypy>=1.10"]
 
 [project.scripts]
-trustgate = "trustgate.cli:main"
+trustgate = "theaios.trustgate.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Cohorte-ai/trustgate"
 Documentation = "https://github.com/Cohorte-ai/trustgate/tree/main/docs"
 Repository = "https://github.com/Cohorte-ai/trustgate"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/theaios"]
 
 [tool.ruff]
 target-version = "py310"

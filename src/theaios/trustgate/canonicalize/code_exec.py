@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from trustgate.canonicalize import Canonicalizer, register_canonicalizer
+from theaios.trustgate.canonicalize import Canonicalizer, register_canonicalizer
 
 _CODE_BLOCK_RE = re.compile(r"```(?:python)?\s*\n(.*?)```", re.DOTALL)
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trustgate.canonicalize.numeric import NumericCanonicalizer
+from theaios.trustgate.canonicalize.numeric import NumericCanonicalizer
 
 
 @pytest.fixture()

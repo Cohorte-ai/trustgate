@@ -8,14 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from trustgate.config import (
+from theaios.trustgate.config import (
     ConfigError,
     load_config,
     load_questions,
     resolve_api_key,
     validate_config,
 )
-from trustgate.types import (
+from theaios.trustgate.types import (
     CanonConfig,
     EndpointConfig,
     QuestionsConfig,
@@ -174,7 +174,7 @@ class TestValidateConfig:
         assert any("judge_endpoint" in e for e in errors)
 
     def test_n_cal_zero(self) -> None:
-        from trustgate.types import CalibrationConfig
+        from theaios.trustgate.types import CalibrationConfig
 
         config = TrustGateConfig(
             endpoint=EndpointConfig(url="https://api.openai.com/v1/chat/completions"),
@@ -184,7 +184,7 @@ class TestValidateConfig:
         assert any("n_cal" in e for e in errors)
 
     def test_n_test_zero(self) -> None:
-        from trustgate.types import CalibrationConfig
+        from theaios.trustgate.types import CalibrationConfig
 
         config = TrustGateConfig(
             endpoint=EndpointConfig(url="https://api.openai.com/v1/chat/completions"),

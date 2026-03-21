@@ -5,24 +5,24 @@ from __future__ import annotations
 import random
 from pathlib import Path
 
-from trustgate.types import Question
+from theaios.trustgate.types import Question
 
-# Re-export loaders for convenient `from trustgate.datasets import load_gsm8k` usage.
+# Re-export loaders for convenient `from theaios.trustgate.datasets import load_gsm8k` usage.
 # Lazy imports to avoid circular dependencies — the submodules import from this __init__.
 
 
 
 def __getattr__(name: str) -> object:
     if name == "load_gsm8k":
-        from trustgate.datasets.gsm8k import load_gsm8k
+        from theaios.trustgate.datasets.gsm8k import load_gsm8k
 
         return load_gsm8k
     if name == "load_mmlu":
-        from trustgate.datasets.mmlu import load_mmlu
+        from theaios.trustgate.datasets.mmlu import load_mmlu
 
         return load_mmlu
     if name == "load_truthfulqa":
-        from trustgate.datasets.truthfulqa import load_truthfulqa
+        from theaios.trustgate.datasets.truthfulqa import load_truthfulqa
 
         return load_truthfulqa
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

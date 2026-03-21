@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from trustgate.datasets.truthfulqa import load_truthfulqa
+from theaios.trustgate.datasets.truthfulqa import load_truthfulqa
 
 
 def _mock_data() -> list[dict[str, object]]:

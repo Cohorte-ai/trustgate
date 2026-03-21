@@ -9,14 +9,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from trustgate.cache import DiskCache
-from trustgate.calibration import calibrate, compute_profile, random_split
-from trustgate.canonicalize import get_canonicalizer
-from trustgate.canonicalize.custom import load_custom_canonicalizer
-from trustgate.config import load_config, load_questions, validate_config
-from trustgate.sampler import Sampler
-from trustgate.sequential import SequentialSampler
-from trustgate.types import (
+from theaios.trustgate.cache import DiskCache
+from theaios.trustgate.calibration import calibrate, compute_profile, random_split
+from theaios.trustgate.canonicalize import get_canonicalizer
+from theaios.trustgate.canonicalize.custom import load_custom_canonicalizer
+from theaios.trustgate.config import load_config, load_questions, validate_config
+from theaios.trustgate.sampler import Sampler
+from theaios.trustgate.sequential import SequentialSampler
+from theaios.trustgate.types import (
     CanonConfig,
     CertificationResult,
     Question,

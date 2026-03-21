@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from trustgate.canonicalize import Canonicalizer, register_canonicalizer
+from theaios.trustgate.canonicalize import Canonicalizer, register_canonicalizer
 
 # Priority-ordered extraction patterns
 _ANSWER_IS_RE = re.compile(

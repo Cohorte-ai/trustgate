@@ -5,8 +5,8 @@ from __future__ import annotations
 import csv
 import io
 
-from trustgate.reporting.csv_export import export_csv
-from trustgate.types import CertificationResult
+from theaios.trustgate.reporting.csv_export import export_csv
+from theaios.trustgate.types import CertificationResult
 
 
 def _sample_result() -> CertificationResult:

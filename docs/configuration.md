@@ -273,7 +273,7 @@ significance level.
 When loading a config via the Python API, you can pass dot-notation overrides:
 
 ```python
-from trustgate import load_config
+from theaios.trustgate import load_config
 
 config = load_config(
     "trustgate.yaml",

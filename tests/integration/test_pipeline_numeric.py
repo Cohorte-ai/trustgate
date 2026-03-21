@@ -9,8 +9,8 @@ import httpx
 import pytest
 import respx
 
-from trustgate.certification import certify
-from trustgate.types import (
+from theaios.trustgate.certification import certify
+from theaios.trustgate.types import (
     CalibrationConfig,
     CanonConfig,
     EndpointConfig,

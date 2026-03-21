@@ -6,8 +6,8 @@ from io import StringIO
 
 from rich.console import Console
 
-from trustgate.reporting.console import print_certification_result, print_comparison_result
-from trustgate.types import CertificationResult
+from theaios.trustgate.reporting.console import print_certification_result, print_comparison_result
+from theaios.trustgate.types import CertificationResult
 
 
 def _sample_result() -> CertificationResult:

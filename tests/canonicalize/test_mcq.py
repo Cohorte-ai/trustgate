@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trustgate.canonicalize.mcq import MCQCanonicalizer
+from theaios.trustgate.canonicalize.mcq import MCQCanonicalizer
 
 
 @pytest.fixture()

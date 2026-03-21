@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trustgate.canonicalize.code_exec import CodeExecCanonicalizer, _extract_code
+from theaios.trustgate.canonicalize.code_exec import CodeExecCanonicalizer, _extract_code
 
 
 @pytest.fixture()

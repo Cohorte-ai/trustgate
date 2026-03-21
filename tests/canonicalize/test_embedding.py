@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from trustgate.canonicalize.embedding import EmbeddingCanonicalizer, _greedy_cluster
+from theaios.trustgate.canonicalize.embedding import EmbeddingCanonicalizer, _greedy_cluster
 
 
 # ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ class TestEmbeddingCanonicalizer:
             [0.98, 0.02, 0.0],
         ])
 
-        with patch("trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
+        with patch("theaios.trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
             canon = EmbeddingCanonicalizer.__new__(EmbeddingCanonicalizer)
             canon.model = mock_model
             canon.min_cluster_size = 2
@@ -93,7 +93,7 @@ class TestEmbeddingCanonicalizer:
             [0.0, 0.0, 1.0],
         ])
 
-        with patch("trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
+        with patch("theaios.trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
             canon = EmbeddingCanonicalizer.__new__(EmbeddingCanonicalizer)
             canon.model = mock_model
             canon.min_cluster_size = 2
@@ -104,7 +104,7 @@ class TestEmbeddingCanonicalizer:
 
     def test_canonicalize_batch_single(self) -> None:
         """Single answer should return a label without error."""
-        with patch("trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
+        with patch("theaios.trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
             canon = EmbeddingCanonicalizer.__new__(EmbeddingCanonicalizer)
             canon.model = MagicMock()
             canon.min_cluster_size = 2
@@ -114,13 +114,13 @@ class TestEmbeddingCanonicalizer:
 
     def test_canonicalize_single_returns_text(self) -> None:
         """The single-answer canonicalize() returns preprocessed text."""
-        with patch("trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
+        with patch("theaios.trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
             canon = EmbeddingCanonicalizer.__new__(EmbeddingCanonicalizer)
 
         assert canon.canonicalize("Q?", "  hello world  ") == "hello world"
 
     def test_canonicalize_empty(self) -> None:
-        with patch("trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
+        with patch("theaios.trustgate.canonicalize.embedding.EmbeddingCanonicalizer.__init__", return_value=None):
             canon = EmbeddingCanonicalizer.__new__(EmbeddingCanonicalizer)
 
         assert canon.canonicalize("Q?", "") == "empty"

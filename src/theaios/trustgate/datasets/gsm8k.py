@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import re
 
-from trustgate.datasets import _download_jsonl, subsample
-from trustgate.types import Question
+from theaios.trustgate.datasets import _download_jsonl, subsample
+from theaios.trustgate.types import Question
 
 _GSM8K_URL = (
     "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl"

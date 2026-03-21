@@ -5,7 +5,7 @@ from __future__ import annotations
 from rich.console import Console
 from rich.table import Table
 
-from trustgate.types import CertificationResult
+from theaios.trustgate.types import CertificationResult
 
 
 def print_certification_result(

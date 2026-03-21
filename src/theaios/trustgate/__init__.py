@@ -2,12 +2,12 @@
 
 __version__ = "0.1.0"
 
-from trustgate.calibration import calibrate, compute_profile
-from trustgate.canonicalize import Canonicalizer, get_canonicalizer, register_canonicalizer
-from trustgate.certification import certify, certify_async
-from trustgate.config import load_config
-from trustgate.sampler import sample
-from trustgate.types import (
+from theaios.trustgate.calibration import calibrate, compute_profile
+from theaios.trustgate.canonicalize import Canonicalizer, get_canonicalizer, register_canonicalizer
+from theaios.trustgate.certification import certify, certify_async
+from theaios.trustgate.config import load_config
+from theaios.trustgate.sampler import sample
+from theaios.trustgate.types import (
     CalibrationConfig,
     CanonConfig,
     CertificationResult,

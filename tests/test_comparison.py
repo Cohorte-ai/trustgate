@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-from trustgate.comparison import compare, compute_comparison_summary
-from trustgate.types import (
+from theaios.trustgate.comparison import compare, compute_comparison_summary
+from theaios.trustgate.types import (
     CertificationResult,
     EndpointConfig,
     Question,
@@ -64,7 +64,7 @@ class TestCompare:
             call_count += 1
             return r
 
-        with patch("trustgate.comparison.certify_async", side_effect=mock_certify_async):
+        with patch("theaios.trustgate.comparison.certify_async", side_effect=mock_certify_async):
             output = compare(
                 models=["model-a", "model-b"],
                 config=_make_config(),
@@ -85,7 +85,7 @@ class TestCompare:
         async def mock_certify_async(**kwargs: object) -> CertificationResult:
             return results.pop(0)
 
-        with patch("trustgate.comparison.certify_async", side_effect=mock_certify_async):
+        with patch("theaios.trustgate.comparison.certify_async", side_effect=mock_certify_async):
             output = compare(
                 models=["low", "high", "mid"],
                 config=_make_config(),
@@ -100,7 +100,7 @@ class TestCompare:
         async def mock_certify_async(**kwargs: object) -> CertificationResult:
             return _make_result(reliability=0.92)
 
-        with patch("trustgate.comparison.certify_async", side_effect=mock_certify_async):
+        with patch("theaios.trustgate.comparison.certify_async", side_effect=mock_certify_async):
             output = compare(
                 models=["only-model"],
                 config=_make_config(),

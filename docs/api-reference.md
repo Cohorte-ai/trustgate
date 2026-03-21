@@ -56,7 +56,7 @@ for most users.
 **Example:**
 
 ```python
-import trustgate
+from theaios import trustgate
 
 result = trustgate.certify(config_path="trustgate.yaml")
 print(f"Reliability: {result.reliability_level:.0%}")
@@ -84,7 +84,7 @@ loop or a framework like FastAPI).
 
 ```python
 import asyncio
-import trustgate
+from theaios import trustgate
 
 result = asyncio.run(trustgate.certify_async(config_path="trustgate.yaml"))
 ```
@@ -154,7 +154,7 @@ descending, then alphabetically for tie-breaking. Frequencies sum to 1.0.
 **Example:**
 
 ```python
-import trustgate
+from theaios import trustgate
 
 profile = trustgate.compute_profile(["42", "42", "42", "43", "42"])
 # [("42", 0.8), ("43", 0.2)]
@@ -216,7 +216,7 @@ Load and validate a YAML configuration file.
 **Example:**
 
 ```python
-import trustgate
+from theaios import trustgate
 
 config = trustgate.load_config("trustgate.yaml")
 print(config.endpoint.model)
@@ -435,7 +435,7 @@ Class decorator that registers a `Canonicalizer` subclass under the given name.
 **Example:**
 
 ```python
-from trustgate import Canonicalizer, register_canonicalizer
+from theaios.trustgate import Canonicalizer, register_canonicalizer
 
 @register_canonicalizer("my_custom")
 class MyCanonicalizer(Canonicalizer):
@@ -466,7 +466,7 @@ Instantiate a registered canonicalizer by name.
 **Example:**
 
 ```python
-import trustgate
+from theaios import trustgate
 
 canon = trustgate.get_canonicalizer("numeric")
 result = canon.canonicalize("What is 2+2?", "The answer is 4.")
@@ -513,7 +513,7 @@ the same signature.
 **Example:**
 
 ```python
-from trustgate.comparison import compare
+from theaios.trustgate.comparison import compare
 
 results = compare(
     models=["gpt-4.1-mini", "gpt-4.1"],

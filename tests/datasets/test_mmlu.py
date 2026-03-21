@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from trustgate.datasets.mmlu import load_mmlu
+from theaios.trustgate.datasets.mmlu import load_mmlu
 
 
 def _mock_data() -> list[dict[str, object]]:

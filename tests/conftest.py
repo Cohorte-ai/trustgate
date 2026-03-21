@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from trustgate.types import (
+from theaios.trustgate.types import (
     CalibrationConfig,
     CanonConfig,
     EndpointConfig,

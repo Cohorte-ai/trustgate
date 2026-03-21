@@ -6,8 +6,8 @@ import asyncio
 import copy
 from itertools import combinations
 
-from trustgate.certification import certify_async
-from trustgate.types import CertificationResult, Question, TrustGateConfig
+from theaios.trustgate.certification import certify_async
+from theaios.trustgate.types import CertificationResult, Question, TrustGateConfig
 
 
 async def compare_async(

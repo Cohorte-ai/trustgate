@@ -6,7 +6,7 @@ import csv
 import io
 from pathlib import Path
 
-from trustgate.types import CertificationResult
+from theaios.trustgate.types import CertificationResult
 
 _SUMMARY_HEADERS = [
     "reliability_level",

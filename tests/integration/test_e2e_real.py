@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-import trustgate
+from theaios import trustgate
 
 pytestmark = pytest.mark.skipif(
     os.getenv("TRUSTGATE_E2E") != "1",
@@ -20,7 +20,7 @@ pytestmark = pytest.mark.skipif(
 
 def test_e2e_certify_mmlu() -> None:
     """Certify GPT-4.1-mini on 20 MMLU questions."""
-    from trustgate.datasets import load_mmlu
+    from theaios.trustgate.datasets import load_mmlu
 
     questions = load_mmlu(subjects=["abstract_algebra"], n=20)
     labels = {q.id: q.acceptable_answers[0] for q in questions if q.acceptable_answers}
@@ -50,7 +50,7 @@ def test_e2e_certify_mmlu() -> None:
 
 def test_e2e_certify_gsm8k() -> None:
     """Certify GPT-4.1-mini on 20 GSM8K questions with sequential stopping."""
-    from trustgate.datasets import load_gsm8k
+    from theaios.trustgate.datasets import load_gsm8k
 
     questions = load_gsm8k(n=20)
     labels = {q.id: q.acceptable_answers[0] for q in questions if q.acceptable_answers}

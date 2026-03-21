@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trustgate.canonicalize import (
+from theaios.trustgate.canonicalize import (
     Canonicalizer,
     _REGISTRY,
     get_canonicalizer,
@@ -74,10 +74,10 @@ class TestPreprocess:
 class TestRegistry:
     def test_builtin_canonicalizers_registered(self) -> None:
         # Import modules to trigger registration
-        import trustgate.canonicalize.numeric  # noqa: F401
-        import trustgate.canonicalize.mcq  # noqa: F401
-        import trustgate.canonicalize.code_exec  # noqa: F401
-        import trustgate.canonicalize.llm_judge  # noqa: F401
+        import theaios.trustgate.canonicalize.numeric  # noqa: F401
+        import theaios.trustgate.canonicalize.mcq  # noqa: F401
+        import theaios.trustgate.canonicalize.code_exec  # noqa: F401
+        import theaios.trustgate.canonicalize.llm_judge  # noqa: F401
 
         names = list_canonicalizers()
         assert "numeric" in names
@@ -86,7 +86,7 @@ class TestRegistry:
         assert "llm_judge" in names
 
     def test_get_canonicalizer_numeric(self) -> None:
-        import trustgate.canonicalize.numeric  # noqa: F401
+        import theaios.trustgate.canonicalize.numeric  # noqa: F401
 
         c = get_canonicalizer("numeric")
         assert isinstance(c, Canonicalizer)

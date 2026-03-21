@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from trustgate.cache import DiskCache
+from theaios.trustgate.cache import DiskCache
 
 _URL = "https://api.openai.com/v1/chat/completions"
 _URL2 = "https://api.anthropic.com/v1/messages"

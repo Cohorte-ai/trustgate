@@ -6,8 +6,8 @@ import httpx
 import pytest
 import respx
 
-from trustgate.canonicalize.llm_judge import LLMJudgeCanonicalizer
-from trustgate.types import EndpointConfig
+from theaios.trustgate.canonicalize.llm_judge import LLMJudgeCanonicalizer
+from theaios.trustgate.types import EndpointConfig
 
 JUDGE_URL = "https://api.openai.com/v1/chat/completions"
 

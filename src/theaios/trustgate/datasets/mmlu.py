@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from trustgate.datasets import subsample
-from trustgate.types import Question
+from theaios.trustgate.datasets import subsample
+from theaios.trustgate.types import Question
 
 # MMLU test set hosted as a CSV on HuggingFace
 _MMLU_BASE_URL = (

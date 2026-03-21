@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from trustgate.types import Question
+from theaios.trustgate.types import Question
 
 if TYPE_CHECKING:
     from flask import Flask

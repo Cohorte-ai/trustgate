@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from trustgate.canonicalize import Canonicalizer, register_canonicalizer
+from theaios.trustgate.canonicalize import Canonicalizer, register_canonicalizer
 
 
 @register_canonicalizer("embedding")

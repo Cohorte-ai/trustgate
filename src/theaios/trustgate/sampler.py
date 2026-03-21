@@ -11,9 +11,9 @@ from typing import Any
 
 import httpx
 
-from trustgate.cache import DiskCache
-from trustgate.config import resolve_api_key
-from trustgate.types import (
+from theaios.trustgate.cache import DiskCache
+from theaios.trustgate.config import resolve_api_key
+from theaios.trustgate.types import (
     EndpointConfig,
     Question,
     SampleResponse,

@@ -8,8 +8,8 @@ from collections import Counter
 
 import httpx
 
-from trustgate.sampler import Sampler
-from trustgate.types import Question, SampleResponse
+from theaios.trustgate.sampler import Sampler
+from theaios.trustgate.types import Question, SampleResponse
 
 
 def hoeffding_bound(k: int, delta: float) -> float:

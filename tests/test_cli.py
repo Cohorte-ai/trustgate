@@ -6,7 +6,7 @@ import json
 
 from click.testing import CliRunner
 
-from trustgate.cli import main
+from theaios.trustgate.cli import main
 
 
 class TestCLIHelp:
@@ -112,7 +112,7 @@ class TestCertifyOutput:
         import pathlib
         from unittest.mock import patch
 
-        from trustgate.types import CertificationResult
+        from theaios.trustgate.types import CertificationResult
 
         mock_result = CertificationResult(
             reliability_level=0.90,
@@ -144,7 +144,7 @@ class TestCertifyOutput:
         else:
             args += ["--output", output_format]
 
-        with patch("trustgate.cli.certify", return_value=mock_result):
+        with patch("theaios.trustgate.cli.certify", return_value=mock_result):
             return runner.invoke(main, args)
 
     def test_json_output(self, tmp_path: object) -> None:

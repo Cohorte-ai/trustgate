@@ -7,9 +7,9 @@ import logging
 
 import httpx
 
-from trustgate.canonicalize import Canonicalizer, register_canonicalizer
-from trustgate.sampler import EndpointAdapter, _backoff
-from trustgate.types import EndpointConfig
+from theaios.trustgate.canonicalize import Canonicalizer, register_canonicalizer
+from theaios.trustgate.sampler import EndpointAdapter, _backoff
+from theaios.trustgate.types import EndpointConfig
 
 logger = logging.getLogger(__name__)
 

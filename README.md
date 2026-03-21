@@ -11,23 +11,23 @@ Works with any provider (OpenAI, Anthropic, Together, self-hosted), any task typ
 ## Installation
 
 ```bash
-pip install trustgate
+pip install theaios-trustgate
 ```
 
 Optional extras for specific canonicalization methods:
 
 ```bash
 # LLM-as-judge canonicalization (needs openai SDK)
-pip install "trustgate[judge]"
+pip install "theaios-trustgate[judge]"
 
 # Embedding-based canonicalization (needs sentence-transformers)
-pip install "trustgate[embedding]"
+pip install "theaios-trustgate[embedding]"
 
 # Local human calibration UI (needs Flask)
-pip install "trustgate[serve]"
+pip install "theaios-trustgate[serve]"
 
 # Everything
-pip install "trustgate[all]"
+pip install "theaios-trustgate[all]"
 ```
 
 ---
@@ -184,7 +184,7 @@ trustgate cache clear    # delete all cached responses
 ## Python API
 
 ```python
-import trustgate
+from theaios import trustgate
 
 result = trustgate.certify(config_path="trustgate.yaml")
 
@@ -197,7 +197,7 @@ print(result.capability_gap)       # 0.024
 ### Inline configuration (no YAML needed)
 
 ```python
-import trustgate
+from theaios import trustgate
 
 result = trustgate.certify(
     config=trustgate.TrustGateConfig(
@@ -217,7 +217,7 @@ result = trustgate.certify(
 ### Built-in datasets
 
 ```python
-from trustgate.datasets import load_gsm8k, load_mmlu, load_truthfulqa
+from theaios.trustgate.datasets import load_gsm8k, load_mmlu, load_truthfulqa
 
 # Grab 100 MMLU questions (auto-downloads, cached locally)
 questions = load_mmlu(subjects=["abstract_algebra"], n=100)
@@ -231,7 +231,7 @@ questions = load_gsm8k(n=200)
 Write your own canonicalizer for domain-specific tasks:
 
 ```python
-from trustgate import Canonicalizer, register_canonicalizer
+from theaios.trustgate import Canonicalizer, register_canonicalizer
 
 @register_canonicalizer("legal_citation")
 class LegalCitationCanonicalizer(Canonicalizer):
@@ -365,7 +365,7 @@ We welcome contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ```bash
 git clone https://github.com/Cohorte-ai/trustgate.git
 cd trustgate
-pip install -e ".[dev,all]"
+pip install -e ".[dev,serve,judge]"
 pytest
 ruff check src/ tests/
 ```

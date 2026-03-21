@@ -99,7 +99,7 @@ Requires a `judge_endpoint` configuration pointing to the judge model. Install
 the judge extra for OpenAI SDK support:
 
 ```bash
-pip install "trustgate[judge]"
+pip install "theaios-trustgate[judge]"
 ```
 
 **Config:**
@@ -134,7 +134,7 @@ a built-in greedy cosine-similarity clustering fallback is used.
 Requires the embedding extra:
 
 ```bash
-pip install "trustgate[embedding]"
+pip install "theaios-trustgate[embedding]"
 ```
 
 **Config:**
@@ -181,7 +181,7 @@ CLI.
 ### Registration via Decorator
 
 ```python
-from trustgate import Canonicalizer, register_canonicalizer
+from theaios.trustgate import Canonicalizer, register_canonicalizer
 
 @register_canonicalizer("my_name")
 class MyCanonicalizer(Canonicalizer):
@@ -254,7 +254,7 @@ tasks. It normalizes ICD-10 codes extracted from free-text LLM responses:
 """Custom canonicalizer for medical diagnosis (ICD-10 code extraction)."""
 
 import re
-from trustgate import Canonicalizer, register_canonicalizer
+from theaios.trustgate import Canonicalizer, register_canonicalizer
 
 # ICD-10 codes look like: A00-Z99 with optional decimal (e.g., J18.9, E11.65)
 _ICD10_RE = re.compile(r"\b([A-Z]\d{2}(?:\.\d{1,2})?)\b")
@@ -300,7 +300,7 @@ canonicalization:
 **Usage in Python:**
 
 ```python
-import trustgate
+from theaios import trustgate
 
 # Make sure the module containing the canonicalizer is imported first
 import my_medical_canonicalizers  # noqa: F401 (triggers @register_canonicalizer)
@@ -326,7 +326,7 @@ result = trustgate.certify(
 To see all registered canonicalizers (built-in and custom):
 
 ```python
-from trustgate.canonicalize import list_canonicalizers
+from theaios.trustgate.canonicalize import list_canonicalizers
 
 print(list_canonicalizers())
 # ['code_exec', 'embedding', 'llm_judge', 'mcq', 'numeric']

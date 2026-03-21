@@ -6,8 +6,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-import trustgate
-from trustgate.types import CertificationResult
+from theaios import trustgate
+from theaios.trustgate.types import CertificationResult
 
 
 def export_json(result: CertificationResult, path: str | None = None) -> str:

@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import yaml
 
-from trustgate.types import (
+from theaios.trustgate.types import (
     VALID_CANON_TYPES,
     CalibrationConfig,
     CanonConfig,
@@ -266,7 +266,7 @@ def load_questions(source: QuestionsConfig | str) -> list[Question]:
         # here we just raise so callers know to use the dataset loaders.
         raise NotImplementedError(
             f"Built-in dataset source '{source.source}' must be loaded via "
-            "trustgate.datasets (e.g., from trustgate.datasets import load_gsm8k)"
+            "trustgate.datasets (e.g., from theaios.trustgate.datasets import load_gsm8k)"
         )
 
     raise ConfigError(["questions.file or questions.source must be set"])

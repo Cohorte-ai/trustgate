@@ -8,8 +8,8 @@ from unittest.mock import patch
 
 import pytest
 
-from trustgate.sequential import SequentialSampler, hoeffding_bound, should_stop
-from trustgate.types import (
+from theaios.trustgate.sequential import SequentialSampler, hoeffding_bound, should_stop
+from theaios.trustgate.types import (
     EndpointConfig,
     Question,
     SampleResponse,
@@ -119,8 +119,8 @@ class TestSequentialSampler:
         """If every response is the same, should stop well before k_max."""
         config = _make_config()
 
-        with patch("trustgate.sampler.resolve_api_key", return_value="sk-test"):
-            from trustgate.sampler import Sampler
+        with patch("theaios.trustgate.sampler.resolve_api_key", return_value="sk-test"):
+            from theaios.trustgate.sampler import Sampler
 
             sampler = Sampler(config)
 
@@ -156,8 +156,8 @@ class TestSequentialSampler:
         """If answers alternate, should use all k_max."""
         config = _make_config()
 
-        with patch("trustgate.sampler.resolve_api_key", return_value="sk-test"):
-            from trustgate.sampler import Sampler
+        with patch("theaios.trustgate.sampler.resolve_api_key", return_value="sk-test"):
+            from theaios.trustgate.sampler import Sampler
 
             sampler = Sampler(config)
 
@@ -186,8 +186,8 @@ class TestSequentialSampler:
     def test_sample_all(self) -> None:
         config = _make_config()
 
-        with patch("trustgate.sampler.resolve_api_key", return_value="sk-test"):
-            from trustgate.sampler import Sampler
+        with patch("theaios.trustgate.sampler.resolve_api_key", return_value="sk-test"):
+            from theaios.trustgate.sampler import Sampler
 
             sampler = Sampler(config)
 

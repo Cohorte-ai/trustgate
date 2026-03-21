@@ -6,15 +6,15 @@ import json
 
 import pytest
 
-from trustgate.certification import (
+from theaios.trustgate.certification import (
     ConfigError,
     LabelsRequired,
     _canon_kwargs,
     estimate_cost,
     load_ground_truth,
 )
-from trustgate.sampler import Sampler
-from trustgate.types import (
+from theaios.trustgate.sampler import Sampler
+from theaios.trustgate.types import (
     CanonConfig,
     EndpointConfig,
     SampleResponse,
@@ -146,19 +146,19 @@ class TestCanonKwargs:
 
 class TestPublicAPI:
     def test_all_exports_importable(self) -> None:
-        import trustgate
+        from theaios import trustgate
 
         for name in trustgate.__all__:
             assert hasattr(trustgate, name), f"Missing export: {name}"
 
     def test_certify_exists(self) -> None:
-        import trustgate
+        from theaios import trustgate
 
         assert callable(trustgate.certify)
         assert callable(trustgate.certify_async)
 
     def test_version(self) -> None:
-        import trustgate
+        from theaios import trustgate
 
         assert trustgate.__version__ == "0.1.0"
 
@@ -170,7 +170,7 @@ class TestPublicAPI:
 
 class TestCertifyErrors:
     def test_raises_config_error_on_invalid_config(self) -> None:
-        from trustgate.certification import certify
+        from theaios.trustgate.certification import certify
 
         bad_config = TrustGateConfig(
             endpoint=EndpointConfig(url="not-a-url"),
@@ -181,8 +181,8 @@ class TestCertifyErrors:
     def test_raises_labels_required(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from unittest.mock import AsyncMock, patch
 
-        from trustgate.certification import certify
-        from trustgate.types import Question
+        from theaios.trustgate.certification import certify
+        from theaios.trustgate.types import Question
 
         monkeypatch.setenv("TEST_KEY", "sk-test")
 

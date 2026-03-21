@@ -59,8 +59,8 @@ automatically.
 ### From Python
 
 ```python
-from trustgate.serve import serve_calibration
-from trustgate.config import load_questions
+from theaios.trustgate.serve import serve_calibration
+from theaios.trustgate.config import load_questions
 
 questions = load_questions("questions.csv")
 
@@ -83,7 +83,7 @@ You can also create the Flask app directly for integration into an existing
 server:
 
 ```python
-from trustgate.serve import create_app
+from theaios.trustgate.serve import create_app
 
 app = create_app(
     questions=questions,
@@ -100,7 +100,7 @@ app.run(host="0.0.0.0", port=8080)
 The calibration UI requires Flask. Install it with the `serve` extra:
 
 ```bash
-pip install "trustgate[serve]"
+pip install "theaios-trustgate[serve]"
 ```
 
 ---
@@ -199,7 +199,7 @@ trustgate certify --ground-truth calibration_labels.json
 
 ```python
 import json
-import trustgate
+from theaios import trustgate
 
 with open("calibration_labels.json") as f:
     labels = json.load(f)
@@ -255,7 +255,7 @@ Here is the complete workflow from zero labels to a reliability certificate:
 
 ```bash
 # 1. Install with the serve extra
-pip install "trustgate[serve]"
+pip install "theaios-trustgate[serve]"
 
 # 2. Prepare your questions file (CSV with id, question columns)
 # questions.csv:

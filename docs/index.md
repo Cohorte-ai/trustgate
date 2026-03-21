@@ -9,23 +9,23 @@ TrustGate certifies the reliability of any LLM or AI endpoint using self-consist
 ## Installation
 
 ```bash
-pip install trustgate
+pip install theaios-trustgate
 ```
 
 Optional extras for specific features:
 
 ```bash
 # LLM-as-judge canonicalization (needs openai SDK)
-pip install "trustgate[judge]"
+pip install "theaios-trustgate[judge]"
 
 # Embedding-based canonicalization (needs sentence-transformers + hdbscan)
-pip install "trustgate[embedding]"
+pip install "theaios-trustgate[embedding]"
 
 # Local human calibration web UI (needs Flask)
-pip install "trustgate[serve]"
+pip install "theaios-trustgate[serve]"
 
 # Everything
-pip install "trustgate[all]"
+pip install "theaios-trustgate[all]"
 ```
 
 Requires Python 3.10 or later.

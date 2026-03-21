@@ -6,8 +6,8 @@ import json
 
 import pytest
 
-from trustgate.serve import create_app
-from trustgate.types import Question
+from theaios.trustgate.serve import create_app
+from theaios.trustgate.types import Question
 
 
 def _questions() -> list[Question]:

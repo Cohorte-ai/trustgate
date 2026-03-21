@@ -103,8 +103,8 @@ def list_canonicalizers() -> list[str]:
 # ---------------------------------------------------------------------------
 # Eagerly import built-in canonicalizer modules so decorators run.
 # ---------------------------------------------------------------------------
-import trustgate.canonicalize.code_exec as _code_exec  # noqa: E402, F401
-import trustgate.canonicalize.embedding as _embedding  # noqa: E402, F401
-import trustgate.canonicalize.llm_judge as _llm_judge  # noqa: E402, F401
-import trustgate.canonicalize.mcq as _mcq  # noqa: E402, F401
-import trustgate.canonicalize.numeric as _numeric  # noqa: E402, F401
+import theaios.trustgate.canonicalize.code_exec as _code_exec  # noqa: E402, F401
+import theaios.trustgate.canonicalize.embedding as _embedding  # noqa: E402, F401
+import theaios.trustgate.canonicalize.llm_judge as _llm_judge  # noqa: E402, F401
+import theaios.trustgate.canonicalize.mcq as _mcq  # noqa: E402, F401
+import theaios.trustgate.canonicalize.numeric as _numeric  # noqa: E402, F401
