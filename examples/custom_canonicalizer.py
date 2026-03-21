@@ -2,8 +2,8 @@
 
 import re
 
-import trustgate
-from trustgate import Canonicalizer, register_canonicalizer
+from theaios import trustgate
+from theaios.trustgate import Canonicalizer, register_canonicalizer
 
 
 @register_canonicalizer("medical")

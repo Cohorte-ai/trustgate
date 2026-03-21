@@ -1,7 +1,7 @@
 """TrustGate Quickstart -- Certify GPT-4.1-mini on 50 MCQ questions in 5 minutes."""
 
-import trustgate
-from trustgate.datasets import load_mmlu
+from theaios import trustgate
+from theaios.trustgate.datasets import load_mmlu
 
 # Load 50 MMLU abstract algebra questions (auto-downloaded, cached locally)
 questions = load_mmlu(subjects=["abstract_algebra"], n=50)

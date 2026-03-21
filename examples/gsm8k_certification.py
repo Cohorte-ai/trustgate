@@ -1,8 +1,8 @@
 """Certify a model on GSM8K math problems with sequential stopping."""
 
-import trustgate
-from trustgate.datasets import load_gsm8k
-from trustgate.reporting.json_export import export_json
+from theaios import trustgate
+from theaios.trustgate.datasets import load_gsm8k
+from theaios.trustgate.reporting.json_export import export_json
 
 # Load 200 GSM8K math problems
 questions = load_gsm8k(n=200)

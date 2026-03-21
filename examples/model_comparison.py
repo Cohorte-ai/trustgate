@@ -1,9 +1,9 @@
 """Compare GPT-4.1 vs GPT-4.1-mini on MMLU."""
 
-import trustgate
-from trustgate.comparison import compare
-from trustgate.datasets import load_mmlu
-from trustgate.reporting.console import print_comparison_result
+from theaios import trustgate
+from theaios.trustgate.comparison import compare
+from theaios.trustgate.datasets import load_mmlu
+from theaios.trustgate.reporting.console import print_comparison_result
 
 # Load 100 MMLU questions
 questions = load_mmlu(n=100)
