@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from theaios.trustgate.cache import DiskCache
-from theaios.trustgate.calibration import calibrate, compute_profile, random_split
+from theaios.trustgate.calibration import (
+    calibrate,
+    compute_profile,
+    diagnose_profiles,
+    random_split,
+)
 from theaios.trustgate.canonicalize import get_canonicalizer
 from theaios.trustgate.canonicalize.custom import load_custom_canonicalizer
 from theaios.trustgate.config import load_config, load_questions, validate_config
@@ -298,6 +303,11 @@ async def sample_and_profile_async(
         if answers:
             profiles[qid] = compute_profile(answers)
 
+    # Profile quality diagnostic
+    diag = diagnose_profiles(profiles)
+    for warning in diag.warnings:
+        logger.warning("Profile quality: %s", warning)
+
     return profiles
 
 
@@ -387,6 +397,11 @@ async def certify_async(
         for qid, answers in canonical.items()
         if answers  # skip empty
     }
+
+    # 6b. Profile quality diagnostic
+    diag = diagnose_profiles(profiles)
+    for warning in diag.warnings:
+        logger.warning("Profile quality: %s", warning)
 
     # 7. Split
     all_ids = list(profiles.keys())

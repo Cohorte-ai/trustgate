@@ -6,7 +6,7 @@ import math
 import random
 from collections import Counter
 
-from theaios.trustgate.types import CertificationResult
+from theaios.trustgate.types import CertificationResult, ProfileDiagnostic
 
 
 def compute_profile(canonical_answers: list[str]) -> list[tuple[str, float]]:
@@ -129,6 +129,124 @@ def compute_capability_gap(
             unsolvable += 1
 
     return unsolvable / total if total > 0 else 0.0
+
+
+# ---------------------------------------------------------------------------
+# Profile quality diagnostic
+# ---------------------------------------------------------------------------
+
+
+def diagnose_profiles(
+    profiles: dict[str, list[tuple[str, float]]],
+) -> ProfileDiagnostic:
+    """Measure profile quality to detect canonicalization failure.
+
+    Returns a :class:`ProfileDiagnostic` with:
+
+    - ``mean_consensus``: average frequency of the top answer (1.0 = perfect
+      agreement, 1/K = no agreement)
+    - ``mean_n_classes``: average number of distinct canonical classes per
+      question (1.0 = all identical, K = all unique)
+    - ``frac_no_consensus``: fraction of questions where the top answer has
+      frequency ≤ 1/|classes| (i.e., no single answer stands out)
+    - ``frac_all_unique``: fraction of questions where every sample produced
+      a unique canonical answer (canonicalization is failing)
+    - ``status``: ``"good"``, ``"weak"``, or ``"poor"``
+    - ``warnings``: list of human-readable warning strings (empty if healthy)
+    """
+    if not profiles:
+        return ProfileDiagnostic(
+            mean_consensus=0.0,
+            mean_n_classes=0.0,
+            frac_no_consensus=0.0,
+            frac_all_unique=0.0,
+            status="poor",
+            warnings=["No profiles to diagnose."],
+        )
+
+    consensus_strengths: list[float] = []
+    n_classes_list: list[int] = []
+    no_consensus_count = 0
+    all_unique_count = 0
+
+    for profile in profiles.values():
+        if not profile:
+            continue
+        top_freq = profile[0][1]
+        n_classes = len(profile)
+        consensus_strengths.append(top_freq)
+        n_classes_list.append(n_classes)
+
+        if n_classes > 1 and top_freq <= 1.0 / n_classes + 1e-9:
+            no_consensus_count += 1
+        # All-unique: every answer appeared exactly once
+        if all(freq == profile[0][1] for _, freq in profile) and n_classes > 1:
+            all_unique_count += 1
+
+    n = len(consensus_strengths)
+    if n == 0:
+        return ProfileDiagnostic(
+            mean_consensus=0.0,
+            mean_n_classes=0.0,
+            frac_no_consensus=0.0,
+            frac_all_unique=0.0,
+            status="poor",
+            warnings=["No valid profiles."],
+        )
+
+    mean_consensus = sum(consensus_strengths) / n
+    mean_n_classes = sum(n_classes_list) / n
+    frac_no_consensus = no_consensus_count / n
+    frac_all_unique = all_unique_count / n
+
+    # Assess status and generate warnings
+    warnings: list[str] = []
+
+    if frac_all_unique > 0.5:
+        warnings.append(
+            f"{frac_all_unique:.0%} of questions produced all-unique canonical "
+            f"answers. Canonicalization is likely failing — every sample maps to "
+            f"a different class, so self-consistency cannot measure agreement. "
+            f"Consider: (1) certifying at a shorter decision point in your "
+            f"pipeline (e.g., the SQL query, not the report), (2) using a "
+            f"different canonicalization type, or (3) writing a custom "
+            f"canonicalizer that extracts the key decision from long outputs."
+        )
+    elif frac_all_unique > 0.2:
+        warnings.append(
+            f"{frac_all_unique:.0%} of questions produced all-unique answers. "
+            f"Canonicalization may be under-merging semantically equivalent "
+            f"responses. Consider embedding-based or LLM-judge canonicalization."
+        )
+
+    if mean_consensus < 0.3 and not warnings:
+        warnings.append(
+            f"Mean consensus strength is {mean_consensus:.2f} (low). The model "
+            f"shows weak agreement across samples. This could indicate a hard "
+            f"task, insufficient K, or canonicalization issues."
+        )
+
+    if frac_no_consensus > 0.5:
+        warnings.append(
+            f"{frac_no_consensus:.0%} of questions have no clear consensus "
+            f"(top answer is no more frequent than others)."
+        )
+
+    if frac_all_unique > 0.5:
+        status = "poor"
+    elif frac_all_unique > 0.2 or mean_consensus < 0.3:
+        status = "weak"
+    else:
+        status = "good"
+
+    return ProfileDiagnostic(
+        mean_consensus=round(mean_consensus, 4),
+        mean_n_classes=round(mean_n_classes, 2),
+        frac_no_consensus=round(frac_no_consensus, 4),
+        frac_all_unique=round(frac_all_unique, 4),
+        status=status,
+        warnings=warnings,
+    )
 
 
 def random_split(

@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-from theaios.trustgate.calibration import calibrate, compute_profile
+from theaios.trustgate.calibration import calibrate, compute_profile, diagnose_profiles
 from theaios.trustgate.canonicalize import Canonicalizer, get_canonicalizer, register_canonicalizer
 from theaios.trustgate.certification import (
     certify,
@@ -29,6 +29,7 @@ __all__ = [
     "sample_and_rank",
     "calibrate",
     "compute_profile",
+    "diagnose_profiles",
     "sample",
     "load_config",
     "Canonicalizer",

@@ -102,6 +102,18 @@ class SampleResponse:
 
 
 @dataclass
+class ProfileDiagnostic:
+    """Result of profile quality diagnostic."""
+
+    mean_consensus: float
+    mean_n_classes: float
+    frac_no_consensus: float
+    frac_all_unique: float
+    status: str  # "good", "weak", or "poor"
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
 class CertificationResult:
     """Output of the full certification pipeline."""
 

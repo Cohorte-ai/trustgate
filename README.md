@@ -284,6 +284,68 @@ TrustGate supports multiple task types out of the box. Each task type has a buil
 
 ---
 
+## Certify at the Decision Point
+
+TrustGate works by measuring **self-consistency** — how often the AI gives the same answer to the same question. This only works when the answers are short enough to compare meaningfully.
+
+**If your AI produces long outputs** (reports, essays, multi-paragraph analyses), raw self-consistency won't work: every sample will be unique, and TrustGate will warn you that canonicalization is failing.
+
+The fix: **certify at the decision point, not the final output.** Most AI systems have a short, structured decision buried inside the long output. That's what you should certify:
+
+| Your system | Long output | Certify on (the decision point) |
+|-------------|------------|--------------------------------|
+| SQL agent | English report from query results | The SQL query itself |
+| Medical triage | Full patient summary with reasoning | The triage category (1–5) |
+| Legal review | Multi-page contract analysis | The conclusion (approve / reject / escalate) |
+| RAG pipeline | Synthesized answer with citations | The cited document IDs or key claim |
+| Code agent | Full implementation with comments | Test pass/fail or function signature |
+| Support bot | Detailed customer response | The intent classification or action taken |
+| Research agent | Literature review | The list of cited paper IDs |
+
+### How to implement this
+
+Write a custom canonicalizer that extracts the decision from the full output:
+
+```python
+from theaios.trustgate import Canonicalizer, register_canonicalizer
+
+@register_canonicalizer("sql_decision")
+class SQLDecisionCanonicalizer(Canonicalizer):
+    def canonicalize(self, question: str, answer: str) -> str:
+        # Extract the SQL query from the agent's full response
+        import re
+        match = re.search(r"```sql\n(.+?)```", answer, re.DOTALL)
+        return match.group(1).strip() if match else ""
+```
+
+Or use the LLM-as-judge canonicalizer to have a lightweight model extract the decision:
+
+```yaml
+canonicalization:
+  type: "llm_judge"
+  judge_endpoint:
+    url: "https://api.openai.com/v1/chat/completions"
+    model: "gpt-4.1-nano"  # cheap, fast
+    api_key_env: "OPENAI_API_KEY"
+```
+
+### Profile quality warnings
+
+TrustGate automatically detects when canonicalization is failing. If most questions produce all-unique canonical answers (no agreement across K samples), you'll see:
+
+```
+WARNING: 85% of questions produced all-unique canonical answers.
+Canonicalization is likely failing — every sample maps to a different class,
+so self-consistency cannot measure agreement. Consider:
+(1) certifying at a shorter decision point in your pipeline,
+(2) using a different canonicalization type, or
+(3) writing a custom canonicalizer that extracts the key decision.
+```
+
+This warning fires before certification proceeds, saving you from a meaningless result.
+
+---
+
 ## How It Works
 
 TrustGate implements a four-step pipeline:

@@ -309,6 +309,15 @@ def calibrate(
 
     click.echo(f"Profiled {len(profiles)} questions.")
 
+    # Profile quality check
+    from theaios.trustgate.calibration import diagnose_profiles
+
+    diag = diagnose_profiles(profiles)
+    if diag.warnings:
+        for w in diag.warnings:
+            click.echo(click.style(f"WARNING: {w}", fg="yellow"), err=True)
+        click.echo()
+
     if not serve:
         # Without --serve, dump profiles for inspection
         import json as _json
