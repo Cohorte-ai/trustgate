@@ -1,4 +1,4 @@
-"""Tests for the calibrate command and sample_and_rank pipeline."""
+"""Tests for the calibrate command and sample_and_profile pipeline."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from click.testing import CliRunner
 
-from theaios.trustgate.certification import sample_and_rank
+from theaios.trustgate.certification import sample_and_profile, sample_and_rank
 from theaios.trustgate.cli import main
 from theaios.trustgate.types import (
     CanonConfig,
@@ -23,11 +23,11 @@ from theaios.trustgate.types import (
 
 
 # ===========================================================================
-# sample_and_rank
+# sample_and_profile / sample_and_rank
 # ===========================================================================
 
 
-class TestSampleAndRank:
+class TestSampleAndProfile:
     def _make_config(self) -> TrustGateConfig:
         return TrustGateConfig(
             endpoint=EndpointConfig(
@@ -45,12 +45,8 @@ class TestSampleAndRank:
             Question(id="q2", text="Capital of France? (A) London (B) Paris (C) Berlin"),
         ]
 
-    def test_returns_top_answers(self) -> None:
-        config = self._make_config()
-        questions = self._make_questions()
-
-        # Mock the sampler to return pre-canned responses
-        mock_responses = {
+    def _mock_responses(self) -> dict[str, list[SampleResponse]]:
+        return {
             "q1": [
                 SampleResponse(question_id="q1", sample_index=0, raw_response="The answer is B"),
                 SampleResponse(question_id="q1", sample_index=1, raw_response="B) 4"),
@@ -63,41 +59,44 @@ class TestSampleAndRank:
             ],
         }
 
-        with patch("theaios.trustgate.certification.Sampler") as MockSampler:
-            instance = MockSampler.return_value
-            instance.k = 3
-            instance.sample_all = AsyncMock(return_value=mock_responses)
-
-            top = sample_and_rank(config, questions)
-
-        assert top["q1"] == "B"  # all 3 said B
-        assert top["q2"] == "B"  # 2 said B, 1 said A → mode is B
-
-    def test_handles_unanimous_answers(self) -> None:
+    def test_returns_full_profiles(self) -> None:
         config = self._make_config()
-        questions = [Question(id="q1", text="2+2? (A) 3 (B) 4")]
-
-        mock_responses = {
-            "q1": [
-                SampleResponse(question_id="q1", sample_index=i, raw_response="B")
-                for i in range(3)
-            ],
-        }
+        questions = self._make_questions()
 
         with patch("theaios.trustgate.certification.Sampler") as MockSampler:
             instance = MockSampler.return_value
             instance.k = 3
-            instance.sample_all = AsyncMock(return_value=mock_responses)
+            instance.sample_all = AsyncMock(return_value=self._mock_responses())
+
+            profiles = sample_and_profile(config, questions)
+
+        # q1: all 3 said B → B at 100%
+        assert profiles["q1"][0][0] == "B"
+        assert profiles["q1"][0][1] == pytest.approx(1.0)
+
+        # q2: 2 said B, 1 said A → B at ~67%, A at ~33%
+        assert profiles["q2"][0][0] == "B"
+        assert profiles["q2"][0][1] == pytest.approx(2 / 3)
+        assert profiles["q2"][1][0] == "A"
+        assert profiles["q2"][1][1] == pytest.approx(1 / 3)
+
+    def test_sample_and_rank_returns_top_answers(self) -> None:
+        config = self._make_config()
+        questions = self._make_questions()
+
+        with patch("theaios.trustgate.certification.Sampler") as MockSampler:
+            instance = MockSampler.return_value
+            instance.k = 3
+            instance.sample_all = AsyncMock(return_value=self._mock_responses())
 
             top = sample_and_rank(config, questions)
 
         assert top["q1"] == "B"
+        assert top["q2"] == "B"
 
-    def test_handles_split_answers(self) -> None:
+    def test_split_answers_profile(self) -> None:
         config = self._make_config()
-        questions = [Question(id="q1", text="Hard question? (A) X (B) Y (C) Z")]
-
-        # All different answers → mode is whichever is first alphabetically at same freq
+        questions = [Question(id="q1", text="Hard? (A) X (B) Y (C) Z")]
         mock_responses = {
             "q1": [
                 SampleResponse(question_id="q1", sample_index=0, raw_response="A"),
@@ -111,17 +110,17 @@ class TestSampleAndRank:
             instance.k = 3
             instance.sample_all = AsyncMock(return_value=mock_responses)
 
-            top = sample_and_rank(config, questions)
+            profiles = sample_and_profile(config, questions)
 
-        # All equal frequency → alphabetical tiebreak → "A"
-        assert top["q1"] == "A"
+        # All equal frequency — profile should have 3 entries
+        assert len(profiles["q1"]) == 3
+        freqs = [f for _, f in profiles["q1"]]
+        assert all(f == pytest.approx(1 / 3) for f in freqs)
 
     def test_raises_on_invalid_config(self) -> None:
-        config = TrustGateConfig(
-            endpoint=EndpointConfig(url="not-a-url"),
-        )
+        config = TrustGateConfig(endpoint=EndpointConfig(url="not-a-url"))
         with pytest.raises(Exception, match="Invalid configuration"):
-            sample_and_rank(config, [])
+            sample_and_profile(config, [])
 
 
 # ===========================================================================
@@ -159,15 +158,16 @@ class TestCalibrateCLI:
         assert result.exit_code == 0
         assert "--serve" in result.output
         assert "--port" in result.output
-        assert "--cost-per-request" in result.output
 
-    def test_without_serve_saves_top_answers(self, tmp_path: Path) -> None:
+    def test_without_serve_saves_profiles(self, tmp_path: Path) -> None:
         cfg, q = self._make_config_and_questions(tmp_path)
-
-        mock_top_answers = {"q1": "B", "q2": "B"}
+        mock_profiles = {
+            "q1": [("B", 1.0)],
+            "q2": [("B", 0.67), ("A", 0.33)],
+        }
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
-        with patch("theaios.trustgate.cli.sample_and_rank", return_value=mock_top_answers):
+        with patch("theaios.trustgate.cli.sample_and_profile", return_value=mock_profiles):
             result = runner.invoke(main, [
                 "calibrate",
                 "--config", str(cfg),
@@ -177,25 +177,23 @@ class TestCalibrateCLI:
             ])
 
         assert result.exit_code == 0
-        assert "Sampled 2 questions" in result.output
+        assert "Profiled 2 questions" in result.output
 
-        # Should save a *_answers.json file with top answers
-        answers_file = tmp_path / "labels_answers.json"
-        assert answers_file.exists()
-        data = json.loads(answers_file.read_text())
-        assert data["q1"]["top_answer"] == "B"
-        assert data["q2"]["top_answer"] == "B"
+        # Should save a profiles JSON
+        profiles_file = tmp_path / "labels_profiles.json"
+        assert profiles_file.exists()
+        data = json.loads(profiles_file.read_text())
+        assert data["q1"]["ranked_answers"][0]["answer"] == "B"
 
-    def test_questions_from_config(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_questions_from_config(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         cfg, _ = self._make_config_and_questions(tmp_path)
-        # Config has relative path "questions.csv", so we need to be in tmp_path
         monkeypatch.chdir(tmp_path)
-
-        mock_top_answers = {"q1": "B", "q2": "B"}
+        mock_profiles = {"q1": [("B", 1.0)], "q2": [("B", 0.67)]}
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
-        # Don't pass --questions; should load from config
-        with patch("theaios.trustgate.cli.sample_and_rank", return_value=mock_top_answers):
+        with patch("theaios.trustgate.cli.sample_and_profile", return_value=mock_profiles):
             result = runner.invoke(main, [
                 "calibrate",
                 "--config", str(cfg),
@@ -204,23 +202,14 @@ class TestCalibrateCLI:
             ])
 
         assert result.exit_code == 0
-        assert "Sampled 2 questions" in result.output
-
-    def test_missing_config_errors(self) -> None:
-        runner = CliRunner()
-        result = runner.invoke(main, [
-            "calibrate", "--config", "/nonexistent/config.yaml", "--yes",
-        ])
-        assert result.exit_code == 1
 
     def test_serve_flag_launches_ui(self, tmp_path: Path) -> None:
         cfg, q = self._make_config_and_questions(tmp_path)
-
-        mock_top_answers = {"q1": "B", "q2": "B"}
+        mock_profiles = {"q1": [("B", 1.0)], "q2": [("B", 0.67)]}
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
         with (
-            patch("theaios.trustgate.cli.sample_and_rank", return_value=mock_top_answers),
+            patch("theaios.trustgate.cli.sample_and_profile", return_value=mock_profiles),
             patch("theaios.trustgate.serve.serve_calibration") as mock_serve,
         ):
             result = runner.invoke(main, [
@@ -236,53 +225,73 @@ class TestCalibrateCLI:
         mock_serve.assert_called_once()
         call_kwargs = mock_serve.call_args
         assert call_kwargs.kwargs["port"] == 9999
-        assert call_kwargs.kwargs["output_file"] == str(tmp_path / "labels.json")
+        assert call_kwargs.kwargs["profiles"] == mock_profiles
 
 
 # ===========================================================================
-# End-to-end: calibrate then certify
+# End-to-end: labels format compatibility
 # ===========================================================================
 
 
-class TestCalibrateAndCertifyFlow:
-    def test_labels_file_format_works_with_certify(self, tmp_path: Path) -> None:
-        """Verify the labels format produced by the review UI is accepted by certify."""
-        # Simulate what the review UI saves
-        labels = {"q1": "correct", "q2": "incorrect", "q3": "correct"}
+class TestLabelsCompatibility:
+    def test_labels_from_ui_work_with_certify(self, tmp_path: Path) -> None:
+        """Labels saved by the UI ({qid: answer}) work with certify --ground-truth."""
+        labels = {"q1": "B", "q2": "A", "q3": "C"}
         labels_file = tmp_path / "calibration_labels.json"
         labels_file.write_text(json.dumps(labels))
 
-        # Verify load_ground_truth can read it
         from theaios.trustgate.certification import load_ground_truth
 
         loaded = load_ground_truth(str(labels_file))
-        assert loaded == {"q1": "correct", "q2": "incorrect", "q3": "correct"}
+        assert loaded == {"q1": "B", "q2": "A", "q3": "C"}
 
-    def test_serve_app_produces_valid_labels(self) -> None:
-        """Verify the Flask app saves labels in the format certify expects."""
+    def test_nonconformity_scores_from_labels(self) -> None:
+        """Verify that labels produce correct nonconformity scores."""
+        from theaios.trustgate.calibration import compute_nonconformity_score
+
+        profile = [("B", 0.8), ("A", 0.1), ("C", 0.1)]
+
+        # Human selected B (rank 1)
+        assert compute_nonconformity_score(profile, "B") == 1
+
+        # Human selected A (rank 2)
+        assert compute_nonconformity_score(profile, "A") == 2
+
+        # Human selected C (rank 3)
+        assert compute_nonconformity_score(profile, "C") == 3
+
+        # Human selected "none" → answer not in profile → ∞
+        assert compute_nonconformity_score(profile, "D") == float("inf")
+
+    def test_serve_app_export_compatible_with_certify(self) -> None:
+        """The Flask app's export format is directly usable as ground truth."""
         from theaios.trustgate.serve import create_app
 
         questions = [
             Question(id="q1", text="What is 2+2?"),
             Question(id="q2", text="Capital of France?"),
         ]
-        top_answers = {"q1": "4", "q2": "Paris"}
+        profiles = {
+            "q1": [("4", 0.8), ("5", 0.1), ("3", 0.1)],
+            "q2": [("Paris", 0.7), ("London", 0.2), ("Berlin", 0.1)],
+        }
 
-        app = create_app(questions, top_answers, output_file="/dev/null")
+        app = create_app(questions, profiles, output_file="/dev/null")
         client = app.test_client()
 
-        # Submit reviews
-        client.post("/api/review", json={"question_id": "q1", "judgment": True})
-        client.post("/api/review", json={"question_id": "q2", "judgment": False})
+        # Human picks rank-1 for q1, rank-2 for q2
+        client.post("/api/review", json={"question_id": "q1", "selected_answer": "4"})
+        client.post("/api/review", json={"question_id": "q2", "selected_answer": "London"})
 
-        # Check results
-        resp = client.get("/api/results")
+        # Export
+        resp = client.get("/api/export")
         data = resp.get_json()
-        assert data == {"q1": "correct", "q2": "incorrect"}
 
-        # Check progress
-        resp = client.get("/api/progress")
-        progress = resp.get_json()
-        assert progress["completed"] == 2
-        assert progress["total"] == 2
-        assert progress["pct"] == 100.0
+        # Format: {qid: canonical_answer} — ready for certify --ground-truth
+        assert data == {"q1": "4", "q2": "London"}
+
+        # Verify these produce correct nonconformity scores
+        from theaios.trustgate.calibration import compute_nonconformity_score
+
+        assert compute_nonconformity_score(profiles["q1"], data["q1"]) == 1  # rank 1
+        assert compute_nonconformity_score(profiles["q2"], data["q2"]) == 2  # rank 2

@@ -16,7 +16,7 @@ from theaios.trustgate.certification import (
     estimate_cost_reliability_arbitrage,
     estimate_preflight_cost,
     load_ground_truth,
-    sample_and_rank,
+    sample_and_profile,
 )
 from theaios.trustgate.config import load_config, load_questions
 from theaios.trustgate.reporting import export_csv, export_json, print_certification_result
@@ -299,32 +299,40 @@ def calibrate(
         if not click.confirm("Proceed with sampling?", default=True):
             sys.exit(0)
 
-    # Step 1+2: Sample and rank
-    click.echo("Sampling responses and picking top answers...")
+    # Sample and build profiles
+    click.echo("Sampling responses and building self-consistency profiles...")
     try:
-        top_answers = sample_and_rank(config, questions)
+        profiles = sample_and_profile(config, questions)
     except ConfigError as exc:
         click.echo(f"Configuration error: {exc}", err=True)
         sys.exit(1)
 
-    click.echo(f"Sampled {len(top_answers)} questions. Top answers ready.")
+    click.echo(f"Profiled {len(profiles)} questions.")
 
     if not serve:
-        # Without --serve, just dump the top answers for inspection
+        # Without --serve, dump profiles for inspection
         import json as _json
 
-        data = {qid: {"question": q.text, "top_answer": top_answers.get(q.id, "")}
-                for q in questions for qid in [q.id] if qid in top_answers}
-        Path(output.replace(".json", "_answers.json")).write_text(
+        data = {}
+        for q in questions:
+            if q.id in profiles:
+                data[q.id] = {
+                    "question": q.text,
+                    "ranked_answers": [
+                        {"answer": ans, "frequency": round(freq, 4)}
+                        for ans, freq in profiles[q.id]
+                    ],
+                }
+        Path(output.replace(".json", "_profiles.json")).write_text(
             _json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8",
         )
         click.echo(
-            f"Top answers saved. Run with --serve to launch the review UI, "
+            f"Profiles saved. Run with --serve to launch the review UI, "
             f"or manually create {output} with labels."
         )
         return
 
-    # Step 3: Launch review UI
+    # Launch review UI
     try:
         from theaios.trustgate.serve import serve_calibration
     except ImportError:
@@ -336,12 +344,13 @@ def calibrate(
         sys.exit(1)
 
     click.echo(f"\nStarting calibration UI on http://localhost:{port}")
+    click.echo(f"Admin panel at http://localhost:{port}/admin")
     click.echo(f"Labels will be saved to {output}")
     click.echo("Send the URL to your domain expert. Press Ctrl+C when done.\n")
 
     serve_calibration(
         questions=questions,
-        top_answers=top_answers,
+        profiles=profiles,
         port=port,
         output_file=output,
     )

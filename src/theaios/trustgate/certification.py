@@ -248,20 +248,22 @@ def _build_canonicalizer(config: TrustGateConfig) -> Any:  # noqa: ANN401
 
 
 # ---------------------------------------------------------------------------
-# Sample + rank (reusable by calibrate and certify)
+# Sample + profile (reusable by calibrate and certify)
 # ---------------------------------------------------------------------------
 
 
-async def sample_and_rank_async(
+async def sample_and_profile_async(
     config: TrustGateConfig,
     questions: list[Question],
-) -> dict[str, str]:
-    """Sample K responses, canonicalize, and return the top-ranked answer per question.
+) -> dict[str, list[tuple[str, float]]]:
+    """Sample K responses, canonicalize, and return ranked profiles.
+
+    For each question, returns the self-consistency profile: a list of
+    ``(canonical_answer, frequency)`` tuples sorted by frequency descending.
 
     This is the reusable core shared by ``calibrate`` (to show humans the
-    top answer) and ``certify`` (to compute profiles).
-
-    Returns ``{question_id: top_canonical_answer}``.
+    ranked answers for labeling) and ``certify`` (to compute nonconformity
+    scores).
     """
     errors = validate_config(config)
     if errors:
@@ -290,22 +292,30 @@ async def sample_and_rank_async(
             for r in resps
         ]
 
-    # Pick top answer (mode) per question
-    top_answers: dict[str, str] = {}
+    # Build profiles
+    profiles: dict[str, list[tuple[str, float]]] = {}
     for qid, answers in canonical.items():
         if answers:
-            profile = compute_profile(answers)
-            top_answers[qid] = profile[0][0]  # highest-frequency answer
+            profiles[qid] = compute_profile(answers)
 
-    return top_answers
+    return profiles
+
+
+def sample_and_profile(
+    config: TrustGateConfig,
+    questions: list[Question],
+) -> dict[str, list[tuple[str, float]]]:
+    """Synchronous wrapper for :func:`sample_and_profile_async`."""
+    return asyncio.run(sample_and_profile_async(config, questions))
 
 
 def sample_and_rank(
     config: TrustGateConfig,
     questions: list[Question],
 ) -> dict[str, str]:
-    """Synchronous wrapper for :func:`sample_and_rank_async`."""
-    return asyncio.run(sample_and_rank_async(config, questions))
+    """Sample and return just the top-ranked (mode) answer per question."""
+    profiles = sample_and_profile(config, questions)
+    return {qid: profile[0][0] for qid, profile in profiles.items() if profile}
 
 
 # ---------------------------------------------------------------------------

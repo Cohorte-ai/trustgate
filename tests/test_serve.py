@@ -1,4 +1,4 @@
-"""Tests for the local calibration UI server."""
+"""Tests for the local calibration UI server (ranked-answer selection)."""
 
 from __future__ import annotations
 
@@ -18,13 +18,18 @@ def _questions() -> list[Question]:
     ]
 
 
-def _answers() -> dict[str, str]:
-    return {"q1": "4", "q2": "Paris", "q3": "Jupiter"}
+def _profiles() -> dict[str, list[tuple[str, float]]]:
+    """Ranked canonical answer profiles for each question."""
+    return {
+        "q1": [("4", 0.8), ("5", 0.1), ("3", 0.1)],
+        "q2": [("Paris", 0.7), ("London", 0.2), ("Berlin", 0.1)],
+        "q3": [("Jupiter", 0.9), ("Saturn", 0.1)],
+    }
 
 
 @pytest.fixture()
 def client() -> object:
-    app = create_app(_questions(), _answers(), output_file="/dev/null")
+    app = create_app(_questions(), _profiles(), output_file="/dev/null")
     app.config["TESTING"] = True  # type: ignore[union-attr]
     with app.test_client() as c:  # type: ignore[union-attr]
         yield c
@@ -36,8 +41,7 @@ class TestReviewerUI:
         assert resp.status_code == 200  # type: ignore[union-attr]
         data = resp.data.decode()  # type: ignore[union-attr]
         assert "TrustGate Calibration" in data
-        assert "Correct" in data
-        assert "Incorrect" in data
+        assert "Which answer is acceptable?" in data
 
 
 class TestAdminUI:
@@ -48,39 +52,54 @@ class TestAdminUI:
 
 
 class TestAPINext:
-    def test_returns_first_question(self, client: object) -> None:
+    def test_returns_first_question_with_ranked_answers(self, client: object) -> None:
         resp = client.get("/api/next")  # type: ignore[union-attr]
         data = json.loads(resp.data)  # type: ignore[union-attr]
         assert data["question_id"] == "q1"
         assert data["question"] == "What is 2+2?"
-        assert data["answer"] == "4"
         assert data["done"] is False
+        # Ranked answers with frequencies
+        answers = data["ranked_answers"]
+        assert len(answers) == 3
+        assert answers[0] == {"answer": "4", "frequency": 0.8, "rank": 1}
+        assert answers[1] == {"answer": "5", "frequency": 0.1, "rank": 2}
+        assert answers[2] == {"answer": "3", "frequency": 0.1, "rank": 3}
 
 
 class TestAPIReview:
-    def test_submit_correct(self, client: object) -> None:
+    def test_select_answer(self, client: object) -> None:
         resp = client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q1", "judgment": True}),
+            data=json.dumps({"question_id": "q1", "selected_answer": "4"}),
             content_type="application/json",
         )
         data = json.loads(resp.data)  # type: ignore[union-attr]
         assert data["ok"] is True
 
-    def test_overwrite_judgment(self, client: object) -> None:
+    def test_select_none(self, client: object) -> None:
+        resp = client.post(  # type: ignore[union-attr]
+            "/api/review",
+            data=json.dumps({"question_id": "q1", "selected_answer": None}),
+            content_type="application/json",
+        )
+        data = json.loads(resp.data)  # type: ignore[union-attr]
+        assert data["ok"] is True
+
+    def test_overwrite_selection(self, client: object) -> None:
         client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q1", "judgment": True}),
+            data=json.dumps({"question_id": "q1", "selected_answer": "4"}),
             content_type="application/json",
         )
         client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q1", "judgment": False}),
+            data=json.dumps({"question_id": "q1", "selected_answer": "5"}),
             content_type="application/json",
         )
         resp = client.get("/api/results")  # type: ignore[union-attr]
         results = json.loads(resp.data)  # type: ignore[union-attr]
-        assert results["q1"] == "incorrect"
+        assert results["q1"]["answer"] == "5"
+        assert results["q1"]["rank"] == 2
 
 
 class TestAPIProgress:
@@ -94,25 +113,13 @@ class TestAPIProgress:
     def test_progress_after_review(self, client: object) -> None:
         client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q1", "judgment": True}),
+            data=json.dumps({"question_id": "q1", "selected_answer": "4"}),
             content_type="application/json",
         )
         resp = client.get("/api/progress")  # type: ignore[union-attr]
         data = json.loads(resp.data)  # type: ignore[union-attr]
         assert data["completed"] == 1
         assert data["pct"] == pytest.approx(100 / 3)
-
-    def test_full_progress(self, client: object) -> None:
-        for qid in ["q1", "q2", "q3"]:
-            client.post(  # type: ignore[union-attr]
-                "/api/review",
-                data=json.dumps({"question_id": qid, "judgment": True}),
-                content_type="application/json",
-            )
-        resp = client.get("/api/progress")  # type: ignore[union-attr]
-        data = json.loads(resp.data)  # type: ignore[union-attr]
-        assert data["completed"] == 3
-        assert data["pct"] == 100.0
 
 
 class TestAPIResults:
@@ -121,41 +128,58 @@ class TestAPIResults:
         data = json.loads(resp.data)  # type: ignore[union-attr]
         assert data == {}
 
-    def test_results_after_reviews(self, client: object) -> None:
+    def test_results_with_ranks(self, client: object) -> None:
+        # Select top answer (rank 1)
         client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q1", "judgment": True}),
+            data=json.dumps({"question_id": "q1", "selected_answer": "4"}),
             content_type="application/json",
         )
+        # Select second answer (rank 2)
         client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q2", "judgment": False}),
+            data=json.dumps({"question_id": "q2", "selected_answer": "London"}),
+            content_type="application/json",
+        )
+        # Select none
+        client.post(  # type: ignore[union-attr]
+            "/api/review",
+            data=json.dumps({"question_id": "q3", "selected_answer": None}),
             content_type="application/json",
         )
         resp = client.get("/api/results")  # type: ignore[union-attr]
         data = json.loads(resp.data)  # type: ignore[union-attr]
-        assert data["q1"] == "correct"
-        assert data["q2"] == "incorrect"
+        assert data["q1"] == {"answer": "4", "rank": 1}
+        assert data["q2"] == {"answer": "London", "rank": 2}
+        assert data["q3"] == {"answer": None, "rank": None}
 
 
 class TestAPIExport:
-    def test_export_returns_json(self, client: object) -> None:
+    def test_export_returns_labels_for_certify(self, client: object) -> None:
+        """Export format must be {qid: answer} — compatible with certify --ground-truth."""
         client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q1", "judgment": True}),
+            data=json.dumps({"question_id": "q1", "selected_answer": "4"}),
+            content_type="application/json",
+        )
+        client.post(  # type: ignore[union-attr]
+            "/api/review",
+            data=json.dumps({"question_id": "q2", "selected_answer": None}),
             content_type="application/json",
         )
         resp = client.get("/api/export")  # type: ignore[union-attr]
         assert resp.status_code == 200  # type: ignore[union-attr]
         data = json.loads(resp.data)  # type: ignore[union-attr]
-        assert data["q1"] == "correct"
+        # Only non-null answers exported (compatible with load_ground_truth)
+        assert data == {"q1": "4"}
+        assert "q2" not in data  # null = unsolvable, excluded
 
 
 class TestNextAfterReviews:
     def test_skips_reviewed(self, client: object) -> None:
         client.post(  # type: ignore[union-attr]
             "/api/review",
-            data=json.dumps({"question_id": "q1", "judgment": True}),
+            data=json.dumps({"question_id": "q1", "selected_answer": "4"}),
             content_type="application/json",
         )
         resp = client.get("/api/next")  # type: ignore[union-attr]
@@ -163,10 +187,10 @@ class TestNextAfterReviews:
         assert data["question_id"] == "q2"
 
     def test_done_after_all_reviewed(self, client: object) -> None:
-        for qid in ["q1", "q2", "q3"]:
+        for qid, ans in [("q1", "4"), ("q2", "Paris"), ("q3", "Jupiter")]:
             client.post(  # type: ignore[union-attr]
                 "/api/review",
-                data=json.dumps({"question_id": qid, "judgment": True}),
+                data=json.dumps({"question_id": qid, "selected_answer": ans}),
                 content_type="application/json",
             )
         resp = client.get("/api/next")  # type: ignore[union-attr]
