@@ -2,39 +2,19 @@
 
 **Know if your AI is ready to ship — one number, one guarantee.**
 
-TrustGate certifies the reliability of any LLM or AI endpoint using self-consistency sampling and conformal prediction. Point it at your API, run the pipeline, and get a single reliability level (e.g., 94.6%) backed by a formal statistical guarantee — not a vibe, not a leaderboard score, a mathematical proof.
+TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pipelines, or any system you can ask a question to. It uses self-consistency sampling and conformal prediction to produce a single reliability level (e.g., 94.6%) backed by a formal statistical guarantee. Not a vibe, not a leaderboard score — a mathematical proof.
 
-Works with any provider (OpenAI, Anthropic, Together, self-hosted), any task type, any model. Black-box, no model internals required.
-
----
-
-## Installation
+Black-box. No model internals required. Works with any provider, any task type, any endpoint.
 
 ```bash
 pip install theaios-trustgate
-```
-
-Optional extras for specific canonicalization methods:
-
-```bash
-# LLM-as-judge canonicalization (needs openai SDK)
-pip install "theaios-trustgate[judge]"
-
-# Embedding-based canonicalization (needs sentence-transformers)
-pip install "theaios-trustgate[embedding]"
-
-# Local human calibration UI (needs Flask)
-pip install "theaios-trustgate[serve]"
-
-# Everything
-pip install "theaios-trustgate[all]"
 ```
 
 ---
 
 ## Quickstart
 
-### 1. Create a config file
+### 1. Create a config
 
 ```yaml
 # trustgate.yaml
@@ -60,7 +40,7 @@ questions:
   file: "questions.csv"
 ```
 
-### 2. Prepare your questions
+### 2. Prepare questions
 
 ```csv
 id,question,acceptable_answers
@@ -68,229 +48,215 @@ q001,"What is the capital of France? (A) London (B) Paris (C) Berlin (D) Madrid"
 q002,"Which planet is largest? (A) Earth (B) Mars (C) Jupiter (D) Venus","C"
 ```
 
-### 3. Run certification
+### 3. Certify
 
 ```bash
 trustgate certify
 ```
 
+You see a pre-flight cost estimate first:
+
 ```
-TrustGate Certification Result
-────────────────────────────────────────────
-  Reliability Level:   94.6%  (CI: 93.2–95.8%)
-  M* (prediction set): 1
-  Empirical Coverage:   0.956  (target: 0.900)
-  Conditional Coverage: 0.980
-  Capability Gap:       2.4%
-  Items:                250 cal / 250 test
-  Sampling:             K=10, saved $11.20 (47%) via sequential stopping
-  Status:               PASS
-────────────────────────────────────────────
+     Pre-flight Estimate           Cost / Reliability Tradeoff
+┌─────────────────────────┬──────┐ ┌────┬──────────┬───────────┬────────────┐
+│ Questions               │ 500  │ │  K │ Est.Cost │ Max Cost  │ Resolution │
+│ Samples per question    │ 10   │ │  3 │ $9.00    │ $18.00    │   coarse   │
+│ Max requests            │ 5000 │ │  5 │ $15.00   │ $30.00    │  moderate  │
+│ Sequential stopping     │ ~50% │ │ 10←│ $30.00   │ $60.00    │    fine    │
+│ Est. cost               │ $30  │ │ 20 │ $60.00   │ $120.00   │    fine    │
+└─────────────────────────┴──────┘ └────┴──────────┴───────────┴────────────┘
+Proceed? [Y/n]:
 ```
 
-That's it. Your model is 94.6% reliable at the 90% confidence level.
+Then the certification result:
+
+```
+     TrustGate Certification Result
+┌──────────────────────┬──────────┐
+│ Reliability Level    │ 94.6%    │
+│ M* (prediction set)  │ 1        │
+│ Empirical Coverage   │ 0.956    │
+│ Conditional Coverage │ 0.980    │
+│ Capability Gap       │ 2.4%     │
+│ Calibration items    │ 250      │
+│ Test items           │ 250      │
+│ Status               │ PASS     │
+└──────────────────────┴──────────┘
+```
+
+Your model is 94.6% reliable at the 90% confidence level.
 
 ---
 
-## CLI Reference
+## Generic Endpoints (Agents, RAG, Custom APIs)
 
-### Certify a model
+TrustGate works with **any endpoint you can ask a question to** — not just LLMs. You don't need to control the model or temperature:
+
+```yaml
+endpoint:
+  url: "https://my-agent.example.com/api/ask"
+  temperature: null                          # endpoint controls its own randomness
+  headers:
+    Authorization: "Bearer ${AGENT_API_KEY}" # env var expansion
+  request_template:
+    query: "{{question}}"                    # {{question}} replaced with question text
+  response_path: "answer"                    # dot-notation path in JSON response
+  cost_per_request: 0.03                     # for pre-flight cost estimate
+```
+
+---
+
+## Human Calibration (No Ground Truth)
+
+When you don't have a gold-standard dataset, human reviewers provide the labels. TrustGate samples K responses, canonicalizes them, and shows the reviewer all candidate answers for each question. The reviewer picks the acceptable one — this gives the exact nonconformity score needed for conformal calibration.
+
+Answers are shown in **randomized order with no frequency or rank information** to prevent anchoring bias.
+
+### Option A: Shareable HTML questionnaire (recommended)
+
+Generate a self-contained HTML file and share it with anyone — email, Slack, Google Drive. No server needed. The reviewer opens it in any browser (works offline, works on mobile), reviews answers, and downloads `labels.json`.
 
 ```bash
-trustgate certify \
-  --endpoint "https://api.openai.com/v1/chat/completions" \
-  --api-key $OPENAI_API_KEY \
-  --task-type mcq \
-  --questions questions.csv \
-  --ground-truth labels.csv \
-  --alpha 0.10 \
-  --k 10
+# Step 1: Sample + generate questionnaire
+trustgate calibrate --export questionnaire.html
+
+# Step 2: Share questionnaire.html with your domain expert
+#         They open it in a browser, pick answers, download labels.json
+#         They send labels.json back to you (email, Slack, etc.)
+
+# Step 3: Certify using the labels
+trustgate certify --ground-truth labels.json
 ```
 
-All flags are optional if you have a `trustgate.yaml` in the current directory.
+### Option B: Local web UI
 
-### Compare models
-
-```bash
-trustgate compare \
-  --models gpt-4.1,gpt-4.1-mini,claude-sonnet-4-6 \
-  --task-type mcq \
-  --questions questions.csv \
-  --ground-truth labels.csv
-```
-
-```
-Model              | Reliability | M* | Coverage | Capability Gap
-gpt-4.1            | 94.6%       | 1  | 0.956    | 2.4%
-claude-sonnet-4-6  | 96.0%       | 1  | 0.968    | 1.8%
-gpt-4.1-mini       | 91.2%       | 2  | 0.923    | 3.8%
-```
-
-### Human calibration
-
-When you don't have ground truth labels, use human reviewers:
+For reviewers on the same network:
 
 ```bash
 trustgate calibrate --serve --port 8080
 ```
 
-This opens a local web UI where a reviewer sees each question + the model's top answer and marks it correct or incorrect. 50 items takes ~5 minutes. Send the link to a domain expert — they don't need to know anything about ML.
+### The review interface
 
 ```
-┌──────────────────────────────────────────┐
-│ ██████████████░░░░░░░░░░  23/50  (46%)   │
-│                                          │
-│  Question:                               │
-│  What is the standard treatment for      │
-│  acute myocardial infarction?            │
-│                                          │
-│  AI's Answer:                            │
-│  Aspirin, heparin, and percutaneous      │
-│  coronary intervention (PCI)             │
-│                                          │
-│  ┌─────────────┐  ┌──────────────┐       │
-│  │  Correct     │  │  Incorrect   │       │
-│  └─────────────┘  └──────────────┘       │
-└──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│ █████████████████░░░░░░░  12/50  (24%)           │
+│                                                  │
+│  Question:                                       │
+│  What is the standard treatment for              │
+│  acute myocardial infarction?                    │
+│                                                  │
+│  Which answer is acceptable?                     │
+│                                                  │
+│  ┌──────────────────────────────────────────┐    │
+│  │  Beta-blockers and bed rest              │    │
+│  └──────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────┐    │
+│  │  Aspirin + heparin + PCI                 │    │
+│  └──────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────┐    │
+│  │  Thrombolysis with tPA                   │    │
+│  └──────────────────────────────────────────┘    │
+│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┐    │
+│  │     None of these are correct            │    │
+│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┘    │
+│                                                  │
+│  Keyboard: 1-9 to pick, 0 for none              │
+└──────────────────────────────────────────────────┘
 ```
 
-Then certify using the collected labels:
-
-```bash
-trustgate certify --ground-truth calibration_labels.json
-```
-
-### Export results
-
-```bash
-# JSON (for CI/CD pipelines)
-trustgate certify --output json --output-file result.json
-
-# CSV (for spreadsheets)
-trustgate certify --output csv --output-file result.csv
-```
-
-### Cache management
-
-Responses are cached locally so re-runs don't cost API calls:
-
-```bash
-trustgate cache stats    # show cache size and entry count
-trustgate cache clear    # delete all cached responses
-```
+No rank numbers. No percentages. Randomized order. The reviewer judges purely on content. 50 questions takes ~10 minutes.
 
 ---
 
-## Python API
+## Using TrustGate in Production
+
+TrustGate supports three deployment patterns:
+
+### Pattern 1: Deployment gate (certify once, deploy with confidence)
+
+The simplest pattern. Certify offline before shipping. If reliability is above your threshold, deploy. No per-query overhead at runtime.
 
 ```python
-from theaios import trustgate
+from theaios.trustgate import certify
 
-result = trustgate.certify(config_path="trustgate.yaml")
-
-print(result.reliability_level)    # 0.946
-print(result.m_star)               # 1
-print(result.coverage)             # 0.956
-print(result.capability_gap)       # 0.024
-```
-
-### Inline configuration (no YAML needed)
-
-```python
-from theaios import trustgate
-
-result = trustgate.certify(
-    config=trustgate.TrustGateConfig(
-        endpoint=trustgate.EndpointConfig(
-            url="https://api.openai.com/v1/chat/completions",
-            model="gpt-4.1-mini",
-            api_key_env="OPENAI_API_KEY",
-        ),
-        sampling=trustgate.SamplingConfig(k_fixed=10),
-        canonicalization=trustgate.CanonConfig(type="mcq"),
-    ),
-    questions=trustgate.load_questions("questions.csv"),
-    labels={"q001": "B", "q002": "C"},
-)
-```
-
-### Built-in datasets
-
-```python
-from theaios.trustgate.datasets import load_gsm8k, load_mmlu, load_truthfulqa
-
-# Grab 100 MMLU questions (auto-downloads, cached locally)
-questions = load_mmlu(subjects=["abstract_algebra"], n=100)
-
-# Grab 200 GSM8K math problems
-questions = load_gsm8k(n=200)
-```
-
-### Custom canonicalization
-
-Write your own canonicalizer for domain-specific tasks:
-
-```python
-from theaios.trustgate import Canonicalizer, register_canonicalizer
-
-@register_canonicalizer("legal_citation")
-class LegalCitationCanonicalizer(Canonicalizer):
-    def canonicalize(self, question: str, answer: str) -> str:
-        # Extract and normalize case citations
-        import re
-        citations = re.findall(r'\d+\s+\w+\.?\s*\d+', answer)
-        return "|".join(sorted(citations)) if citations else "no_citation"
-
-# Use it
-result = trustgate.certify(
-    config=trustgate.TrustGateConfig(
-        endpoint=...,
-        canonicalization=trustgate.CanonConfig(type="legal_citation"),
-    ),
-    questions=my_legal_questions,
-    labels=my_labels,
-)
-```
-
-### CI/CD gating
-
-```python
-result = trustgate.certify(config_path="trustgate.yaml")
+result = certify(config_path="trustgate.yaml")
 if result.reliability_level < 0.90:
-    sys.exit(1)  # block deployment
+    raise SystemExit("Reliability too low to deploy")
+# Deploy with confidence — 94.6% of queries will get the right answer
 ```
 
-Or from the CLI:
-
+From the CLI:
 ```bash
-trustgate certify --min-reliability 90
+trustgate certify --yes --output json --output-file result.json
 # Exit code 0 = PASS, 1 = FAIL
 ```
 
----
+### Pattern 2: Runtime trust layer (per-query confidence)
 
-## Task Types & Canonicalization
+Wrap your endpoint with `TrustGate` to get reliability metadata on every response.
 
-TrustGate supports multiple task types out of the box. Each task type has a built-in canonicalizer that normalizes raw LLM responses into comparable forms:
+**Passthrough mode** (default, cheap — 1 API call per query): attaches pre-computed reliability metadata without re-sampling.
 
-| Task type | Canonicalizer | What it does | Example |
-|-----------|--------------|-------------|---------|
-| `mcq` | MCQ | Extracts chosen option letter | "I think B) Paris" -> `"B"` |
-| `numeric` | Numeric | Extracts final number | "The answer is $42.50" -> `"42.5"` |
-| `code_exec` | Code execution | Runs code in sandbox | Python code -> `"pass"` / `"fail"` |
-| `llm_judge` | LLM-as-judge | Asks a judge LLM | (question, answer) -> `"correct"` / `"incorrect"` |
-| `embedding` | Embedding clustering | Groups by semantic similarity | Free text -> `"cluster_0"` |
-| `custom` | Your own plugin | Whatever you need | Your logic -> your canonical form |
+```python
+from theaios.trustgate import TrustGate, certify
+
+# Certify offline (once)
+result = certify(config_path="trustgate.yaml")
+
+# At runtime: single call per query, reliability metadata attached
+gate = TrustGate(config=config, certification=result)  # mode="passthrough"
+response = gate.query("What is the treatment for X?")
+
+response.answer              # "Aspirin + PCI"
+response.reliability_level   # 0.946 (from the certification)
+response.m_star              # 1
+```
+
+**Sampled mode** (expensive — K API calls per query): draws K samples per query and builds a per-query self-consistency profile. Use for high-stakes decisions where you need to know if *this specific query* is in the reliable region.
+
+```python
+gate = TrustGate(config=config, certification=result, mode="sampled")
+response = gate.query("What is the treatment for X?")
+
+response.answer          # "Aspirin + PCI" (top canonical answer)
+response.prediction_set  # ["Aspirin + PCI"] — top-M* answers
+response.consensus       # 0.8 (80% of K samples agreed)
+response.margin          # 0.6 (gap between #1 and #2)
+response.is_singleton    # True (prediction set size = 1 → high confidence)
+```
+
+### Pattern 3: Periodic recalibration
+
+AI systems drift over time — model updates, data shifts, prompt changes. Re-run certification periodically to detect reliability degradation.
+
+```bash
+# In a cron job or CI schedule (weekly, after model updates, etc.)
+trustgate certify --yes --output json --output-file latest_result.json
+```
+
+```python
+# In your application: load the latest certification
+import json
+from theaios.trustgate import TrustGate, CertificationResult
+
+with open("latest_result.json") as f:
+    data = json.load(f)
+result = CertificationResult(**data)  # or deserialize as needed
+gate = TrustGate(config=config, certification=result)
+```
+
+The library doesn't impose a recalibration schedule — that's infrastructure (cron, CI, Airflow). TrustGate makes recertification cheap: cached responses mean re-runs only cost new API calls for questions that changed.
 
 ---
 
 ## Certify at the Decision Point
 
-TrustGate works by measuring **self-consistency** — how often the AI gives the same answer to the same question. This only works when the answers are short enough to compare meaningfully.
+TrustGate measures **self-consistency** — how often the AI gives the same answer. This only works when answers are short enough to compare meaningfully.
 
-**If your AI produces long outputs** (reports, essays, multi-paragraph analyses), raw self-consistency won't work: every sample will be unique, and TrustGate will warn you that canonicalization is failing.
+**If your AI produces long outputs** (reports, essays, multi-paragraph analyses), raw self-consistency won't work: every sample will be unique.
 
-The fix: **certify at the decision point, not the final output.** Most AI systems have a short, structured decision buried inside the long output. That's what you should certify:
+The fix: **certify at the decision point, not the final output.** Most AI systems have a short, structured decision buried inside the long output:
 
 | Your system | Long output | Certify on (the decision point) |
 |-------------|------------|--------------------------------|
@@ -300,11 +266,8 @@ The fix: **certify at the decision point, not the final output.** Most AI system
 | RAG pipeline | Synthesized answer with citations | The cited document IDs or key claim |
 | Code agent | Full implementation with comments | Test pass/fail or function signature |
 | Support bot | Detailed customer response | The intent classification or action taken |
-| Research agent | Literature review | The list of cited paper IDs |
 
-### How to implement this
-
-Write a custom canonicalizer that extracts the decision from the full output:
+Write a custom canonicalizer that extracts the decision:
 
 ```python
 from theaios.trustgate import Canonicalizer, register_canonicalizer
@@ -312,58 +275,70 @@ from theaios.trustgate import Canonicalizer, register_canonicalizer
 @register_canonicalizer("sql_decision")
 class SQLDecisionCanonicalizer(Canonicalizer):
     def canonicalize(self, question: str, answer: str) -> str:
-        # Extract the SQL query from the agent's full response
         import re
         match = re.search(r"```sql\n(.+?)```", answer, re.DOTALL)
         return match.group(1).strip() if match else ""
 ```
 
-Or use the LLM-as-judge canonicalizer to have a lightweight model extract the decision:
+TrustGate automatically warns when canonicalization is failing (all-unique answers, no consensus).
 
-```yaml
-canonicalization:
-  type: "llm_judge"
-  judge_endpoint:
-    url: "https://api.openai.com/v1/chat/completions"
-    model: "gpt-4.1-nano"  # cheap, fast
-    api_key_env: "OPENAI_API_KEY"
-```
+---
 
-### Profile quality warnings
+## Task Types & Canonicalization
 
-TrustGate automatically detects when canonicalization is failing. If most questions produce all-unique canonical answers (no agreement across K samples), you'll see:
-
-```
-WARNING: 85% of questions produced all-unique canonical answers.
-Canonicalization is likely failing — every sample maps to a different class,
-so self-consistency cannot measure agreement. Consider:
-(1) certifying at a shorter decision point in your pipeline,
-(2) using a different canonicalization type, or
-(3) writing a custom canonicalizer that extracts the key decision.
-```
-
-This warning fires before certification proceeds, saving you from a meaningless result.
+| Task type | Canonicalizer | What it does | Example |
+|-----------|--------------|-------------|---------|
+| `mcq` | MCQ | Extracts chosen option letter | "I think B) Paris" → `"B"` |
+| `numeric` | Numeric | Extracts final number | "The answer is $42.50" → `"42.5"` |
+| `code_exec` | Code execution | Runs code in sandbox | Python code → `"pass"` / `"fail"` |
+| `llm_judge` | LLM-as-judge | Asks a judge LLM | (question, answer) → `"correct"` / `"incorrect"` |
+| `embedding` | Embedding clustering | Groups by semantic similarity | Free text → `"cluster_0"` |
+| `custom` | Your own plugin | Whatever you need | Your logic → your canonical form |
 
 ---
 
 ## How It Works
 
-TrustGate implements a four-step pipeline:
-
 ```
-1. SAMPLE        Ask the AI the same question K times (with temperature > 0)
+1. SAMPLE        Ask the AI the same question K times
 2. CANONICALIZE  Normalize raw responses into comparable forms
-3. CALIBRATE     Use human labels or ground truth to compute conformal scores
-4. CERTIFY       Produce a reliability level with a formal coverage guarantee
+3. CALIBRATE     Human or ground truth labels → nonconformity scores
+4. CERTIFY       Conformal prediction → reliability level with guarantee
 ```
 
-**Self-consistency sampling:** If you ask GPT-4 "What is 2+2?" ten times at temperature 0.7, it will say "4" every time. If you ask it a harder question, answers will vary. The pattern of agreement tells you how confident you should be.
+**Self-consistency sampling:** Ask the same question K times. Group identical canonical answers and rank by frequency. The pattern of agreement measures how confident you should be.
 
-**Conformal prediction:** A statistical framework that converts these agreement patterns into a guaranteed reliability level. If TrustGate says "94.6% reliable at alpha=0.10," that means the model's top answer is correct for at least 94.6% of questions — and this guarantee holds with 90% confidence, no matter the data distribution.
+**Conformal prediction:** Converts agreement patterns into a guaranteed reliability level. If TrustGate says "94.6% reliable at α=0.10," the model's top answer is correct for at least 94.6% of questions — this guarantee holds with 90% confidence, regardless of data distribution.
 
-**Sequential stopping:** You don't always need all K samples. TrustGate uses Hoeffding bounds to detect when the answer pattern has stabilized and stops early, saving ~50% of API costs.
+**Sequential stopping:** Hoeffding bounds detect when the answer pattern has stabilized and stop early, saving ~50% of API costs.
 
-For the full theory, see our paper: *[paper title and link]*
+For the full theory: *Black-Box Reliability Certification for AI Agents via Self-Consistency Sampling and Conformal Calibration* (Mouzouni, 2026).
+
+---
+
+## Python API
+
+```python
+from theaios import trustgate
+
+# Certify
+result = trustgate.certify(config_path="trustgate.yaml")
+
+# Sample + profile (for custom pipelines)
+profiles = trustgate.sample_and_profile(config, questions)
+
+# Diagnose profile quality
+diag = trustgate.diagnose_profiles(profiles)
+if diag.status == "poor":
+    print(diag.warnings)
+
+# Generate shareable questionnaire
+trustgate.generate_questionnaire(questions, profiles, "questionnaire.html")
+
+# Runtime trust layer
+gate = trustgate.TrustGate(config=config, certification=result)
+response = gate.query("What is 2+2?")
+```
 
 ---
 
@@ -373,56 +348,66 @@ For the full theory, see our paper: *[paper title and link]*
 <summary>Full <code>trustgate.yaml</code> reference</summary>
 
 ```yaml
-# Required: the AI endpoint to certify
+# The AI endpoint to certify
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
-  model: "gpt-4.1"
-  temperature: 0.7
-  api_key_env: "OPENAI_API_KEY"     # env var name (not the key itself)
-  provider: "openai"                 # openai, anthropic, together, generic (auto-detected from URL)
+  model: "gpt-4.1"                    # optional for generic endpoints
+  temperature: 0.7                     # null = endpoint controls randomness
+  api_key_env: "OPENAI_API_KEY"        # env var name (not the key itself)
+  provider: "openai"                   # auto-detected from URL if omitted
   max_tokens: 4096
+
+  # Generic endpoint support (agents, RAG, custom APIs)
+  # headers:
+  #   Authorization: "Bearer ${MY_KEY}"
+  # request_template:
+  #   query: "{{question}}"
+  # response_path: "answer"
+  # cost_per_request: 0.03
 
 # Sampling parameters
 sampling:
-  k_max: 20                          # maximum samples per question
-  k_fixed: 10                        # fixed K (overrides k_max if set)
-  sequential_stopping: true           # stop early when answer stabilizes
-  delta: 0.05                         # confidence parameter for stopping
-  max_concurrent: 50                  # parallel requests
-  timeout: 120.0                      # per-request timeout (seconds)
-  retries: 10                         # max retries on failure
+  k_max: 20                            # maximum samples per question
+  k_fixed: 10                          # fixed K (overrides k_max if set)
+  sequential_stopping: true             # stop early when answer stabilizes
+  delta: 0.05                           # confidence parameter for stopping
+  max_concurrent: 50                    # parallel requests
+  timeout: 120.0                        # per-request timeout (seconds)
+  retries: 10                           # max retries on failure
 
 # How to normalize raw responses
 canonicalization:
-  type: "mcq"                         # mcq, numeric, code_exec, llm_judge, embedding, custom
-  # For llm_judge:
-  # judge_endpoint:
-  #   url: "https://api.openai.com/v1/chat/completions"
-  #   model: "gpt-4.1"
-  #   api_key_env: "OPENAI_API_KEY"
-  # For custom:
-  # custom_class: "my_package.my_module.MyCanonicalizer"
+  type: "mcq"                           # mcq, numeric, code_exec, llm_judge, embedding, custom
 
 # Conformal calibration parameters
 calibration:
   alpha_values: [0.01, 0.05, 0.10, 0.15, 0.20]
-  n_cal: 500                          # calibration set size
-  n_test: 500                         # test set size
-  bootstrap_splits: 100
+  n_cal: 500
+  n_test: 500
 
 # Questions to evaluate
 questions:
-  file: "questions.csv"               # CSV or JSON file
-  # source: "huggingface/gsm8k"      # or load from a built-in dataset
+  file: "questions.csv"
 ```
 
 </details>
 
 ---
 
-## Contributing
+## CLI Reference
 
-We welcome contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+```
+trustgate certify     Certify an endpoint's reliability
+trustgate calibrate   Sample + collect human labels (--serve, --export)
+trustgate compare     Compare reliability across models
+trustgate sample      Sample responses only (no calibration)
+trustgate cache       Manage the response cache (stats, clear)
+trustgate version     Show version
+```
+
+---
+
+## Contributing
 
 ```bash
 git clone https://github.com/Cohorte-ai/trustgate.git
@@ -436,11 +421,10 @@ ruff check src/ tests/
 
 ## Citation
 
-If you use TrustGate in your research, please cite:
-
 ```bibtex
 @article{mouzouni2026trustgate,
-  title={TrustGate: Black-Box AI Reliability Certification via Self-Consistency Sampling and Conformal Calibration},
+  title={TrustGate: Black-Box AI Reliability Certification via
+         Self-Consistency Sampling and Conformal Calibration},
   author={Mouzouni, Charafeddine},
   year={2026}
 }
