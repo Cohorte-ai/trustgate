@@ -1,14 +1,16 @@
 """Local calibration UI server (Flask).
 
-The reviewer sees each question alongside ALL ranked canonical answers
-(with frequencies) and picks the acceptable one — or marks "none."
-This gives the exact nonconformity score s_i = rank(selected answer)
-needed for conformal calibration (Definition 6.2 in the paper).
+The reviewer sees each question alongside its canonical answer candidates
+in **randomized order with no frequency or rank information** — preventing
+anchoring bias.  The reviewer picks the acceptable answer (or "none"),
+and the system internally resolves the rank for the nonconformity score
+(Definition 6.2 in the paper).
 """
 
 from __future__ import annotations
 
 import json
+import random
 import signal
 import sys
 from pathlib import Path
@@ -35,13 +37,11 @@ body{font-family:system-ui,-apple-system,sans-serif;max-width:640px;margin:0 aut
 .label{font-size:13px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
 .question{font-size:18px;line-height:1.5}
 h3{margin-bottom:12px;font-size:15px;color:#444}
-.answer-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 18px;margin-bottom:8px;
-  border:2px solid #e0e0e0;border-radius:10px;background:white;font-size:16px;cursor:pointer;transition:all .15s;text-align:left}
+.answer-btn{display:block;width:100%;padding:14px 18px;margin-bottom:8px;
+  border:2px solid #e0e0e0;border-radius:10px;background:white;font-size:16px;
+  cursor:pointer;transition:all .15s;text-align:left;word-break:break-word}
 .answer-btn:hover{border-color:#4CAF50;background:#f0faf0}
 .answer-btn:active{transform:scale(.98)}
-.answer-btn .rank{font-weight:700;color:#888;margin-right:12px;min-width:28px}
-.answer-btn .text{flex:1;word-break:break-word}
-.answer-btn .freq{color:#888;font-size:14px;margin-left:12px;white-space:nowrap}
 .none-btn{display:block;width:100%;padding:14px;margin-top:4px;border:2px dashed #ccc;border-radius:10px;
   background:white;font-size:16px;color:#888;cursor:pointer;text-align:center;transition:all .15s}
 .none-btn:hover{border-color:#f44336;color:#f44336;background:#fff5f5}
@@ -58,26 +58,25 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
   <div id="answers"></div>
   <button class="none-btn" onclick="pick(null)">None of these are correct</button>
 </div>
-<div class="hint">Keyboard: <span class="key">1</span>–<span class="key">9</span> to pick answer, <span class="key">0</span> for none</div>
+<div class="hint">Keyboard: <span class="key">1</span>–<span class="key">9</span> to pick, <span class="key">0</span> for none</div>
 <script>
-let qid=null,nAnswers=0;
+let qid=null,answerValues=[];
 async function load(){
  const r=await fetch('/api/next');const d=await r.json();
  if(d.done){document.body.innerHTML='<div class="done">All done! Labels saved.</div>';return}
  qid=d.question_id;
  document.getElementById('q').textContent=d.question;
  const c=document.getElementById('answers');c.innerHTML='';
- nAnswers=d.ranked_answers.length;
- d.ranked_answers.forEach((a,i)=>{
+ answerValues=d.answers.map(a=>a.answer);
+ d.answers.forEach((a,i)=>{
   const b=document.createElement('button');b.className='answer-btn';
-  b.innerHTML='<span class="rank">#'+(i+1)+'</span><span class="text">'+escHtml(a.answer)+'</span><span class="freq">'+Math.round(a.frequency*100)+'%</span>';
+  b.textContent=a.answer;
   b.onclick=()=>pick(a.answer);c.appendChild(b);
  });
  const p=await(await fetch('/api/progress')).json();
  document.getElementById('bar').style.width=p.pct+'%';
  document.getElementById('ptext').textContent=p.completed+'/'+p.total+' ('+Math.round(p.pct)+'%)';
 }
-function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 async function pick(answer){
  if(!qid)return;
  await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -85,7 +84,7 @@ async function pick(answer){
 document.addEventListener('keydown',e=>{
  const k=parseInt(e.key);
  if(k===0)pick(null);
- else if(k>=1&&k<=nAnswers){const btns=document.querySelectorAll('.answer-btn');if(btns[k-1])btns[k-1].click();}
+ else if(k>=1&&k<=answerValues.length)pick(answerValues[k-1]);
 });
 load();
 </script>
@@ -151,13 +150,16 @@ def create_app(
     questions: list[Question],
     profiles: dict[str, list[tuple[str, float]]],
     output_file: str = "calibration_labels.json",
+    seed: int = 42,
 ) -> Flask:
     """Create the Flask app for the calibration UI.
 
-    The reviewer sees each question with its full ranked canonical answers
-    and picks the acceptable one.  Labels are saved as
-    ``{qid: canonical_answer}`` — directly compatible with
-    ``trustgate certify --ground-truth``.
+    Answers are shown to the reviewer in **randomized order** with no
+    frequency or rank information, preventing anchoring bias.  The system
+    resolves the rank internally after the reviewer selects an answer.
+
+    Labels are saved as ``{qid: canonical_answer}`` — directly compatible
+    with ``trustgate certify --ground-truth``.
 
     Requires Flask: ``pip install 'theaios-trustgate[serve]'``
     """
@@ -171,6 +173,15 @@ def create_app(
 
     app = Flask(__name__)
 
+    # Pre-compute shuffled answer orders per question (fixed seed for reproducibility)
+    rng = random.Random(seed)
+    shuffled_answers: dict[str, list[str]] = {}
+    for qid, profile in profiles.items():
+        answers = [ans for ans, _freq in profile]
+        shuffled = list(answers)
+        rng.shuffle(shuffled)
+        shuffled_answers[qid] = shuffled
+
     # State
     labels: dict[str, str | None] = {}  # qid → selected canonical answer (or None)
     question_map = {q.id: q for q in questions}
@@ -179,7 +190,7 @@ def create_app(
     output_path = Path(output_file)
 
     def _rank_of(qid: str, answer: str | None) -> int | None:
-        """Find the rank of the selected answer in the profile."""
+        """Find the rank of the selected answer in the original profile."""
         if answer is None:
             return None
         profile = profiles.get(qid, [])
@@ -208,15 +219,15 @@ def create_app(
         while pending_idx < len(pending):
             qid = pending[pending_idx]
             if qid not in labels:
-                profile = profiles.get(qid, [])
-                ranked = [
-                    {"answer": ans, "frequency": freq, "rank": i + 1}
-                    for i, (ans, freq) in enumerate(profile)
+                # Serve answers in shuffled order, no frequencies, no ranks
+                answers = [
+                    {"answer": ans}
+                    for ans in shuffled_answers.get(qid, [])
                 ]
                 return jsonify({
                     "question_id": qid,
                     "question": question_map[qid].text,
-                    "ranked_answers": ranked,
+                    "answers": answers,
                     "done": False,
                 })
             pending_idx += 1

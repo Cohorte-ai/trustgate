@@ -52,18 +52,21 @@ class TestAdminUI:
 
 
 class TestAPINext:
-    def test_returns_first_question_with_ranked_answers(self, client: object) -> None:
+    def test_returns_question_with_shuffled_answers(self, client: object) -> None:
         resp = client.get("/api/next")  # type: ignore[union-attr]
         data = json.loads(resp.data)  # type: ignore[union-attr]
         assert data["question_id"] == "q1"
         assert data["question"] == "What is 2+2?"
         assert data["done"] is False
-        # Ranked answers with frequencies
-        answers = data["ranked_answers"]
+        # Answers present but no frequency or rank info
+        answers = data["answers"]
         assert len(answers) == 3
-        assert answers[0] == {"answer": "4", "frequency": 0.8, "rank": 1}
-        assert answers[1] == {"answer": "5", "frequency": 0.1, "rank": 2}
-        assert answers[2] == {"answer": "3", "frequency": 0.1, "rank": 3}
+        answer_texts = {a["answer"] for a in answers}
+        assert answer_texts == {"4", "5", "3"}
+        # No frequency or rank keys exposed to reviewer
+        for a in answers:
+            assert "frequency" not in a
+            assert "rank" not in a
 
 
 class TestAPIReview:
