@@ -4,7 +4,7 @@ __version__ = "0.1.0"
 
 from theaios.trustgate.calibration import calibrate, compute_profile
 from theaios.trustgate.canonicalize import Canonicalizer, get_canonicalizer, register_canonicalizer
-from theaios.trustgate.certification import certify, certify_async
+from theaios.trustgate.certification import certify, certify_async, sample_and_rank
 from theaios.trustgate.config import load_config
 from theaios.trustgate.sampler import sample
 from theaios.trustgate.types import (
@@ -20,6 +20,7 @@ from theaios.trustgate.types import (
 __all__ = [
     "certify",
     "certify_async",
+    "sample_and_rank",
     "calibrate",
     "compute_profile",
     "sample",

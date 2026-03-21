@@ -237,6 +237,77 @@ def _canon_kwargs(canon_config: CanonConfig) -> dict[str, Any]:
     return kwargs
 
 
+def _build_canonicalizer(config: TrustGateConfig) -> Any:  # noqa: ANN401
+    """Build a canonicalizer from config."""
+    if config.canonicalization.type == "custom" and config.canonicalization.custom_class:
+        return load_custom_canonicalizer(config.canonicalization.custom_class)
+    return get_canonicalizer(
+        config.canonicalization.type,
+        **_canon_kwargs(config.canonicalization),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Sample + rank (reusable by calibrate and certify)
+# ---------------------------------------------------------------------------
+
+
+async def sample_and_rank_async(
+    config: TrustGateConfig,
+    questions: list[Question],
+) -> dict[str, str]:
+    """Sample K responses, canonicalize, and return the top-ranked answer per question.
+
+    This is the reusable core shared by ``calibrate`` (to show humans the
+    top answer) and ``certify`` (to compute profiles).
+
+    Returns ``{question_id: top_canonical_answer}``.
+    """
+    errors = validate_config(config)
+    if errors:
+        raise ConfigError(errors)
+
+    questions_by_id = {q.id: q for q in questions}
+    cache = DiskCache()
+
+    # Sample
+    sampler = Sampler(config, cache=cache)
+    k = sampler.k
+
+    if config.sampling.sequential_stopping:
+        seq_sampler = SequentialSampler(sampler, delta=config.sampling.delta)
+        responses = await seq_sampler.sample_all(questions, k_max=k)
+    else:
+        responses = await sampler.sample_all(questions, k=k)
+
+    # Canonicalize
+    canonicalizer = _build_canonicalizer(config)
+    canonical: dict[str, list[str]] = {}
+    for qid, resps in responses.items():
+        question_text = questions_by_id[qid].text
+        canonical[qid] = [
+            canonicalizer.canonicalize(question_text, r.raw_response)
+            for r in resps
+        ]
+
+    # Pick top answer (mode) per question
+    top_answers: dict[str, str] = {}
+    for qid, answers in canonical.items():
+        if answers:
+            profile = compute_profile(answers)
+            top_answers[qid] = profile[0][0]  # highest-frequency answer
+
+    return top_answers
+
+
+def sample_and_rank(
+    config: TrustGateConfig,
+    questions: list[Question],
+) -> dict[str, str]:
+    """Synchronous wrapper for :func:`sample_and_rank_async`."""
+    return asyncio.run(sample_and_rank_async(config, questions))
+
+
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
@@ -290,13 +361,7 @@ async def certify_async(
         responses = await sampler.sample_all(questions, k=k)
 
     # 5. Canonicalize
-    if config.canonicalization.type == "custom" and config.canonicalization.custom_class:
-        canonicalizer = load_custom_canonicalizer(config.canonicalization.custom_class)
-    else:
-        canonicalizer = get_canonicalizer(
-            config.canonicalization.type,
-            **_canon_kwargs(config.canonicalization),
-        )
+    canonicalizer = _build_canonicalizer(config)
 
     canonical: dict[str, list[str]] = {}
     for qid, resps in responses.items():

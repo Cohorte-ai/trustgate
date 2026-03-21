@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 import click
 
@@ -15,6 +16,7 @@ from theaios.trustgate.certification import (
     estimate_cost_reliability_arbitrage,
     estimate_preflight_cost,
     load_ground_truth,
+    sample_and_rank,
 )
 from theaios.trustgate.config import load_config, load_questions
 from theaios.trustgate.reporting import export_csv, export_json, print_certification_result
@@ -235,26 +237,114 @@ def compare(
 
 @main.command()
 @click.option("--config", "-c", "config_path", default="trustgate.yaml")
-@click.option("--questions", "-q", "questions_path", required=True)
+@click.option("--questions", "-q", "questions_path", help="Questions file (CSV or JSON)")
 @click.option("--serve", is_flag=True, help="Start local calibration web UI")
-@click.option("--port", type=int, default=8080)
-@click.option("--output", "-o", default="calibration_labels.json")
+@click.option("--port", type=int, default=8080, help="Port for calibration UI")
+@click.option("--output", "-o", default="calibration_labels.json", help="Output labels file")
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
+@click.option(
+    "--cost-per-request", type=float,
+    help="Cost per API request in USD (for generic/agent endpoints)",
+)
 def calibrate(
     config_path: str,
-    questions_path: str,
+    questions_path: str | None,
     serve: bool,
     port: int,
     output: str,
+    yes: bool,
+    cost_per_request: float | None,
 ) -> None:
-    """Collect human calibration labels."""
-    if serve:
-        click.echo(f"Starting calibration UI on http://localhost:{port}")
-        click.echo("(Web UI will be available in a future release)")
-    else:
-        click.echo(
-            "Run with --serve to start the calibration web UI, "
-            "or provide labels via --ground-truth to the certify command."
+    """Sample responses and collect human calibration labels.
+
+    This command:
+
+    \b
+    1. Samples K responses per question from your endpoint
+    2. Canonicalizes and picks the top answer for each question
+    3. Launches a web UI where a human reviewer marks each top answer
+       as correct or incorrect
+    4. Saves the labels to a JSON file
+
+    Then use: trustgate certify --ground-truth calibration_labels.json
+    """
+    # Load config
+    try:
+        config = load_config(config_path)
+    except FileNotFoundError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+
+    if cost_per_request is not None:
+        config.endpoint.cost_per_request = cost_per_request
+
+    # Load questions
+    questions = None
+    if questions_path:
+        try:
+            questions = load_questions(questions_path)
+        except (FileNotFoundError, ValueError) as exc:
+            click.echo(f"Error loading questions: {exc}", err=True)
+            sys.exit(1)
+    if questions is None:
+        try:
+            questions = load_questions(config.questions)
+        except Exception as exc:
+            click.echo(f"Error loading questions: {exc}", err=True)
+            sys.exit(1)
+
+    # Pre-flight estimate
+    if not yes:
+        _show_preflight(config, len(questions))
+        if not click.confirm("Proceed with sampling?", default=True):
+            sys.exit(0)
+
+    # Step 1+2: Sample and rank
+    click.echo("Sampling responses and picking top answers...")
+    try:
+        top_answers = sample_and_rank(config, questions)
+    except ConfigError as exc:
+        click.echo(f"Configuration error: {exc}", err=True)
+        sys.exit(1)
+
+    click.echo(f"Sampled {len(top_answers)} questions. Top answers ready.")
+
+    if not serve:
+        # Without --serve, just dump the top answers for inspection
+        import json as _json
+
+        data = {qid: {"question": q.text, "top_answer": top_answers.get(q.id, "")}
+                for q in questions for qid in [q.id] if qid in top_answers}
+        Path(output.replace(".json", "_answers.json")).write_text(
+            _json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8",
         )
+        click.echo(
+            f"Top answers saved. Run with --serve to launch the review UI, "
+            f"or manually create {output} with labels."
+        )
+        return
+
+    # Step 3: Launch review UI
+    try:
+        from theaios.trustgate.serve import serve_calibration
+    except ImportError:
+        click.echo(
+            "Flask is required for the calibration UI.\n"
+            "Install with: pip install 'theaios-trustgate[serve]'",
+            err=True,
+        )
+        sys.exit(1)
+
+    click.echo(f"\nStarting calibration UI on http://localhost:{port}")
+    click.echo(f"Labels will be saved to {output}")
+    click.echo("Send the URL to your domain expert. Press Ctrl+C when done.\n")
+
+    serve_calibration(
+        questions=questions,
+        top_answers=top_answers,
+        port=port,
+        output_file=output,
+    )
 
 
 # ---------------------------------------------------------------------------
