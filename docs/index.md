@@ -1,8 +1,10 @@
 # TrustGate
 
-**Know if your AI is ready to ship -- one number, one guarantee.**
+**Know if your AI is ready to ship — one number, one guarantee.**
 
-TrustGate certifies the reliability of any LLM or AI endpoint using self-consistency sampling and conformal prediction. Point it at your API, run the certification pipeline, and get a single reliability level (e.g., 94.6%) backed by a formal statistical guarantee -- not a vibe, not a leaderboard score, a mathematical proof. It works with any provider, any task type, any model, entirely black-box with no model internals required.
+TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pipelines, or any system you can ask a question to. It uses self-consistency sampling and conformal prediction to produce a single **reliability level** (e.g., 94.6%) backed by a formal statistical guarantee.
+
+Black-box. No model internals required. Works with any provider.
 
 ---
 
@@ -12,33 +14,25 @@ TrustGate certifies the reliability of any LLM or AI endpoint using self-consist
 pip install theaios-trustgate
 ```
 
-Optional extras for specific features:
+Optional extras:
 
 ```bash
-# LLM-as-judge canonicalization (needs openai SDK)
-pip install "theaios-trustgate[judge]"
-
-# Embedding-based canonicalization (needs sentence-transformers + hdbscan)
-pip install "theaios-trustgate[embedding]"
-
-# Local human calibration web UI (needs Flask)
-pip install "theaios-trustgate[serve]"
-
-# Everything
-pip install "theaios-trustgate[all]"
+pip install "theaios-trustgate[judge]"      # LLM-as-judge canonicalization
+pip install "theaios-trustgate[embedding]"   # Embedding-based clustering
+pip install "theaios-trustgate[serve]"       # Local calibration web UI
+pip install "theaios-trustgate[all]"         # Everything
 ```
 
-Requires Python 3.10 or later.
+Requires Python 3.10+.
 
 ---
 
 ## Quickstart
 
-### Step 1: Create a config file
-
-Create a file called `trustgate.yaml` in your project directory:
+### 1. Create a config file
 
 ```yaml
+# trustgate.yaml
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1"
@@ -61,59 +55,134 @@ questions:
   file: "questions.csv"
 ```
 
-Your `questions.csv` should look like this:
-
 ```csv
 id,question,acceptable_answers
-q001,"What is the capital of France? (A) London (B) Paris (C) Berlin (D) Madrid","B"
-q002,"Which planet is largest? (A) Earth (B) Mars (C) Jupiter (D) Venus","C"
+q001,"Capital of France? (A) London (B) Paris (C) Berlin (D) Madrid","B"
+q002,"Largest planet? (A) Earth (B) Mars (C) Jupiter (D) Venus","C"
 ```
 
-### Step 2: Run certification
+### 2. Certify
 
 ```bash
 trustgate certify
 ```
 
-### Step 3: Read your reliability level
-
-TrustGate prints a summary like this:
+### 3. Read the result
 
 ```
-TrustGate Certification Result
---------------------------------------------
-  Reliability Level:   94.6%  (CI: 93.2-95.8%)
-  M* (prediction set): 1
-  Empirical Coverage:   0.956  (target: 0.900)
-  Conditional Coverage: 0.980
-  Capability Gap:       2.4%
-  Items:                250 cal / 250 test
-  Sampling:             K=10, saved $11.20 (47%) via sequential stopping
-  Status:               PASS
---------------------------------------------
+     TrustGate Certification Result
+┌──────────────────────┬──────────┐
+│ Reliability Level    │ 94.6%    │
+│ M* (prediction set)  │ 1        │
+│ Empirical Coverage   │ 0.956    │
+│ Conditional Coverage │ 0.980    │
+│ Capability Gap       │ 2.4%     │
+│ Status               │ PASS     │
+└──────────────────────┴──────────┘
 ```
 
-The **reliability level** (94.6% in this example) is the single number that matters. It tells you: for at least 94.6% of the questions you tested, the model's top answer was correct -- and this claim holds with a formal statistical guarantee. If you are evaluating whether an AI is reliable enough to deploy, this is the number to look at. Unlike raw accuracy or leaderboard rankings, the reliability level is backed by conformal prediction, which means it accounts for statistical uncertainty and does not overfit to the particular test set you used.
+**Reliability level** (94.6%) is the number that matters: the model's top answer is correct for at least 94.6% of questions, backed by a conformal coverage guarantee.
 
 ---
 
-## What do the other metrics mean?
+## How It Works
 
-- **M\* (prediction set size)**: How many top answers you need to include to guarantee the correct answer is covered. M\*=1 means the single most frequent answer is enough. M\*=2 means you need the top two.
-- **Empirical coverage**: The fraction of test questions where the top-M\* answers included the correct one.
-- **Conditional coverage**: Same as empirical coverage, but computed only on questions the model can actually answer (where the correct answer appeared at least once across K samples).
-- **Capability gap**: The fraction of questions where the correct answer never appeared in any of the K samples. These are questions the model fundamentally cannot answer.
+```
+1. SAMPLE        Ask the AI the same question K times
+2. CANONICALIZE  Normalize raw responses into comparable forms
+3. CALIBRATE     Human or ground truth labels → nonconformity scores
+4. CERTIFY       Conformal prediction → reliability level with guarantee
+```
 
-For a deeper explanation of the math behind these metrics, see [Concepts](concepts.md).
+For each calibration question, the system finds where the correct answer ranks in the AI's self-consistency profile. If the AI's top answer is correct → score = 1. If the correct answer is second → score = 2. These scores are sorted, and the conformal quantile gives M* — the prediction set size that guarantees coverage.
+
+The human reviewer (or ground truth dataset) provides the correct answers. The math is the same either way.
+
+→ **[Full explanation in Concepts](concepts.md)**
 
 ---
 
-## Further reading
+## Key Features
 
-- [Concepts](concepts.md) -- Plain-language explanation of the statistical methods (self-consistency, conformal prediction, sequential stopping)
-- [Configuration](configuration.md) -- Full reference for `trustgate.yaml`
-- [CLI Reference](cli.md) -- All commands and flags for the `trustgate` CLI
-- [Canonicalization](canonicalization.md) -- How raw LLM responses are normalized, and how to write your own canonicalizer
-- [Human Calibration](human-calibration.md) -- Using human reviewers when you don't have ground-truth labels
-- [API Reference](api-reference.md) -- Python API for programmatic use
-- [FAQ](faq.md) -- Common questions and troubleshooting
+### Any endpoint
+Works with LLMs, agents, RAG pipelines, or any HTTP API. No model or temperature control required.
+
+→ **[Configuration guide](configuration.md)**
+
+### Human calibration without ground truth
+Generate a shareable HTML questionnaire for domain experts. No server needed — works offline in any browser. Answers are shown in randomized order to prevent bias. Each selection produces a nonconformity score that feeds into the conformal calibration.
+
+→ **[Human Calibration guide](human-calibration.md)**
+
+### Runtime trust layer
+Wrap your endpoint with `TrustGate` to attach reliability metadata to every response. Passthrough mode (1 API call) or sampled mode (K calls with per-query confidence).
+
+→ **[API Reference](api-reference.md)**
+
+### Cost-aware
+Pre-flight estimate shows the cost/reliability tradeoff before you spend money. Sequential stopping via Hoeffding bounds saves ~50% of API costs.
+
+→ **[CLI Reference](cli.md)**
+
+### Decision-point certification
+For systems that produce long outputs, certify at the decision point (the SQL query, not the report). TrustGate automatically warns when canonicalization is failing.
+
+→ **[Canonicalization guide](canonicalization.md)**
+
+---
+
+## Metrics Reference
+
+| Metric | What it means |
+|--------|--------------|
+| **Reliability Level** | Highest confidence level where the coverage guarantee holds |
+| **M\*** | How many top answers needed to guarantee the correct one is included |
+| **Empirical Coverage** | Fraction of test questions where top-M* answers contain the correct one |
+| **Conditional Coverage** | Same, but only on questions the model can solve |
+| **Capability Gap** | Fraction of questions where the correct answer never appeared in K samples |
+
+→ **[Detailed explanations in Concepts](concepts.md)**
+
+---
+
+## Python API
+
+```python
+from theaios import trustgate
+
+# Certify
+result = trustgate.certify(config_path="trustgate.yaml")
+
+# Sample + profile (for custom pipelines)
+profiles = trustgate.sample_and_profile(config, questions)
+
+# Diagnose profile quality
+diag = trustgate.diagnose_profiles(profiles)
+
+# Generate shareable questionnaire
+trustgate.generate_questionnaire(questions, profiles, "questionnaire.html")
+
+# Runtime trust layer
+gate = trustgate.TrustGate(config=config, certification=result)
+response = gate.query("What is 2+2?")
+```
+
+→ **[Full API Reference](api-reference.md)**
+
+---
+
+## Further Reading
+
+- **[Concepts](concepts.md)** — Self-consistency, conformal prediction, sequential stopping, how human feedback becomes a reliability guarantee
+- **[Configuration](configuration.md)** — Full `trustgate.yaml` reference, generic endpoints
+- **[CLI Reference](cli.md)** — All commands and flags
+- **[Canonicalization](canonicalization.md)** — Built-in canonicalizers, custom plugins, decision-point guidance
+- **[Human Calibration](human-calibration.md)** — HTML questionnaire, web UI, labels format
+- **[API Reference](api-reference.md)** — Python API, TrustGate runtime class
+- **[FAQ](faq.md)** — Common questions
+
+---
+
+## Paper
+
+For the full theory: [*Black-Box Reliability Certification for AI Agents via Self-Consistency Sampling and Conformal Calibration*](https://arxiv.org/abs/2602.21368) (Mouzouni, 2026).
