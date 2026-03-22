@@ -12,3 +12,4 @@ build/
 .trustgate_cache/
 startup/
 scripts/
+site/

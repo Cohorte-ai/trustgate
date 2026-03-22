@@ -1,279 +1,233 @@
 # Human Calibration
 
-TrustGate includes a local web UI for collecting human correctness judgments.
-Use it when you do not have ground truth labels and need a domain expert to
-evaluate whether the AI's answers are correct.
+TrustGate includes tools for collecting human calibration labels when you
+don't have ground truth. A domain expert reviews the AI's candidate answers
+and identifies the acceptable one — providing the exact nonconformity scores
+needed for conformal calibration.
 
 ---
 
 ## When to Use Human Calibration
 
-Use the calibration UI when:
-
-- **You have no ground truth labels.** Many real-world tasks (medical triage,
-  legal analysis, customer support quality) lack pre-labeled datasets. A human
-  reviewer can provide the labels TrustGate needs for conformal calibration.
-
-- **You want domain expert evaluation.** The reviewer does not need any ML
-  knowledge. They see a question, see the AI's answer, and mark it correct or
-  incorrect. Send the URL to a doctor, lawyer, or subject-matter expert and
-  they can start immediately.
-
-- **You need a quick calibration set.** Labeling ~50 items takes about 5 minutes.
-  That is enough for a meaningful reliability estimate.
+- **No ground truth labels.** Many real-world tasks (medical triage, legal
+  analysis, customer support) lack pre-labeled datasets.
+- **Domain expert evaluation.** The reviewer doesn't need ML knowledge —
+  they see a question, see the AI's candidate answers, and pick the correct one.
+- **Quick calibration.** Labeling ~50 items takes about 10 minutes.
 
 ---
 
 ## How It Works
 
-1. TrustGate samples responses from your AI endpoint and selects the top answer
-   (most frequent canonical form) for each question.
-2. The calibration server presents each (question, top answer) pair in a clean
-   web interface.
-3. The human reviewer marks each pair as **Correct** or **Incorrect**.
-4. Labels are auto-saved to a JSON file after every judgment.
-5. You feed the saved labels into `trustgate certify` to produce the reliability
-   certificate.
+1. TrustGate samples K responses per question from your endpoint.
+2. Responses are canonicalized and ranked by frequency (the self-consistency profile).
+3. The reviewer sees each question alongside **all candidate answers in randomized order** — no frequencies, no rank numbers, preventing anchoring bias.
+4. The reviewer picks the acceptable answer (or "none of these").
+5. The system internally resolves the rank of the selected answer → nonconformity score.
+6. Labels are saved as `{question_id: canonical_answer}` — directly compatible with `trustgate certify --ground-truth`.
 
 ---
 
-## Starting the Calibration UI
+## Option A: Shareable HTML Questionnaire (Recommended)
 
-### From the CLI
+Generate a self-contained HTML file and share it with anyone — email, Slack,
+Google Drive. No server needed. Works offline, works on mobile.
 
 ```bash
-trustgate calibrate --serve --questions questions.csv --port 8080
+# 1. Sample + generate questionnaire
+trustgate calibrate --export questionnaire.html
+
+# 2. Share questionnaire.html with your reviewer
+#    They open it in any browser, pick answers, click "Download Labels"
+#    → downloads labels.json
+
+# 3. Reviewer sends labels.json back to you
+
+# 4. Certify
+trustgate certify --ground-truth labels.json
 ```
 
-| Flag            | Default                    | Description                      |
-|-----------------|----------------------------|----------------------------------|
-| `--serve`       | (required flag)            | Start the web UI server          |
-| `--questions`   | (required)                 | Path to questions file (CSV/JSON)|
-| `--port`        | `8080`                     | Port for the local server        |
-| `--output`      | `calibration_labels.json`  | Where to save the labels         |
-| `--config`      | `trustgate.yaml`           | Config file (for endpoint info)  |
+The HTML file embeds all questions and shuffled answers as inline JSON.
+Everything runs client-side in the browser. Zero infrastructure.
 
-The server starts on `http://localhost:8080` and opens your browser
-automatically.
+### From Python
+
+```python
+from theaios.trustgate import sample_and_profile, generate_questionnaire
+from theaios.trustgate.config import load_config, load_questions
+
+config = load_config("trustgate.yaml")
+questions = load_questions("questions.csv")
+
+# Sample and build profiles
+profiles = sample_and_profile(config, questions)
+
+# Generate the questionnaire
+generate_questionnaire(questions, profiles, "questionnaire.html")
+```
+
+---
+
+## Option B: Local Web UI
+
+For reviewers on the same network. Requires Flask (`pip install "theaios-trustgate[serve]"`).
+
+```bash
+trustgate calibrate --serve --port 8080
+```
+
+| Flag              | Default                    | Description                       |
+|-------------------|----------------------------|-----------------------------------|
+| `--serve`         | (flag)                     | Start the web UI server           |
+| `--export`        |                            | Export as shareable HTML file      |
+| `--questions`     |                            | Questions file (CSV/JSON)         |
+| `--port`          | `8080`                     | Port for the local server         |
+| `--output`        | `calibration_labels.json`  | Where to save the labels          |
+| `--config`        | `trustgate.yaml`           | Config file                       |
+| `--cost-per-request` |                         | USD per request (generic endpoints)|
+| `--yes`           |                            | Skip confirmation prompt          |
 
 ### From Python
 
 ```python
 from theaios.trustgate.serve import serve_calibration
-from theaios.trustgate.config import load_questions
+from theaios.trustgate import sample_and_profile
+from theaios.trustgate.config import load_config, load_questions
 
+config = load_config("trustgate.yaml")
 questions = load_questions("questions.csv")
-
-# top_answers maps question ID -> the AI's best answer (string)
-top_answers = {
-    "q001": "Paris",
-    "q002": "Jupiter",
-    # ...
-}
+profiles = sample_and_profile(config, questions)
 
 serve_calibration(
     questions=questions,
-    top_answers=top_answers,
+    profiles=profiles,
     port=8080,
     output_file="calibration_labels.json",
 )
 ```
 
-You can also create the Flask app directly for integration into an existing
-server:
-
-```python
-from theaios.trustgate.serve import create_app
-
-app = create_app(
-    questions=questions,
-    top_answers=top_answers,
-    output_file="calibration_labels.json",
-)
-
-# Use with any WSGI server
-app.run(host="0.0.0.0", port=8080)
-```
-
-### Installation
-
-The calibration UI requires Flask. Install it with the `serve` extra:
-
-```bash
-pip install "theaios-trustgate[serve]"
-```
-
 ---
 
-## The Reviewer Interface
+## The Review Interface
 
-When the reviewer opens `http://localhost:8080`, they see:
+The reviewer sees each question with all candidate answers in **randomized
+order** — no rank numbers, no frequency percentages. They judge purely on
+content.
 
 ```
- +------------------------------------------+
- | ██████████████░░░░░░░░░░  23/50  (46%)   |
- |                                          |
- |  Question:                               |
- |  What is the standard treatment for      |
- |  acute myocardial infarction?            |
- |                                          |
- |  AI's Answer:                            |
- |  Aspirin, heparin, and percutaneous      |
- |  coronary intervention (PCI)             |
- |                                          |
- |  +-------------+  +--------------+       |
- |  |   Correct   |  |  Incorrect   |       |
- |  +-------------+  +--------------+       |
- +------------------------------------------+
+┌──────────────────────────────────────────────────┐
+│ █████████████████░░░░░░░  12/50  (24%)           │
+│                                                  │
+│  Question:                                       │
+│  What is the standard treatment for              │
+│  acute myocardial infarction?                    │
+│                                                  │
+│  Which answer is acceptable?                     │
+│                                                  │
+│  ┌──────────────────────────────────────────┐    │
+│  │  Beta-blockers and bed rest              │    │
+│  └──────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────┐    │
+│  │  Aspirin + heparin + PCI                 │    │
+│  └──────────────────────────────────────────┘    │
+│  ┌──────────────────────────────────────────┐    │
+│  │  Thrombolysis with tPA                   │    │
+│  └──────────────────────────────────────────┘    │
+│  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┐    │
+│  │     None of these are correct            │    │
+│  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┘    │
+│                                                  │
+│  Keyboard: 1-9 to pick, 0 for none              │
+└──────────────────────────────────────────────────┘
 ```
 
-### Features
-
-- **Progress bar** --- Shows how many items have been reviewed out of the total,
-  with a percentage. Updates after every judgment.
-
-- **Keyboard shortcuts** --- Press **Y** to mark the answer as correct, **N** to
-  mark it as incorrect. This makes rapid labeling possible without touching the
-  mouse.
-
-- **Auto-save** --- Labels are written to disk (as JSON) after every single
-  judgment. If the browser crashes or the server is stopped, no work is lost.
-
-- **Auto-advance** --- After marking an answer, the next unlabeled question
-  loads automatically. No need to click "Next".
+- **Keyboard shortcuts**: `1`-`9` to pick an answer, `0` for "none"
+- **Auto-advance**: next question loads automatically after each pick
+- **Auto-save**: labels saved to disk after every judgment (web UI only)
+- **Mobile-friendly**: works on phones and tablets
 
 ---
 
 ## The Admin Panel
 
-Navigate to `http://localhost:8080/admin` for an overview dashboard:
+Navigate to `http://localhost:8080/admin` (web UI only):
 
-- Overall progress bar and completion percentage
-- Count of correct vs. incorrect judgments so far
-- Table of the 20 most recent judgments (auto-refreshes every 3 seconds)
-- **Download JSON** button to export the current labels file at any time
-
-The admin panel is useful for monitoring progress when you have sent the
-reviewer URL to someone else.
+- Progress bar and completion percentage
+- Count of top-1 correct / lower rank / none acceptable
+- Table of recent judgments with resolved ranks
+- **Download JSON** button to export labels at any time
 
 ### API Endpoints
 
-The calibration server exposes a simple REST API used by the frontend:
-
-| Endpoint          | Method | Description                             |
-|-------------------|--------|-----------------------------------------|
-| `/`               | GET    | Reviewer UI (HTML)                      |
-| `/admin`          | GET    | Admin dashboard (HTML)                  |
-| `/api/next`       | GET    | Next unlabeled question + answer        |
-| `/api/review`     | POST   | Submit a judgment (`question_id`, `judgment`) |
-| `/api/progress`   | GET    | Current progress (`completed`, `total`, `pct`) |
-| `/api/results`    | GET    | All labels collected so far             |
-| `/api/export`     | GET    | Download labels as a JSON file          |
+| Endpoint       | Method | Description                                      |
+|----------------|--------|--------------------------------------------------|
+| `/`            | GET    | Reviewer UI (HTML)                               |
+| `/admin`       | GET    | Admin dashboard (HTML)                           |
+| `/api/next`    | GET    | Next question + shuffled candidate answers       |
+| `/api/review`  | POST   | Submit selection (`question_id`, `selected_answer`) |
+| `/api/progress`| GET    | Progress (`completed`, `total`, `pct`)           |
+| `/api/results` | GET    | All labels with resolved ranks                   |
+| `/api/export`  | GET    | Download labels JSON                             |
 
 ---
 
-## After Calibration
+## Labels Format
 
-The calibration UI saves labels to a JSON file (default:
-`calibration_labels.json`). The file maps question IDs to judgments:
+The labels file maps question IDs to the selected canonical answer:
 
 ```json
 {
-  "q001": "correct",
-  "q002": "incorrect",
-  "q003": "correct",
-  "q004": "correct",
-  "q005": "incorrect"
+  "q001": "B",
+  "q002": "Paris",
+  "q003": "42"
 }
 ```
 
-Feed this file into the certification pipeline:
+Questions where the reviewer picked "none" are excluded (they represent
+unsolvable items — the correct answer never appeared in K samples).
 
-### From the CLI
+This format is directly compatible with `trustgate certify --ground-truth`.
+
+---
+
+## End-to-End Workflow
 
 ```bash
-trustgate certify --ground-truth calibration_labels.json
-```
+# 1. Install
+pip install "theaios-trustgate[serve]"
 
-### From Python
+# 2. Prepare questions
+# questions.csv:
+#   id,question
+#   q001,"What is the capital of France? (A) London (B) Paris (C) Berlin"
+#   q002,"What causes type 2 diabetes?"
 
-```python
-import json
-from theaios import trustgate
+# 3. Option A: Generate shareable questionnaire
+trustgate calibrate --export questionnaire.html
+# Share with reviewer → they send back labels.json
 
-with open("calibration_labels.json") as f:
-    labels = json.load(f)
+# 3. Option B: Start local web UI
+trustgate calibrate --serve --port 8080
+# Reviewer opens browser, reviews items, labels auto-saved
 
-result = trustgate.certify(
-    config=trustgate.TrustGateConfig(
-        endpoint=trustgate.EndpointConfig(
-            url="https://api.openai.com/v1/chat/completions",
-            model="gpt-4.1",
-            api_key_env="OPENAI_API_KEY",
-        ),
-        canonicalization=trustgate.CanonConfig(type="mcq"),
-    ),
-    questions=trustgate.load_config("trustgate.yaml").questions,
-    labels=labels,
-)
-
-print(f"Reliability: {result.reliability_level:.1%}")
+# 4. Certify using the labels
+trustgate certify --ground-truth labels.json
 ```
 
 ---
 
 ## Practical Tips
 
-- **50 items in 5 minutes.** That is the typical pace with keyboard shortcuts.
-  Plan for about 6 seconds per item. For a calibration set of 250 items, budget
-  roughly 25 minutes.
+- **50 items in 10 minutes.** Plan ~10 seconds per item with keyboard shortcuts.
 
-- **Send the URL to a domain expert.** The reviewer does not need Python, ML
-  knowledge, or any special setup. They just need a web browser and the URL
-  (e.g., `http://your-machine:8080`). If you are on a shared network, bind to
-  `0.0.0.0` instead of `127.0.0.1` so others can access it.
+- **Share the HTML questionnaire** for cross-organization reviews. The reviewer
+  doesn't need Python, network access, or any setup — just a browser.
 
-- **Labels are auto-saved.** You can stop and resume at any time. Already-labeled
-  questions are skipped on reload.
+- **Quality over quantity.** 50 well-labeled items are more valuable than 500
+  noisy ones. Choose a reviewer who understands the domain.
 
-- **Use the admin panel to monitor.** If you delegate labeling to someone else,
-  keep `/admin` open to track their progress in real time.
+- **Answers are randomized** to prevent the reviewer from anchoring on the
+  AI's confidence. The system resolves ranks internally.
 
-- **Quality over quantity.** For conformal calibration, 50 well-labeled items are
-  more valuable than 500 noisy ones. Choose a reviewer who genuinely understands
-  the domain.
-
-- **Combine with ground truth.** If you have partial ground truth labels (e.g.,
-  from a test set) and need more, run human calibration for the unlabeled
-  portion, then merge the two JSON files before running `trustgate certify`.
-
----
-
-## End-to-End Workflow
-
-Here is the complete workflow from zero labels to a reliability certificate:
-
-```bash
-# 1. Install with the serve extra
-pip install "theaios-trustgate[serve]"
-
-# 2. Prepare your questions file (CSV with id, question columns)
-# questions.csv:
-#   id,question
-#   q001,"What is the capital of France?"
-#   q002,"What causes type 2 diabetes?"
-#   ...
-
-# 3. Sample responses and start the calibration UI
-trustgate calibrate --serve --questions questions.csv --port 8080
-
-# 4. Review items in the browser (Y/N keyboard shortcuts)
-#    Labels are auto-saved to calibration_labels.json
-
-# 5. Certify using the collected labels
-trustgate certify --ground-truth calibration_labels.json --questions questions.csv
-
-# Output:
-#   Reliability Level:   92.3%
-#   Status:              PASS
-```
+- **Combine with ground truth.** If you have partial labels, run human
+  calibration for the rest, merge the JSON files, then certify.

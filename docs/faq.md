@@ -192,7 +192,7 @@ syntax, `match` statements, and `dataclasses` with enhanced field support.
 
 ## 10. How do I contribute?
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for full guidelines. In brief:
+See the [repository](https://github.com/Cohorte-ai/trustgate) for full guidelines. In brief:
 
 1. Fork the repository and create a feature branch.
 2. Install dev dependencies: `pip install -e ".[dev]"`.
