@@ -1,6 +1,10 @@
 <div align="center">
   <a href="https://cohorte-ai.github.io/trustgate/">
-    <img alt="TrustGate" src=".github/images/TheAIOS-TrustGate.svg" width="60%">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/images/TheAIOS-TrustGate-darkmode.svg">
+      <source media="(prefers-color-scheme: light)" srcset=".github/images/TheAIOS-TrustGate.svg">
+      <img alt="TrustGate" src=".github/images/TheAIOS-TrustGate.svg" width="60%">
+    </picture>
   </a>
 </div>
 
