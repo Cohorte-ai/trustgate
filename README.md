@@ -14,7 +14,7 @@
 
 <div align="center">
   <a href="https://opensource.org/licenses/Apache-2.0" target="_blank"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License"></a>
-  <a href="https://pypi.org/project/theaios-trustgate/" target="_blank"><img src="https://img.shields.io/pypi/v/theaios-trustgate?label=%20" alt="Version"></a>
+  <a href="https://github.com/Cohorte-ai/trustgate" target="_blank"><img src="https://img.shields.io/badge/version-0.1.0-green" alt="Version"></a>
   <a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python"></a>
   <a href="https://cohorte-ai.github.io/trustgate/" target="_blank"><img src="https://img.shields.io/badge/docs-mkdocs-blue" alt="Docs"></a>
 </div>
