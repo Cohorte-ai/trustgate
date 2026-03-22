@@ -40,7 +40,7 @@ trustgate = "theaios.trustgate.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/Cohorte-ai/trustgate"
-Documentation = "https://github.com/Cohorte-ai/trustgate/tree/main/docs"
+Documentation = "https://cohorte-ai.github.io/trustgate/"
 Repository = "https://github.com/Cohorte-ai/trustgate"
 
 [tool.hatch.build.targets.wheel]
