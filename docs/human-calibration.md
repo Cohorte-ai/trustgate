@@ -26,6 +26,24 @@ needed for conformal calibration.
 5. The system internally resolves the rank of the selected answer → nonconformity score.
 6. Labels are saved as `{question_id: canonical_answer}` — directly compatible with `trustgate certify --ground-truth`.
 
+### What happens to the reviewer's selections
+
+Each selection produces a **nonconformity score** — the rank of the selected
+answer in the AI's original self-consistency profile:
+
+- Reviewer picks an answer that was the AI's **most frequent** response → score = 1 (the AI agreed with the human)
+- Reviewer picks an answer that was the AI's **second most frequent** → score = 2 (the AI's top pick was wrong, but the correct answer was close)
+- Reviewer picks an answer that was **third or lower** → score = 3+ (the AI buried the correct answer)
+- Reviewer picks **"none of these"** → score = ∞ (the AI never produced the correct answer — capability gap)
+
+These scores feed into conformal calibration: they are sorted, and the
+quantile at confidence level 1-α gives M\* (how many top answers you need to
+include to guarantee coverage). If most scores are 1, then M\*=1 and the
+reliability level is high. See [Concepts](concepts.md#worked-example-from-human-clicks-to-reliability-level) for a worked example.
+
+The reviewer doesn't need to understand any of this — they just pick the
+correct answer. The math happens behind the scenes.
+
 ---
 
 ## Option A: Shareable HTML Questionnaire (Recommended)

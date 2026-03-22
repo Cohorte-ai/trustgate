@@ -38,6 +38,32 @@ Here is how it works at a high level:
 
 The key property of conformal prediction is that the coverage guarantee is **distribution-free** -- it holds regardless of the underlying data distribution, with no assumptions about how the model generates answers. If TrustGate reports a reliability level of 94.6% at alpha=0.10, that means the guarantee holds with at least 90% confidence.
 
+### Where do the correct answers come from?
+
+There are two ways to provide the correct answers for the calibration set:
+
+**Option A: Ground truth labels.** If you have a dataset with known answers (e.g., a benchmark like GSM8K or MMLU), you supply them directly. TrustGate looks up each correct answer in the self-consistency profile and computes the nonconformity score automatically.
+
+**Option B: Human calibration.** When you don't have ground truth, a human reviewer provides the answers. For each question, TrustGate shows all the candidate answers the AI produced (in randomized order, with no ranking or frequency information). The reviewer picks the acceptable one. The system then resolves which rank that answer held in the original self-consistency profile — that rank is the nonconformity score.
+
+The two options are mathematically equivalent: both produce a nonconformity score per question, which feeds into the same conformal calibration procedure. The human is not grading or scoring — they are identifying which answer is correct so the system can measure where it falls in the AI's own ranking.
+
+### Worked example: from human clicks to reliability level
+
+Suppose you have 50 calibration questions and a human reviewer labels each one:
+
+| Question | AI's ranked answers | Human picks | Nonconformity score |
+|----------|-----------------------|-------------|---------------------|
+| q1 | "Paris" (8/10), "Lyon" (2/10) | "Paris" | 1 (rank 1) |
+| q2 | "42" (6/10), "43" (3/10), "44" (1/10) | "42" | 1 (rank 1) |
+| q3 | "B" (5/10), "C" (3/10), "A" (2/10) | "C" | 2 (rank 2) |
+| q4 | "Aspirin" (4/10), "Ibuprofen" (4/10), "Tylenol" (2/10) | "Ibuprofen" | 2 (rank 2) |
+| q5 | "Red" (5/10), "Blue" (3/10), "Green" (2/10) | (none) | ∞ (not in list) |
+
+The human doesn't see the frequencies or ranks — they see the answers in random order and judge on content alone. TrustGate resolves the rank internally.
+
+Now we have 50 scores: mostly 1s (the AI's top answer was correct), some 2s (correct answer was second), and a few ∞s (correct answer never appeared — capability gap). These scores are sorted, and the conformal quantile at the desired alpha level gives M\*. If most scores are 1, then M\*=1 and the reliability level is high.
+
 ---
 
 ## 3. Reliability Level
