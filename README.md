@@ -15,7 +15,6 @@
 <div align="center">
   <a href="https://opensource.org/licenses/Apache-2.0" target="_blank"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License"></a>
   <a href="https://github.com/Cohorte-ai/trustgate" target="_blank"><img src="https://img.shields.io/badge/version-0.1.0-green" alt="Version"></a>
-  <a href="https://www.python.org/downloads/" target="_blank"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python"></a>
   <a href="https://arxiv.org/abs/2602.21368" target="_blank"><img src="https://img.shields.io/badge/arXiv-2602.21368-b31b1b" alt="arXiv"></a>
   <a href="https://cohorte-ai.github.io/trustgate/" target="_blank"><img src="https://img.shields.io/badge/docs-mkdocs-blue" alt="Docs"></a>
   <a href="https://x.com/CohorteAI" target="_blank"><img src="https://img.shields.io/twitter/follow/CohorteAI?style=social" alt="Follow @CohorteAI"></a>
