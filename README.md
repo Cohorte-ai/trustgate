@@ -124,18 +124,32 @@ endpoint:
   cost_per_request: 0.03
 ```
 
-## Certify at the Decision Point
+## Certify Each Component, Not Just the Final Output
 
-Self-consistency works on **short, structured outputs**. For systems that produce long outputs, certify at the decision point:
+Complex AI systems are pipelines — retriever, reranker, reasoning, generation. Don't certify the whole pipeline as a black box. **Certify each component independently** to find exactly where reliability breaks down.
 
-| System | Long output | Certify on |
-|--------|------------|------------|
-| SQL agent | English report | The SQL query |
-| Medical triage | Patient summary | Triage category (1–5) |
-| Legal review | Contract analysis | Conclusion (approve/reject) |
-| Code agent | Full implementation | Test pass/fail |
+```
+Query → [Retriever] → [Reranker] → [Generator] → Answer
+            ↑              ↑             ↑
+      certify: 94%    certify: 91%   certify: 87%
+      "right docs?"  "right order?" "right answer?"
+```
 
-TrustGate warns you automatically when canonicalization is failing.
+Each component is just an endpoint — TrustGate certifies it independently with its own questions, canonicalization, and reliability level. This lets you:
+
+- **Pinpoint failures**: the generator is the weak link, not the retriever
+- **Iterate efficiently**: improve one component, re-certify just that one
+- **Stay agnostic**: document changes don't invalidate the retriever certification
+
+| Component | Certify on | Canonicalization |
+|-----------|------------|------------------|
+| RAG retriever | Retrieved document IDs | Exact match |
+| SQL agent | Generated SQL query | Normalized SQL |
+| Classification step | Category label | MCQ |
+| Reasoning step | Intermediate conclusion | LLM-judge or custom |
+| Final answer | Short structured output | Numeric / MCQ |
+
+TrustGate warns you automatically when outputs are too long or diverse for meaningful self-consistency measurement.
 
 ## Pre-flight Cost Estimate
 

@@ -124,10 +124,10 @@ Pre-flight estimate shows the cost/reliability tradeoff before you spend money. 
 
 → **[CLI Reference](cli.md)**
 
-### Decision-point certification
-For systems that produce long outputs, certify at the decision point (the SQL query, not the report). TrustGate automatically warns when canonicalization is failing.
+### Component-level certification
+Don't certify the whole pipeline — certify each component independently to find where reliability breaks down. The retriever, the reasoner, the generator — each gets its own reliability level.
 
-→ **[Canonicalization guide](canonicalization.md)**
+→ **[Canonicalization guide](canonicalization.md#certifying-pipeline-components)**
 
 ---
 

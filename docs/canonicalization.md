@@ -344,3 +344,79 @@ print(list_canonicalizers())
 | Open-ended / subjective         | `llm_judge`               | Needs a judge endpoint; adds API cost           |
 | Free-text with semantic overlap | `embedding`               | Groups similar answers; no ground truth needed   |
 | Domain-specific                 | Custom plugin             | Write your own for maximum control              |
+
+---
+
+## Certifying Pipeline Components
+
+Complex AI systems are multi-step pipelines. Instead of certifying the final
+output (which is often long and hard to canonicalize), **certify each component
+independently**. This lets you pinpoint exactly where reliability breaks down
+and iterate on the weak link without re-certifying the whole system.
+
+```
+Query → [Retriever] → [Reranker] → [Generator] → Answer
+            ↑              ↑             ↑
+      certify: 94%    certify: 91%   certify: 87%
+```
+
+Each component is just an endpoint — give it a question, get a short structured
+output. TrustGate certifies it independently with its own questions and
+canonicalization.
+
+| Pipeline component | What it outputs | Canonicalization |
+|--------------------|-----------------|------------------|
+| RAG retriever | Retrieved document IDs | Exact match (custom) |
+| SQL agent | SQL query | Normalized SQL (custom) |
+| Classification step | Category label | `mcq` |
+| Entity extraction | Entity list | Sorted list (custom) |
+| Reasoning / chain-of-thought | Intermediate conclusion | `llm_judge` |
+| Final short answer | Structured value | `numeric` or `mcq` |
+
+### Why component-level certification matters
+
+- **Pinpoint failures.** "The generator is the weak link, not the retriever."
+- **Iterate faster.** Improve one component, re-certify just that one — not
+  the full pipeline.
+- **Stay agnostic to data changes.** If your RAG corpus changes, re-certify
+  the retriever. The generator certification is still valid.
+- **Quantify cost/reliability tradeoffs per component.** A cheap model might
+  be reliable enough for retrieval but not for reasoning.
+
+### Example: certifying a RAG retriever
+
+```python
+from theaios.trustgate import Canonicalizer, register_canonicalizer
+
+@register_canonicalizer("retriever_docs")
+class RetrieverCanonicalizer(Canonicalizer):
+    def canonicalize(self, question: str, answer: str) -> str:
+        """Extract sorted document IDs from retriever output."""
+        import json
+        try:
+            docs = json.loads(answer)
+            doc_ids = sorted(d["id"] for d in docs)
+            return "|".join(doc_ids)
+        except (json.JSONDecodeError, KeyError):
+            return ""
+```
+
+```yaml
+# trustgate-retriever.yaml
+endpoint:
+  url: "https://my-rag.example.com/api/retrieve"
+  temperature: null
+  request_template:
+    query: "{{question}}"
+  response_path: "documents"
+  cost_per_request: 0.001
+
+canonicalization:
+  type: "retriever_docs"
+```
+
+```bash
+trustgate certify --config trustgate-retriever.yaml
+```
+
+Now you know the retriever's reliability independently of the generator.
