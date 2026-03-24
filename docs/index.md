@@ -174,6 +174,7 @@ response = gate.query("What is 2+2?")
 ## Further Reading
 
 - **[Concepts](concepts.md)** — Self-consistency, conformal prediction, sequential stopping, how human feedback becomes a reliability guarantee
+- **[Getting Your Questions](getting-questions.md)** — Generate with AI, extract from production logs, augment, or use built-in benchmarks
 - **[Configuration](configuration.md)** — Full `trustgate.yaml` reference, generic endpoints
 - **[CLI Reference](cli.md)** — All commands and flags
 - **[Canonicalization](canonicalization.md)** — Built-in canonicalizers, custom plugins, decision-point guidance

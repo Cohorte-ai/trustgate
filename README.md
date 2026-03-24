@@ -103,6 +103,28 @@ trustgate calibrate --export questionnaire.html
 trustgate certify --ground-truth labels.json
 ```
 
+## Where Do the Questions Come From?
+
+You don't need a gold-standard dataset to use TrustGate. Three ways to get started:
+
+**1. Generate questions with AI.** Ask an LLM to produce realistic questions for your system:
+```
+"Generate 100 realistic customer support questions that users would ask
+our e-commerce chatbot, covering orders, returns, shipping, and products."
+```
+
+**2. Extract from production logs.** Pull real queries from your observability stack (Datadog, Langfuse, LangSmith, custom logs). These are the actual questions your system faces — the most representative test set possible.
+
+**3. Use built-in benchmarks.** For standard tasks, TrustGate ships dataset loaders:
+```python
+from theaios.trustgate.datasets import load_gsm8k, load_mmlu
+questions = load_mmlu(subjects=["abstract_algebra"], n=100)
+```
+
+No ground truth labels? No problem — use [human calibration](https://cohorte-ai.github.io/trustgate/human-calibration/). A domain expert reviews 50 items in 10 minutes.
+
+→ **[Full guide: Getting Your Questions](https://cohorte-ai.github.io/trustgate/getting-questions/)**
+
 ## Works With Any Endpoint
 
 LLMs, agents, RAG pipelines — anything with an HTTP API:

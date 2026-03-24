@@ -53,6 +53,7 @@ nav:
   - Home: index.md
   - Getting Started:
       - Concepts: concepts.md
+      - Getting Your Questions: getting-questions.md
       - Configuration: configuration.md
       - CLI Reference: cli.md
   - Guides:
