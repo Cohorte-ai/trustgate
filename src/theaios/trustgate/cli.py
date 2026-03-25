@@ -544,19 +544,26 @@ def _estimate_time(
     k = config.sampling.k_fixed or config.sampling.k_max
     total_samples = n_questions * k
 
+    # Estimate effective samples (sequential stopping saves ~50%)
+    if config.sampling.sequential_stopping:
+        effective_samples = int(total_samples * 0.5)
+    else:
+        effective_samples = total_samples
+
     # Sampling time
     max_concurrent = config.sampling.max_concurrent
     if config.sampling.sequential_stopping:
-        # Sequential: ~K serial calls per question, questions in parallel
+        # Sequential: samples are serial per question, but questions run in parallel
+        # Wall time dominated by the slowest question × K
         sampling_s = (k * _AVG_API_LATENCY * n_questions) / max_concurrent
     else:
         # Fast: all samples in parallel, limited by semaphore
         sampling_s = (total_samples * _AVG_API_LATENCY) / max_concurrent
 
-    # Canonicalization time (only for LLM-based)
+    # Canonicalization time (only for LLM-based, scales with effective samples)
     uses_llm_canon = config.canonicalization.type in ("llm", "llm_judge")
     if uses_llm_canon:
-        canon_s = (total_samples * _AVG_API_LATENCY) / _CANON_CONCURRENCY
+        canon_s = (effective_samples * _AVG_API_LATENCY) / _CANON_CONCURRENCY
     else:
         canon_s = 0.0
 
