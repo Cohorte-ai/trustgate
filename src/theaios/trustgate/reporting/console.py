@@ -55,6 +55,16 @@ def print_certification_result(
         "https://cohorte-ai.github.io/trustgate/concepts/[/dim]"
     )
 
+    # Cache hint
+    from pathlib import Path
+
+    cache_dir = Path(".trustgate_cache")
+    if cache_dir.exists() and any(cache_dir.glob("*.json")):
+        console.print(
+            "[dim]This run used cached data. "
+            "Clear cache with: trustgate cache clear[/dim]"
+        )
+
     # Verbose: per-alpha coverage breakdown
     if verbose and result.alpha_coverage:
         alpha_table = Table(title="Coverage by Alpha")
