@@ -434,12 +434,30 @@ def calibrate(
             click.echo(click.style(f"WARNING: {w}", fg="yellow"), err=True)
         click.echo()
 
+    # For human calibration (--export or --serve), only show a random
+    # subset of questions (n_cal from config). Per the paper (Section 6.3),
+    # the calibration set must be randomly sampled and exchangeable with
+    # the test set. LLM auto-judge can run on all questions.
+    from theaios.trustgate.calibration import random_split
+
+    n_cal = min(config.calibration.n_cal, len(profiles) // 2)
+    n_test = min(config.calibration.n_test, len(profiles) - n_cal)
+    cal_ids, _test_ids = random_split(list(profiles.keys()), n_cal, n_test)
+    cal_set = set(cal_ids)
+    cal_questions = [q for q in questions if q.id in cal_set]
+    cal_profiles = {qid: profiles[qid] for qid in cal_ids if qid in profiles}
+
+    click.echo(
+        f"Selected {len(cal_questions)} questions for human calibration "
+        f"(out of {len(profiles)} total)."
+    )
+
     # --export: generate shareable HTML questionnaire
     if export_path:
         from theaios.trustgate.questionnaire import generate_questionnaire
 
         try:
-            out = generate_questionnaire(questions, profiles, output_path=export_path)
+            out = generate_questionnaire(cal_questions, cal_profiles, output_path=export_path)
         except OSError as exc:
             click.echo(f"Error writing questionnaire: {exc}", err=True)
             sys.exit(1)
@@ -489,8 +507,8 @@ def calibrate(
     click.echo("Send the URL to your domain expert. Press Ctrl+C when done.\n")
 
     serve_calibration(
-        questions=questions,
-        profiles=profiles,
+        questions=cal_questions,
+        profiles=cal_profiles,
         port=port,
         output_file=output,
     )

@@ -225,7 +225,8 @@ class TestCalibrateCLI:
         mock_serve.assert_called_once()
         call_kwargs = mock_serve.call_args
         assert call_kwargs.kwargs["port"] == 9999
-        assert call_kwargs.kwargs["profiles"] == mock_profiles
+        # Only a subset (n_cal) of profiles is passed for human calibration
+        assert len(call_kwargs.kwargs["profiles"]) <= len(mock_profiles)
 
 
 # ===========================================================================
