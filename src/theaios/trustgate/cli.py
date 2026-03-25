@@ -611,16 +611,14 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
     k = estimate["k"]
     table.add_row("Questions", str(n_questions))
     table.add_row("Samples per question (K)", str(k))
-    table.add_row("Max requests", f"{estimate['total_requests']:,}")
+    table.add_row("Requests", f"{estimate['est_requests']:,}")
     if estimate["sequential_stopping"]:
-        table.add_row("Sequential stopping", "enabled (~50% savings)")
-        table.add_row("Est. requests", f"~{estimate['est_requests']:,}")
+        table.add_row("Sequential stopping", "enabled (~50% fewer requests)")
 
     cost_per_req = estimate["cost_per_request"]
     if cost_per_req is not None:
         table.add_row("Cost per request", f"${cost_per_req:.4f}")
         table.add_row("Est. cost", f"${estimate['est_cost']:.2f}")
-        table.add_row("Max cost", f"${estimate['max_cost']:.2f}")
     else:
         table.add_row(
             "Cost",
@@ -638,34 +636,43 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
 
     console.print(table)
 
-    # --- Cost / Reliability arbitrage ---
+    # --- Cost / Time / Reliability tradeoff ---
+    arb_table = Table(title="Cost / Time / Reliability Tradeoff")
+    arb_table.add_column("K", justify="right")
+    arb_table.add_column("Requests", justify="right")
     if cost_per_req is not None:
-        arbitrage = estimate_cost_reliability_arbitrage(config, n_questions)
-        arb_table = Table(title="Cost / Reliability Tradeoff")
-        arb_table.add_column("K", justify="right")
-        arb_table.add_column("Requests", justify="right")
         arb_table.add_column("Est. Cost", justify="right")
-        arb_table.add_column("Max Cost", justify="right")
-        arb_table.add_column("Resolution", justify="center")
+    arb_table.add_column("Est. Time", justify="right")
+    arb_table.add_column("Resolution", justify="center")
 
-        for row in arbitrage:
-            rk: int = row["k"]  # type: ignore[assignment]
-            # Higher K = finer resolution of self-consistency → tighter guarantees
-            if rk <= 3:
-                resolution = "[red]coarse[/red]"
-            elif rk <= 7:
-                resolution = "[yellow]moderate[/yellow]"
-            else:
-                resolution = "[green]fine[/green]"
+    arbitrage = estimate_cost_reliability_arbitrage(config, n_questions)
+    for row in arbitrage:
+        rk: int = row["k"]  # type: ignore[assignment]
+        if rk <= 3:
+            resolution = "[red]coarse[/red]"
+        elif rk <= 7:
+            resolution = "[yellow]moderate[/yellow]"
+        else:
+            resolution = "[green]fine[/green]"
 
-            marker = " ←" if rk == k else ""
-            arb_table.add_row(
-                f"{rk}{marker}",
-                f"~{row['est_requests']:,}" if estimate["sequential_stopping"] else f"{row['total_requests']:,}",
-                f"${row['est_cost']:.2f}" if row["est_cost"] is not None else "?",
-                f"${row['max_cost']:.2f}" if row["max_cost"] is not None else "?",
-                resolution,
-            )
+        # Estimate time for this K value
+        import copy
+        cfg_k = copy.copy(config)
+        cfg_k.sampling = copy.copy(config.sampling)
+        cfg_k.sampling.k_fixed = rk
+        row_time = _estimate_time(cfg_k, n_questions)
+        row_time_str = _format_time_estimate(row_time)
+
+        marker = " ←" if rk == k else ""
+        row_cells: list[str] = [
+            f"{rk}{marker}",
+            f"{row['est_requests']:,}",
+        ]
+        if cost_per_req is not None:
+            row_cells.append(f"${row['est_cost']:.2f}" if row["est_cost"] is not None else "?")
+        row_cells.append(row_time_str)
+        row_cells.append(resolution)
+        arb_table.add_row(*row_cells)
 
         console.print(arb_table)
         console.print(
