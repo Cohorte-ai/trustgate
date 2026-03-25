@@ -674,11 +674,11 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
         row_cells.append(resolution)
         arb_table.add_row(*row_cells)
 
-        console.print(arb_table)
-        console.print(
-            "[dim]Higher K → more samples per question → finer self-consistency signal → "
-            "tighter reliability guarantee.[/dim]"
-        )
+    console.print(arb_table)
+    console.print(
+        "[dim]Higher K → more samples per question → finer self-consistency signal → "
+        "tighter reliability guarantee.[/dim]"
+    )
     console.print()
 
 
