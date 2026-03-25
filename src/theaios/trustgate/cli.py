@@ -193,8 +193,8 @@ def certify_cmd(
             spinner_msg = f"[bold blue]Sampling and certifying (fast mode) — est. {time_str}[/bold blue]"
         else:
             spinner_msg = (
-                f"[bold blue]Sampling and certifying — est. {time_str}[/bold blue] "
-                "[dim](sequential stopping saves ~50% API cost)[/dim]"
+                f"[bold blue]Sampling and certifying — est. {time_str}[/bold blue]\n"
+                "  [dim](sequential stopping is slow but saves ~50% API cost)[/dim]"
             )
         with Status(spinner_msg, console=console):
             result = certify(
