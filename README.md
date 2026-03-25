@@ -36,71 +36,141 @@ TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pip
 > [!NOTE]
 > Part of the [theaios](https://github.com/Cohorte-ai) ecosystem. Install with `pip install theaios-trustgate`.
 
-## Quickstart
+## How to Use TrustGate
 
 ```bash
 pip install theaios-trustgate
 ```
 
-```python
-from theaios import trustgate
+### Step 1: Connect your AI system
 
-result = trustgate.certify(config_path="trustgate.yaml")
-print(result.reliability_level)  # 0.946
+Define what you're measuring — an LLM via API key, or any endpoint with auth credentials.
+
+```yaml
+# trustgate.yaml
+
+# Option A: Known LLM (cost auto-estimated)
+endpoint:
+  url: "https://api.openai.com/v1/chat/completions"
+  model: "gpt-4.1-mini"
+  api_key_env: "OPENAI_API_KEY"
+
+# Option B: Custom endpoint (you provide the cost)
+endpoint:
+  url: "https://my-agent.example.com/api/ask"
+  temperature: null
+  request_template:
+    query: "{{question}}"
+  response_path: "answer"
+  cost_per_request: 0.03      # measure this first from your billing
 ```
 
-The pipeline: sample K responses → canonicalize → calibrate with conformal prediction → get a reliability level with a guarantee. Works with any provider (OpenAI, Anthropic, self-hosted), any task type, fully black-box.
+> [!IMPORTANT]
+> For custom endpoints, always measure your per-request cost first (check your billing dashboard) and set `cost_per_request`. Without it, TrustGate cannot show cost estimates before running.
 
-> [!TIP]
-> For the full theory, see our paper: [*Black-Box Reliability Certification for AI Agents via Self-Consistency Sampling and Conformal Calibration*](https://arxiv.org/abs/2602.21368) (Mouzouni, 2026).
+### Step 2: Prepare your questions
 
-## Three Ways to Use TrustGate
+You need questions that represent what your system faces in production. Three ways:
 
-### 1. Deployment gate — certify before shipping
+- **Generate with AI** — ask an LLM to produce realistic questions for your use case
+- **Extract from production logs** — pull real queries from Langfuse, LangSmith, Datadog, or your own logs
+- **Use built-in benchmarks** — `load_mmlu()`, `load_gsm8k()` for standard tasks
+
+If you have correct answers, add them as `acceptable_answers` in the CSV. If not, you'll use human calibration in step 4.
+
+→ **[Full guide: Getting Your Questions](https://cohorte-ai.github.io/trustgate/getting-questions/)**
+
+### Step 3: Certify
 
 ```bash
-trustgate certify --yes
-# Exit code 0 = PASS, 1 = FAIL
+trustgate certify
 ```
+
+TrustGate shows a cost estimate and asks for confirmation before making any API calls:
+
+```
+     Pre-flight Estimate              Cost / Reliability Tradeoff
+┌─────────────────────────┬──────┐  ┌────┬───────────┬────────────┐
+│ Questions               │ 500  │  │  K │ Est. Cost │ Resolution │
+│ Samples per question    │ 10   │  │  3 │ $9.00     │   coarse   │
+│ Est. cost               │ $30  │  │ 10←│ $30.00    │    fine    │
+└─────────────────────────┴──────┘  └────┴───────────┴────────────┘
+Proceed? Enter Y, N, or a number to change K [Y]:
+```
+
+Then the result:
 
 ```
      TrustGate Certification Result
 ┌──────────────────────┬──────────┐
 │ Reliability Level    │ 94.6%    │
 │ M* (prediction set)  │ 1        │
-│ Empirical Coverage   │ 0.956    │
+│ Coverage             │ 0.956    │
 │ Capability Gap       │ 2.4%     │
 │ Status               │ PASS     │
 └──────────────────────┴──────────┘
 ```
 
-### 2. Runtime trust layer — confidence on every query
+### Step 4: Calibrate (if no ground truth)
+
+If you don't have correct answers, a domain expert provides them. Three options:
+
+**Share a questionnaire** (recommended — works across organizations):
+```bash
+trustgate calibrate --export questionnaire.html
+# Share via email/Slack → reviewer opens in browser → downloads labels.json
+trustgate certify --ground-truth labels.json
+```
+
+**Local web UI** (reviewer on your network):
+```bash
+trustgate calibrate --serve --port 8080
+```
+
+**Automated LLM judge** (fast but less rigorous):
+```bash
+trustgate certify --auto-judge
+```
+
+> [!TIP]
+> For the full theory, see our paper: [*Black-Box Reliability Certification for AI Agents via Self-Consistency Sampling and Conformal Calibration*](https://arxiv.org/abs/2602.21368) (Mouzouni, 2026).
+
+---
+
+## Using TrustGate in Production
+
+### Deployment gate — certify before shipping
+
+```bash
+trustgate certify --yes
+# Exit code 0 = PASS, 1 = FAIL
+```
+
+### Runtime trust layer — confidence on every query
 
 ```python
 from theaios.trustgate import TrustGate, certify
 
 result = certify(config_path="trustgate.yaml")
-gate = TrustGate(config=config, certification=result)
 
-# Passthrough (1 API call): attaches reliability metadata
+# Passthrough (1 call/query): reliability metadata attached
+gate = TrustGate(config=config, certification=result)
 response = gate.query("What is the treatment for X?")
 response.reliability_level  # 0.946
 
-# Sampled (K API calls): per-query prediction set
+# Sampled (K calls/query): per-query prediction set
 gate = TrustGate(config=config, certification=result, mode="sampled")
 response = gate.query("What is the treatment for X?")
 response.prediction_set  # ["Aspirin + PCI"]
 response.consensus       # 0.8
 ```
 
-### 3. Human calibration — no ground truth needed
+### Periodic recalibration
 
-Generate a questionnaire, share it with a domain expert, certify with their labels:
+Re-run certification on a schedule (cron, CI) to detect drift:
 
 ```bash
-trustgate calibrate --export questionnaire.html
-# Share via email/Slack → reviewer opens in browser → downloads labels.json
-trustgate certify --ground-truth labels.json
+trustgate certify --yes --output json --output-file latest.json
 ```
 
 ## Where Do the Questions Come From?
