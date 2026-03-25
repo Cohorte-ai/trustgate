@@ -54,7 +54,7 @@ class TestVersion:
         result = runner.invoke(main, ["version"])
         assert result.exit_code == 0
         assert "trustgate" in result.output
-        assert "0.1." in result.output  # version present, not hardcoded
+        assert "trustgate 0." in result.output  # version present, not hardcoded
 
 
 class TestCacheCommands:
