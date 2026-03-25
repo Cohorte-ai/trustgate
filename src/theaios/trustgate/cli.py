@@ -688,6 +688,8 @@ def _show_preflight(config: TrustGateConfig, n_questions: int, latency: float | 
     arb_table.add_column("Requests", justify="right")
     if cost_per_req is not None:
         arb_table.add_column("Est. Cost", justify="right")
+    if latency:
+        arb_table.add_column("Est. Time", justify="right")
     arb_table.add_column("Resolution", justify="center")
 
     arbitrage = estimate_cost_reliability_arbitrage(config, n_questions)
@@ -707,6 +709,13 @@ def _show_preflight(config: TrustGateConfig, n_questions: int, latency: float | 
         ]
         if cost_per_req is not None:
             row_cells.append(f"${row['est_cost']:.2f}" if row["est_cost"] is not None else "?")
+        if latency:
+            import copy
+            cfg_k = copy.copy(config)
+            cfg_k.sampling = copy.copy(config.sampling)
+            cfg_k.sampling.k_fixed = rk
+            row_time = _estimate_time(cfg_k, n_questions, latency=latency)
+            row_cells.append(_format_time_estimate(row_time))
         row_cells.append(resolution)
         arb_table.add_row(*row_cells)
 
