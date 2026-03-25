@@ -133,6 +133,12 @@ Then the result:
 └──────────────────────┴──────────┘
 ```
 
+> [!TIP]
+> Add `--fast` to skip sequential stopping and run all samples in parallel. ~5x faster, ~2x cost:
+> ```bash
+> trustgate certify --fast --yes
+> ```
+
 ### Step 4: Calibrate (if no ground truth)
 
 If you don't have correct answers, a domain expert provides them. Three options:
@@ -328,7 +334,7 @@ Proceed? [Y/n]:
 - **Black-box** — no model internals, no logprobs, just API access
 - **Any endpoint** — LLMs, agents, RAG, custom APIs
 - **Human-in-the-loop** — shareable questionnaire, no server needed
-- **Cost-aware** — pre-flight estimates, sequential stopping saves ~50%
+- **Cost-aware** — pre-flight estimates, sequential stopping saves ~50%, `--fast` mode for speed
 - **Production-ready** — passthrough mode, CI/CD gating, periodic recalibration
 
 ---
