@@ -180,7 +180,11 @@ def certify_cmd(
 
     console = Console()
     try:
-        with Status("[bold blue]Sampling responses...", console=console):
+        with Status(
+            "[bold blue]Sampling and certifying... "
+            "[dim](sequential sampling minimizes API costs — this takes a few minutes)[/dim]",
+            console=console,
+        ):
             result = certify(
                 config=config,
                 questions=questions,
@@ -363,7 +367,11 @@ def calibrate(
 
     console = Console()
     try:
-        with Status("[bold blue]Sampling responses and building profiles...", console=console):
+        with Status(
+            "[bold blue]Sampling and profiling... "
+            "[dim](sequential sampling minimizes API costs — this takes a few minutes)[/dim]",
+            console=console,
+        ):
             profiles = sample_and_profile(config, questions)
     except ConfigError as exc:
         click.echo(f"Configuration error: {exc}", err=True)
