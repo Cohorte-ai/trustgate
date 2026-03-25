@@ -32,6 +32,14 @@ class Canonicalizer(ABC):
         should produce the same canonical string.
         """
 
+    async def canonicalize_async(self, question: str, answer: str) -> str:
+        """Async version of canonicalize.
+
+        Override this in subclasses that need async I/O (e.g., LLM judge).
+        Default implementation delegates to the sync method.
+        """
+        return self.canonicalize(question, answer)
+
     def validate(self, canonical: str) -> bool:
         """Optional: check that the canonical form is well-formed."""
         return True
@@ -41,8 +49,9 @@ class Canonicalizer(ABC):
 
         1. Strip leading/trailing whitespace
         2. Remove markdown code fences (keep inner content)
-        3. Remove common LLM preambles
-        4. Normalize unicode (NFC)
+        3. Remove markdown formatting (bold, italic)
+        4. Remove common LLM preambles
+        5. Normalize unicode (NFC)
         """
         if not answer:
             return ""
@@ -51,6 +60,9 @@ class Canonicalizer(ABC):
 
         # Remove code fences but keep the content inside them
         text = _CODE_FENCE_RE.sub(r"\1", text)
+
+        # Remove markdown bold/italic markers: **text** → text, *text* → text
+        text = text.replace("**", "").replace("__", "")
 
         # Strip common preambles
         text = _PREAMBLE_RE.sub("", text).strip()

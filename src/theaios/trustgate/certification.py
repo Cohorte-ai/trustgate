@@ -287,13 +287,13 @@ async def sample_and_profile_async(
     else:
         responses = await sampler.sample_all(questions, k=k)
 
-    # Canonicalize
+    # Canonicalize (use async when available — needed for LLM judge)
     canonicalizer = _build_canonicalizer(config)
     canonical: dict[str, list[str]] = {}
     for qid, resps in responses.items():
         question_text = questions_by_id[qid].text
         canonical[qid] = [
-            canonicalizer.canonicalize(question_text, r.raw_response)
+            await canonicalizer.canonicalize_async(question_text, r.raw_response)
             for r in resps
         ]
 
@@ -380,14 +380,14 @@ async def certify_async(
     else:
         responses = await sampler.sample_all(questions, k=k)
 
-    # 5. Canonicalize
+    # 5. Canonicalize (use async — needed for LLM judge inside event loop)
     canonicalizer = _build_canonicalizer(config)
 
     canonical: dict[str, list[str]] = {}
     for qid, resps in responses.items():
         question_text = questions_by_id[qid].text
         canonical[qid] = [
-            canonicalizer.canonicalize(question_text, r.raw_response)
+            await canonicalizer.canonicalize_async(question_text, r.raw_response)
             for r in resps
         ]
 

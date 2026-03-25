@@ -42,20 +42,19 @@ class LLMJudgeCanonicalizer(Canonicalizer):
         self.timeout = timeout
 
     def canonicalize(self, question: str, answer: str) -> str:
-        """Synchronous wrapper — runs the async judge call."""
+        """Synchronous canonicalization — only works outside an event loop."""
         text = self.preprocess(answer)
         if not text:
             return "incorrect"
-        try:
-            return asyncio.run(self.canonicalize_async(question, text))
-        except RuntimeError:
-            # Already inside an event loop
-            loop = asyncio.get_event_loop()
-            return loop.run_until_complete(self.canonicalize_async(question, text))
+        return asyncio.run(self.canonicalize_async(question, text))
 
     async def canonicalize_async(self, question: str, answer: str) -> str:
-        """Ask the judge LLM and return 'correct' or 'incorrect'."""
-        prompt = _JUDGE_PROMPT.format(question=question, answer=answer)
+        """Async canonicalization — safe to call from within an event loop."""
+        text = self.preprocess(answer)
+        if not text:
+            return "incorrect"
+
+        prompt = _JUDGE_PROMPT.format(question=question, answer=text)
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             last_error: Exception | None = None

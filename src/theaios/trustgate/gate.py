@@ -217,7 +217,7 @@ class TrustGate:
         raw_texts = [r.raw_response for r in responses]
 
         canonical = [
-            self._canonicalizer.canonicalize(question, r.raw_response)
+            await self._canonicalizer.canonicalize_async(question, r.raw_response)
             for r in responses
         ]
 
