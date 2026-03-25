@@ -46,7 +46,7 @@ sampling:
 
 canonicalization:
   type: "mcq"
-  # judge_endpoint:             # required only when type is "llm_judge"
+  # judge_endpoint:             # required when type is "llm_judge" or "llm"
   #   url: "https://api.openai.com/v1/chat/completions"
   #   model: "gpt-4.1"
   #   api_key_env: "OPENAI_API_KEY"
@@ -134,7 +134,7 @@ for comparison with ground truth.
 | Field            | Type   | Default | Description |
 |------------------|--------|---------|-------------|
 | `type`           | string | `"mcq"` | Canonicalization strategy. Must be one of: `"numeric"`, `"mcq"`, `"code_exec"`, `"llm_judge"`, `"llm"`, `"embedding"`, `"custom"`. |
-| `judge_endpoint` | object | `null`  | An `endpoint` block (same schema as the top-level `endpoint`) for the LLM judge. **Required** when `type` is `"llm_judge"`. |
+| `judge_endpoint` | object | `null`  | An `endpoint` block (same schema as the top-level `endpoint`) for the LLM. **Required** when `type` is `"llm_judge"` or `"llm"`. Also used by `--auto-judge` for automated calibration. |
 | `custom_class`   | string | `null`  | Fully-qualified Python class path (e.g., `"mypackage.canon.MyCanon"`). **Required** when `type` is `"custom"`. |
 
 #### Canonicalization types

@@ -51,6 +51,9 @@ trustgate certify [OPTIONS]
 | `--output-file` | | PATH | *(none)* | Write output to a file instead of stdout. When used with `--output console`, the result is printed to the terminal and also saved as JSON to the specified file. |
 | `--no-cache` | | FLAG | `false` | Disable the disk-based response cache for this run. |
 | `--verbose` | `-v` | FLAG | `false` | Show detailed per-question results in console output. |
+| `--auto-judge` | | FLAG | `false` | Use LLM-as-judge for automated calibration instead of human review. Requires `judge_endpoint` in config. |
+| `--cost-per-request` | | FLOAT | *(none)* | Cost per API request in USD (for generic/agent endpoints). |
+| `--yes` | `-y` | FLAG | `false` | Skip the pre-flight confirmation prompt. |
 
 ### Examples
 
