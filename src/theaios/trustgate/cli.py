@@ -185,12 +185,17 @@ def certify_cmd(
 
     console = Console()
     try:
-        spinner_msg = (
-            "[bold blue]Sampling and certifying (fast mode — all parallel)...[/bold blue]"
-            if fast
-            else "[bold blue]Sampling and certifying... "
-            "[dim](sequential sampling minimizes API costs — this takes a few minutes)[/dim]"
-        )
+        n_q = len(questions) if questions else 0
+        time_est = _estimate_time(config, n_q) if n_q > 0 else None
+        time_str = _format_time_estimate(time_est) if time_est else ""
+
+        if fast:
+            spinner_msg = f"[bold blue]Sampling and certifying (fast mode) — est. {time_str}[/bold blue]"
+        else:
+            spinner_msg = (
+                f"[bold blue]Sampling and certifying — est. {time_str}[/bold blue] "
+                "[dim](sequential stopping saves ~50% API cost)[/dim]"
+            )
         with Status(spinner_msg, console=console):
             result = certify(
                 config=config,
@@ -528,6 +533,59 @@ def cache_clear(cache_dir: str) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
+_AVG_API_LATENCY = 1.0  # seconds per API call (conservative estimate)
+_CANON_CONCURRENCY = 20  # matches LLMSemanticCanonicalizer semaphore
+
+
+def _estimate_time(
+    config: TrustGateConfig, n_questions: int,
+) -> dict[str, object]:
+    """Estimate wall time for the certification pipeline."""
+    k = config.sampling.k_fixed or config.sampling.k_max
+    total_samples = n_questions * k
+
+    # Sampling time
+    max_concurrent = config.sampling.max_concurrent
+    if config.sampling.sequential_stopping:
+        # Sequential: ~K serial calls per question, questions in parallel
+        sampling_s = (k * _AVG_API_LATENCY * n_questions) / max_concurrent
+    else:
+        # Fast: all samples in parallel, limited by semaphore
+        sampling_s = (total_samples * _AVG_API_LATENCY) / max_concurrent
+
+    # Canonicalization time (only for LLM-based)
+    uses_llm_canon = config.canonicalization.type in ("llm", "llm_judge")
+    if uses_llm_canon:
+        canon_s = (total_samples * _AVG_API_LATENCY) / _CANON_CONCURRENCY
+    else:
+        canon_s = 0.0
+
+    # Calibration (auto-judge adds another round)
+    judge_ep = config.canonicalization.judge_endpoint
+    if judge_ep is not None:
+        cal_s = (n_questions * _AVG_API_LATENCY) / _CANON_CONCURRENCY
+    else:
+        cal_s = 1.0
+
+    total_s = sampling_s + canon_s + cal_s
+
+    return {
+        "sampling_s": round(sampling_s),
+        "canon_s": round(canon_s),
+        "cal_s": round(cal_s),
+        "total_s": round(total_s),
+        "total_min": round(total_s / 60, 1),
+        "uses_llm_canon": uses_llm_canon,
+    }
+
+
+def _format_time_estimate(est: dict[str, object]) -> str:
+    """Format time estimate as a human-readable string."""
+    total_s = est["total_s"]
+    if total_s < 60:  # type: ignore[operator]
+        return f"~{total_s}s"
+    return f"~{est['total_min']} min"
+
 
 def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
     """Show pre-flight cost estimate and cost/reliability arbitrage."""
@@ -561,6 +619,15 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
             "Cost",
             "[dim]unknown (use --cost-per-request or set cost_per_request in config)[/dim]",
         )
+
+    # Time estimate
+    time_est = _estimate_time(config, n_questions)
+    time_str = _format_time_estimate(time_est)
+    details = f"sampling ~{time_est['sampling_s']}s"
+    if time_est["uses_llm_canon"]:
+        details += f", canonicalization ~{time_est['canon_s']}s"
+    details += f", calibration ~{time_est['cal_s']}s"
+    table.add_row("Est. time", f"{time_str} ({details})")
 
     console.print(table)
 
