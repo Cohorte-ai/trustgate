@@ -53,7 +53,6 @@ trustgate certify [OPTIONS]
 | `--verbose` | `-v` | FLAG | `false` | Show detailed per-question results in console output. |
 | `--auto-judge` | | FLAG | `false` | Use LLM-as-judge for automated calibration instead of human review. Requires `judge_endpoint` in config. |
 | `--min-reliability` | | FLOAT | *(none)* | Minimum reliability level (0–100). **Exit code 1** if below threshold. Use in CI/CD pipelines. |
-| `--fast` | | FLAG | `false` | Skip sequential stopping — all K samples per question in parallel. Faster but ~2x API cost. |
 | `--cost-per-request` | | FLOAT | *(none)* | Cost per API request in USD (for generic/agent endpoints). |
 | `--yes` | `-y` | FLAG | `false` | Skip the pre-flight confirmation prompt. |
 

@@ -78,7 +78,6 @@ def version() -> None:
     help="Cost per API request in USD (for generic/agent endpoints)",
 )
 @click.option("--min-reliability", type=float, help="Minimum reliability level (0-100). Exit code 1 if below.")
-@click.option("--fast", is_flag=True, help="Skip sequential stopping — all samples in parallel (faster, higher cost)")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 def certify_cmd(
     config_path: str,
@@ -97,7 +96,6 @@ def certify_cmd(
     verbose: bool,
     cost_per_request: float | None,
     min_reliability: float | None,
-    fast: bool,
     yes: bool,
 ) -> None:
     """Certify an AI endpoint's reliability."""
@@ -111,14 +109,6 @@ def certify_cmd(
 
     if cost_per_request is not None:
         config.endpoint.cost_per_request = cost_per_request
-
-    if fast:
-        config.sampling.sequential_stopping = False
-        from theaios.trustgate.canonicalize.llm_semantic import (
-            _MAX_CONCURRENT_CANON_FAST,
-            set_canon_concurrency,
-        )
-        set_canon_concurrency(_MAX_CONCURRENT_CANON_FAST)
 
     questions = None
     if questions_path:
@@ -194,13 +184,10 @@ def certify_cmd(
         time_est = _estimate_time(config, n_q) if n_q > 0 else None
         time_str = _format_time_estimate(time_est) if time_est else ""
 
-        if fast:
-            spinner_msg = f"[bold blue]Sampling and certifying (fast mode) — est. {time_str}[/bold blue]"
-        else:
-            spinner_msg = (
-                f"[bold blue]Sampling and certifying — est. {time_str}[/bold blue]\n"
-                "  [dim](sequential stopping is slow but saves ~50% API cost)[/dim]"
-            )
+        spinner_msg = (
+            f"[bold blue]Sampling and certifying — est. {time_str}[/bold blue]\n"
+            "  [dim](sequential stopping saves ~50% API cost)[/dim]"
+        )
         with Status(spinner_msg, console=console):
             result = certify(
                 config=config,
@@ -541,10 +528,7 @@ def cache_clear(cache_dir: str) -> None:
 _AVG_API_LATENCY = 1.0  # seconds per API call (conservative estimate)
 
 
-def _get_canon_concurrency() -> int:
-    """Get current canonicalization concurrency (may be boosted by --fast)."""
-    from theaios.trustgate.canonicalize.llm_semantic import _MAX_CONCURRENT_CANON
-    return _MAX_CONCURRENT_CANON
+_CANON_CONCURRENCY = 20  # matches LLMSemanticCanonicalizer semaphore
 
 
 def _estimate_time(
@@ -573,14 +557,14 @@ def _estimate_time(
     # Canonicalization time (only for LLM-based, scales with effective samples)
     uses_llm_canon = config.canonicalization.type in ("llm", "llm_judge")
     if uses_llm_canon:
-        canon_s = (effective_samples * _AVG_API_LATENCY) / _get_canon_concurrency()
+        canon_s = (effective_samples * _AVG_API_LATENCY) / _CANON_CONCURRENCY
     else:
         canon_s = 0.0
 
     # Calibration (auto-judge adds another round)
     judge_ep = config.canonicalization.judge_endpoint
     if judge_ep is not None:
-        cal_s = (n_questions * _AVG_API_LATENCY) / _get_canon_concurrency()
+        cal_s = (n_questions * _AVG_API_LATENCY) / _CANON_CONCURRENCY
     else:
         cal_s = 1.0
 
