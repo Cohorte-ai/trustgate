@@ -13,9 +13,31 @@ from __future__ import annotations
 
 import json
 import random
+import re
 from pathlib import Path
 
 from theaios.trustgate.types import Question
+
+_MCQ_OPTION_RE = re.compile(
+    r"\(([A-Ea-e])\)\s*([^(]+?)(?=\s*\([A-Ea-e]\)|$)",
+)
+
+
+def _enrich_mcq_answer(canonical: str, question: str) -> str:
+    """If canonical is a single MCQ letter, extract the option text from the question.
+
+    Returns e.g. ``"B — Paris"`` instead of just ``"B"``.
+    Falls back to the raw canonical string if not matchable.
+    """
+    if len(canonical) != 1 or canonical.upper() not in "ABCDE":
+        return canonical
+
+    for match in _MCQ_OPTION_RE.finditer(question):
+        letter = match.group(1).upper()
+        text = match.group(2).strip().rstrip(".,;:?!")
+        if letter == canonical.upper():
+            return f"{canonical} — {text}"
+    return canonical
 
 _QUESTIONNAIRE_HTML = """\
 <!DOCTYPE html>
@@ -103,7 +125,7 @@ function render() {
   item.answers.forEach((a) => {
     const b = document.createElement('button');
     b.className = 'answer-btn';
-    b.textContent = a.answer;
+    b.textContent = a.display || a.answer;
     b.onclick = () => pick(a.answer);
     c.appendChild(b);
   });
@@ -165,12 +187,14 @@ def generate_questionnaire(
         if not profile:
             continue
         answers = [ans for ans, _freq in profile]
-        shuffled = list(answers)
+        # For MCQ single-letter answers, enrich with option text from question
+        enriched = [_enrich_mcq_answer(ans, q.text) for ans in answers]
+        shuffled = list(zip(answers, enriched))
         rng.shuffle(shuffled)
         items.append({
             "question_id": q.id,
             "question": q.text,
-            "answers": [{"answer": a} for a in shuffled],
+            "answers": [{"answer": ans, "display": disp} for ans, disp in shuffled],
         })
 
     items_json = json.dumps(items, ensure_ascii=False)

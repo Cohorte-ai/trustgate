@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from theaios.trustgate.questionnaire import _enrich_mcq_answer
 from theaios.trustgate.types import Question
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ async function load(){
  answerValues=d.answers.map(a=>a.answer);
  d.answers.forEach((a,i)=>{
   const b=document.createElement('button');b.className='answer-btn';
-  b.textContent=a.answer;
+  b.textContent=a.display||a.answer;
   b.onclick=()=>pick(a.answer);c.appendChild(b);
  });
  const p=await(await fetch('/api/progress')).json();
@@ -220,8 +221,9 @@ def create_app(
             qid = pending[pending_idx]
             if qid not in labels:
                 # Serve answers in shuffled order, no frequencies, no ranks
+                q_text = question_map[qid].text
                 answers = [
-                    {"answer": ans}
+                    {"answer": ans, "display": _enrich_mcq_answer(ans, q_text)}
                     for ans in shuffled_answers.get(qid, [])
                 ]
                 return jsonify({
