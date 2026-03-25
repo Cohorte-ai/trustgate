@@ -164,8 +164,17 @@ trustgate certify --auto-judge
 ### Deployment gate — certify before shipping
 
 ```bash
-trustgate certify --yes
-# Exit code 0 = PASS, 1 = FAIL
+# CI/CD: fail the build if reliability < 90%
+trustgate certify --min-reliability 90 --yes
+# Exit code 0 = PASS (≥90%), exit code 1 = FAIL (<90%)
+```
+
+```yaml
+# GitHub Actions
+- name: AI Reliability Gate
+  run: trustgate certify --min-reliability 90 --yes
+  env:
+    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 ### Runtime trust layer — confidence on every query
