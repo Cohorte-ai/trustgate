@@ -12,6 +12,7 @@ def print_certification_result(
     result: CertificationResult,
     verbose: bool = False,
     console: Console | None = None,
+    had_cache: bool = False,
 ) -> None:
     """Print a formatted certification result to the terminal using Rich."""
     if console is None:
@@ -55,11 +56,8 @@ def print_certification_result(
         "https://cohorte-ai.github.io/trustgate/concepts/[/dim]"
     )
 
-    # Cache hint
-    from pathlib import Path
-
-    cache_dir = Path(".trustgate_cache")
-    if cache_dir.exists() and any(cache_dir.glob("*.json")):
+    # Cache hint — caller sets this flag before the run
+    if had_cache:
         console.print(
             "[dim]This run used cached data. "
             "Clear cache with: trustgate cache clear[/dim]"

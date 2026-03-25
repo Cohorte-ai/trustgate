@@ -196,6 +196,12 @@ def certify_cmd(
             )
         click.echo(f"Auto-judge labeled {len(labels)} questions.")
 
+    # Check if cache exists before the run
+    from pathlib import Path as _Path
+
+    _cache_dir = _Path(".trustgate_cache")
+    had_cache = _cache_dir.exists() and any(_cache_dir.glob("*.json"))
+
     from rich.console import Console
     from rich.status import Status
 
@@ -237,7 +243,7 @@ def certify_cmd(
         )
         sys.exit(1)
 
-    _output_result(result, output, output_file, verbose)
+    _output_result(result, output, output_file, verbose, had_cache=had_cache)
 
     # --- CI/CD gating: exit code 1 if below threshold ---
     if min_reliability is not None:
@@ -783,6 +789,7 @@ def _output_result(
     output: str,
     output_file: str | None,
     verbose: bool,
+    had_cache: bool = False,
 ) -> None:
     """Route the certification result to the correct reporter."""
     from theaios.trustgate.types import CertificationResult
@@ -805,7 +812,7 @@ def _output_result(
             click.echo(f"Results written to {output_file}")
 
     else:  # console
-        print_certification_result(result, verbose=verbose)
+        print_certification_result(result, verbose=verbose, had_cache=had_cache)
         if output_file:
             export_json(result, path=output_file)
             click.echo(f"\nResults also written to {output_file}")
