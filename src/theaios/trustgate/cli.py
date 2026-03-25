@@ -77,6 +77,7 @@ def version() -> None:
     "--cost-per-request", type=float,
     help="Cost per API request in USD (for generic/agent endpoints)",
 )
+@click.option("--min-reliability", type=float, help="Minimum reliability level (0-100). Exit code 1 if below.")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 def certify_cmd(
     config_path: str,
@@ -94,6 +95,7 @@ def certify_cmd(
     no_cache: bool,
     verbose: bool,
     cost_per_request: float | None,
+    min_reliability: float | None,
     yes: bool,
 ) -> None:
     """Certify an AI endpoint's reliability."""
@@ -192,6 +194,17 @@ def certify_cmd(
         sys.exit(1)
 
     _output_result(result, output, output_file, verbose)
+
+    # --- CI/CD gating: exit code 1 if below threshold ---
+    if min_reliability is not None:
+        threshold = min_reliability / 100 if min_reliability > 1 else min_reliability
+        if result.reliability_level < threshold:
+            click.echo(
+                f"FAIL: reliability {result.reliability_level:.1%} "
+                f"< threshold {threshold:.1%}",
+                err=True,
+            )
+            sys.exit(1)
 
 
 # ---------------------------------------------------------------------------

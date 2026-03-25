@@ -17,9 +17,16 @@ def print_certification_result(
     if console is None:
         console = Console()
 
-    # Status
-    status = "PASS" if result.coverage >= result.reliability_level else "UNCERTAIN"
-    status_style = "bold green" if status == "PASS" else "bold yellow"
+    # Status — PASS if reliability > 0 and coverage meets target
+    if result.reliability_level > 0 and result.coverage >= result.reliability_level:
+        status = "PASS"
+        status_style = "bold green"
+    elif result.reliability_level == 0:
+        status = "FAIL"
+        status_style = "bold red"
+    else:
+        status = "UNCERTAIN"
+        status_style = "bold yellow"
 
     # Main results table
     table = Table(
