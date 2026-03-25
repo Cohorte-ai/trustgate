@@ -133,7 +133,7 @@ for comparison with ground truth.
 
 | Field            | Type   | Default | Description |
 |------------------|--------|---------|-------------|
-| `type`           | string | `"mcq"` | Canonicalization strategy. Must be one of: `"numeric"`, `"mcq"`, `"code_exec"`, `"llm_judge"`, `"embedding"`, `"custom"`. |
+| `type`           | string | `"mcq"` | Canonicalization strategy. Must be one of: `"numeric"`, `"mcq"`, `"code_exec"`, `"llm_judge"`, `"llm"`, `"embedding"`, `"custom"`. |
 | `judge_endpoint` | object | `null`  | An `endpoint` block (same schema as the top-level `endpoint`) for the LLM judge. **Required** when `type` is `"llm_judge"`. |
 | `custom_class`   | string | `null`  | Fully-qualified Python class path (e.g., `"mypackage.canon.MyCanon"`). **Required** when `type` is `"custom"`. |
 
@@ -318,6 +318,6 @@ The config loader runs the following checks after parsing. If any fail, a
 - `sampling.k_fixed` (when set) must be <= `sampling.k_max`.
 - `calibration.n_cal` must be >= 1.
 - `calibration.n_test` must be >= 1.
-- `canonicalization.type` must be one of: `code_exec`, `custom`, `embedding`, `llm_judge`, `mcq`, `numeric`.
+- `canonicalization.type` must be one of: `code_exec`, `custom`, `embedding`, `llm`, `llm_judge`, `mcq`, `numeric`.
 - `canonicalization.custom_class` is required when type is `"custom"`.
-- `canonicalization.judge_endpoint` is required when type is `"llm_judge"`.
+- `canonicalization.judge_endpoint` is required when type is `"llm_judge"` or `"llm"`.

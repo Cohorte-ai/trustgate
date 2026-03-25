@@ -166,20 +166,31 @@ This is the common case for production systems. You have questions but no correc
 
 See [Human Calibration](human-calibration.md) for the full guide.
 
-### Option C: No labels, no human — use LLM-as-judge
+### Option C: No labels, no human — use auto-judge
 
-If you can't get a human reviewer, use a separate LLM as the canonicalizer:
+If you can't get a human reviewer, use an LLM to automatically pick the
+correct answer from the ranked canonical answers (automated calibration):
+
+```bash
+trustgate certify --auto-judge --config trustgate.yaml
+```
+
+This requires a `judge_endpoint` in your config (the LLM that judges):
 
 ```yaml
 canonicalization:
-  type: "llm_judge"
-  judge_endpoint:
+  type: "llm"       # or mcq, numeric, etc.
+  judge_endpoint:    # also used by --auto-judge for calibration
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
     api_key_env: "OPENAI_API_KEY"
 ```
 
-This is less rigorous than human calibration (the judge has its own biases — see the [paper](https://arxiv.org/abs/2602.21368), Section 3.2.2), but it's fully automated and good enough for many use cases.
+The auto-judge replaces the human in the calibration step — it looks at
+each question and its ranked canonical answers, and picks the correct one.
+This is less rigorous than human calibration (the judge has irreducible
+bias — see the [paper](https://arxiv.org/abs/2602.21368), Proposition 3.4),
+but it's fully automated.
 
 ---
 

@@ -117,6 +117,43 @@ canonicalization:
 
 ---
 
+### `llm` --- LLM Semantic Canonicalization
+
+Uses a lightweight LLM to extract the core factual answer from a free-text
+response, producing a short canonical form. This is a true canonicalizer
+(Definition 4.1) — it groups semantically equivalent answers without judging
+correctness. Correctness is determined later, during calibration (by a human
+or by `--auto-judge`).
+
+| Input | Output |
+|-------|--------|
+| `"The capital of France is Paris"` | `"paris"` |
+| `"I believe it's Paris"` | `"paris"` |
+| `"London"` | `"london"` |
+| `"The answer is approximately 42.5"` | `"42.5"` |
+
+Use a cheap, fast model (e.g., `gpt-4.1-nano`) — it only extracts a short
+string.
+
+```bash
+pip install "theaios-trustgate[judge]"
+```
+
+**Config:**
+
+```yaml
+canonicalization:
+  type: "llm"
+  judge_endpoint:
+    url: "https://api.openai.com/v1/chat/completions"
+    model: "gpt-4.1-nano"
+    api_key_env: "OPENAI_API_KEY"
+```
+
+**Source:** `trustgate.canonicalize.llm_semantic.LLMSemanticCanonicalizer`
+
+---
+
 ### `embedding` --- Semantic Clustering
 
 Clusters responses by semantic similarity using sentence-transformers embeddings
@@ -329,7 +366,7 @@ To see all registered canonicalizers (built-in and custom):
 from theaios.trustgate.canonicalize import list_canonicalizers
 
 print(list_canonicalizers())
-# ['code_exec', 'embedding', 'llm_judge', 'mcq', 'numeric']
+# ['code_exec', 'embedding', 'llm', 'llm_judge', 'mcq', 'numeric']
 ```
 
 ---
@@ -341,7 +378,8 @@ print(list_canonicalizers())
 | Multiple-choice exams           | `mcq`                     | Works out of the box for A/B/C/D/E questions    |
 | Math / quantitative             | `numeric`                 | Handles currency, fractions, LaTeX              |
 | Code generation                 | `code_exec`               | Tests if generated code runs without errors     |
-| Open-ended / subjective         | `llm_judge`               | Needs a judge endpoint; adds API cost           |
+| Open-ended / free-text          | `llm`                     | Semantic grouping via LLM; lightweight           |
+| Binary correct/incorrect        | `llm_judge`               | Paper Section 4.3 regime (3); coarse but fast   |
 | Free-text with semantic overlap | `embedding`               | Groups similar answers; no ground truth needed   |
 | Domain-specific                 | Custom plugin             | Write your own for maximum control              |
 
@@ -370,7 +408,7 @@ canonicalization.
 | SQL agent | SQL query | Normalized SQL (custom) |
 | Classification step | Category label | `mcq` |
 | Entity extraction | Entity list | Sorted list (custom) |
-| Reasoning / chain-of-thought | Intermediate conclusion | `llm_judge` |
+| Reasoning / chain-of-thought | Intermediate conclusion | `llm` or custom |
 | Final short answer | Structured value | `numeric` or `mcq` |
 
 ### Why component-level certification matters

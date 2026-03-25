@@ -306,8 +306,8 @@ class CanonConfig:
 
 | Field | Description |
 |---|---|
-| `type` | Canonicalization strategy. One of: `"numeric"`, `"mcq"`, `"code_exec"`, `"llm_judge"`, `"embedding"`, `"custom"`. |
-| `judge_endpoint` | Required when `type` is `"llm_judge"`. Configures the LLM used as the judge. |
+| `type` | Canonicalization strategy. One of: `"numeric"`, `"mcq"`, `"code_exec"`, `"llm_judge"`, `"llm"`, `"embedding"`, `"custom"`. |
+| `judge_endpoint` | Required when `type` is `"llm_judge"` or `"llm"`. Configures the LLM used as the judge. |
 | `custom_class` | Required when `type` is `"custom"`. Dot-path to a `Canonicalizer` subclass (e.g., `"mypackage.MyCanonicalizer"`). |
 
 ---

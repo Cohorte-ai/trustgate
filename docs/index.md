@@ -17,7 +17,7 @@ pip install theaios-trustgate
 Optional extras:
 
 ```bash
-pip install "theaios-trustgate[judge]"      # LLM-as-judge canonicalization
+pip install "theaios-trustgate[judge]"      # LLM semantic canonicalization + auto-judge
 pip install "theaios-trustgate[embedding]"   # Embedding-based clustering
 pip install "theaios-trustgate[serve]"       # Local calibration web UI
 pip install "theaios-trustgate[all]"         # Everything

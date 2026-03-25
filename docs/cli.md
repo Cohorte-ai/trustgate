@@ -42,7 +42,7 @@ trustgate certify [OPTIONS]
 | `--endpoint` | | URL | *(from config)* | AI endpoint URL. Overrides `endpoint.url` in the config. |
 | `--model` | | TEXT | *(from config)* | Model name. Overrides `endpoint.model` in the config. |
 | `--api-key-env` | | TEXT | *(from config)* | Environment variable name holding the API key. Overrides `endpoint.api_key_env`. |
-| `--task-type` | | CHOICE | *(from config)* | Canonicalization type. One of: `numeric`, `mcq`, `code_exec`, `llm_judge`, `embedding`, `custom`. |
+| `--task-type` | | CHOICE | *(from config)* | Canonicalization type. One of: `numeric`, `mcq`, `code_exec`, `llm_judge`, `llm`, `embedding`, `custom`. |
 | `--questions` | `-q` | PATH | *(from config)* | Path to a questions file (CSV or JSON). |
 | `--ground-truth` | `-g` | PATH | *(none)* | Path to a ground-truth labels file. Required for some task types. |
 | `--k` | | INT | *(from config)* | Fixed number of samples per question. Overrides `sampling.k_fixed`. |
@@ -116,7 +116,7 @@ trustgate compare [OPTIONS]
 |------|-------|------|---------|-------------|
 | `--models` | | TEXT | **(required)** | Comma-separated list of model names to compare. |
 | `--config` | `-c` | PATH | `trustgate.yaml` | Path to the YAML config file. The `endpoint` section provides the base URL and API key; the model name is overridden for each entry in `--models`. |
-| `--task-type` | | CHOICE | **(required)** | Canonicalization type. One of: `numeric`, `mcq`, `code_exec`, `llm_judge`, `embedding`, `custom`. |
+| `--task-type` | | CHOICE | **(required)** | Canonicalization type. One of: `numeric`, `mcq`, `code_exec`, `llm_judge`, `llm`, `embedding`, `custom`. |
 | `--questions` | `-q` | PATH | **(required)** | Path to the questions file (CSV or JSON). |
 | `--ground-truth` | `-g` | PATH | *(none)* | Path to a ground-truth labels file. |
 | `--alpha` | `-a` | FLOAT | `0.10` | Significance level for conformal calibration. |

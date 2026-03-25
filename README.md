@@ -168,7 +168,7 @@ Each component is just an endpoint — TrustGate certifies it independently with
 | RAG retriever | Retrieved document IDs | Exact match |
 | SQL agent | Generated SQL query | Normalized SQL |
 | Classification step | Category label | MCQ |
-| Reasoning step | Intermediate conclusion | LLM-judge or custom |
+| Reasoning step | Intermediate conclusion | `llm` or custom |
 | Final answer | Short structured output | Numeric / MCQ |
 
 TrustGate warns you automatically when outputs are too long or diverse for meaningful self-consistency measurement.
