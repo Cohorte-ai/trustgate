@@ -40,7 +40,7 @@ sampling:
   k_fixed: 10
   sequential_stopping: true
   delta: 0.05
-  max_concurrent: 50
+  max_concurrent: 10
   timeout: 120.0
   retries: 10
 
@@ -108,7 +108,7 @@ Controls how many responses are drawn per question and how they are collected.
 | `k_fixed`             | integer/null  | `10`    | Fixed number of samples per question. Set to `null` (or omit) to use adaptive sequential stopping instead. Must be <= `k_max` when set. |
 | `sequential_stopping` | boolean       | `true`  | When `true` and `k_fixed` is null, TrustGate draws samples adaptively and stops early once the conformal set has stabilized, up to `k_max`. |
 | `delta`               | float         | `0.05`  | Confidence parameter for the sequential stopping criterion. Smaller values require more samples before stopping. |
-| `max_concurrent`      | integer       | `50`    | Maximum number of concurrent API requests. Increase for throughput; decrease if you hit rate limits. |
+| `max_concurrent`      | integer       | `10`    | Maximum number of concurrent API requests. Lower for rate-limited APIs (e.g., `5`). Raise for fast APIs (e.g., `30`). Can also be set via `--concurrency` on the CLI. |
 | `timeout`             | float         | `120.0` | Per-request timeout in seconds. |
 | `retries`             | integer       | `10`    | Number of retry attempts for failed API requests (uses exponential back-off). |
 

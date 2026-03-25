@@ -54,6 +54,7 @@ trustgate certify [OPTIONS]
 | `--auto-judge` | | FLAG | `false` | Use LLM-as-judge for automated calibration instead of human review. Requires `judge_endpoint` in config. |
 | `--min-reliability` | | FLOAT | *(none)* | Minimum reliability level (0–100). **Exit code 1** if below threshold. Use in CI/CD pipelines. |
 | `--cost-per-request` | | FLOAT | *(none)* | Cost per API request in USD (for generic/agent endpoints). |
+| `--concurrency` | | INT | `10` | Max concurrent API requests. Lower for rate-limited APIs (e.g., `5`), raise for fast APIs (e.g., `30`). |
 | `--yes` | `-y` | FLAG | `false` | Skip the pre-flight confirmation prompt. |
 
 ### Examples
