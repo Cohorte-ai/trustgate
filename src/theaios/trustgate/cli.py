@@ -135,12 +135,17 @@ def certify_cmd(
         if not click.confirm("Proceed?", default=True):
             sys.exit(0)
 
+    from rich.console import Console
+    from rich.status import Status
+
+    console = Console()
     try:
-        result = certify(
-            config=config,
-            questions=questions,
-            labels=labels,
-        )
+        with Status("[bold blue]Sampling responses...", console=console):
+            result = certify(
+                config=config,
+                questions=questions,
+                labels=labels,
+            )
     except ConfigError as exc:
         click.echo(f"Configuration error: {exc}", err=True)
         sys.exit(1)
@@ -302,9 +307,13 @@ def calibrate(
             sys.exit(0)
 
     # Sample and build profiles
-    click.echo("Sampling responses and building self-consistency profiles...")
+    from rich.console import Console
+    from rich.status import Status
+
+    console = Console()
     try:
-        profiles = sample_and_profile(config, questions)
+        with Status("[bold blue]Sampling responses and building profiles...", console=console):
+            profiles = sample_and_profile(config, questions)
     except ConfigError as exc:
         click.echo(f"Configuration error: {exc}", err=True)
         sys.exit(1)
