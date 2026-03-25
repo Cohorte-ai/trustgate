@@ -78,6 +78,7 @@ def version() -> None:
     help="Cost per API request in USD (for generic/agent endpoints)",
 )
 @click.option("--min-reliability", type=float, help="Minimum reliability level (0-100). Exit code 1 if below.")
+@click.option("--concurrency", type=int, help="Max concurrent API requests (default 30). Lower for rate-limited APIs.")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 def certify_cmd(
     config_path: str,
@@ -96,6 +97,7 @@ def certify_cmd(
     verbose: bool,
     cost_per_request: float | None,
     min_reliability: float | None,
+    concurrency: int | None,
     yes: bool,
 ) -> None:
     """Certify an AI endpoint's reliability."""
@@ -109,6 +111,9 @@ def certify_cmd(
 
     if cost_per_request is not None:
         config.endpoint.cost_per_request = cost_per_request
+
+    if concurrency is not None:
+        config.sampling.max_concurrent = concurrency
 
     questions = None
     if questions_path:
@@ -160,6 +165,8 @@ def certify_cmd(
             try:
                 new_k = int(choice)
                 config.sampling.k_fixed = new_k
+                if new_k > config.sampling.k_max:
+                    config.sampling.k_max = new_k
                 click.echo(f"K set to {new_k}.")
             except ValueError:
                 click.echo("Invalid input. Aborting.", err=True)
@@ -220,6 +227,14 @@ def certify_cmd(
         sys.exit(1)
     except LabelsRequired as exc:
         click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+    except Exception as exc:
+        click.echo(f"Error: {exc}", err=True)
+        click.echo(
+            "Hint: if this is a connection or rate limit error, try reducing "
+            "--concurrency (default 30) or K.",
+            err=True,
+        )
         sys.exit(1)
 
     _output_result(result, output, output_file, verbose)

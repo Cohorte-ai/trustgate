@@ -33,7 +33,7 @@ class SamplingConfig:
     k_fixed: int | None = 10
     sequential_stopping: bool = True
     delta: float = 0.05
-    max_concurrent: int = 30
+    max_concurrent: int = 10
     timeout: float = 120.0
     retries: int = 10
 
