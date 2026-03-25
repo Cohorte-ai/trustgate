@@ -133,9 +133,23 @@ def certify_cmd(
             click.echo(f"Error loading ground truth: {exc}", err=True)
             sys.exit(1)
 
-    # --- Pre-flight cost estimate ---
+    # --- Measure API latency + Pre-flight estimate ---
+    measured_latency: float | None = None
     if questions is not None and not yes:
-        _show_preflight(config, len(questions))
+        from rich.console import Console as _PrefConsole
+        from rich.status import Status as _PrefStatus
+
+        _pcon = _PrefConsole()
+        with _PrefStatus("[bold blue]Measuring API latency...", console=_pcon):
+            measured_latency = _measure_latency(config)
+
+        if measured_latency is None:
+            click.echo(
+                click.style("WARNING: Could not reach the API endpoint. Check your connection and credentials.", fg="yellow"),
+                err=True,
+            )
+
+        _show_preflight(config, len(questions), latency=measured_latency)
         choice = click.prompt(
             "Proceed? Enter Y to run, N to abort, or a number to change K",
             default="Y",
@@ -179,15 +193,22 @@ def certify_cmd(
     from rich.status import Status
 
     console = Console()
-    try:
-        n_q = len(questions) if questions else 0
-        time_est = _estimate_time(config, n_q) if n_q > 0 else None
-        time_str = _format_time_estimate(time_est) if time_est else ""
 
+    n_q = len(questions) if questions else 0
+    if measured_latency and n_q > 0:
+        time_est = _estimate_time(config, n_q, latency=measured_latency)
+        time_str = _format_time_estimate(time_est)
         spinner_msg = (
             f"[bold blue]Sampling and certifying — est. {time_str}[/bold blue]\n"
+            f"  [dim](measured {measured_latency:.1f}s/call, sequential stopping saves ~50% API cost)[/dim]"
+        )
+    else:
+        spinner_msg = (
+            "[bold blue]Sampling and certifying...[/bold blue]\n"
             "  [dim](sequential stopping saves ~50% API cost)[/dim]"
         )
+
+    try:
         with Status(spinner_msg, console=console):
             result = certify(
                 config=config,
@@ -525,16 +546,48 @@ def cache_clear(cache_dir: str) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
-_AVG_API_LATENCY = 2.0  # seconds per API call (includes network + model latency)
+_DEFAULT_LATENCY = 2.0  # fallback if we can't measure
 
 
 _CANON_CONCURRENCY = 20  # matches LLMSemanticCanonicalizer semaphore
 
 
+def _measure_latency(
+    config: TrustGateConfig,
+) -> float | None:
+    """Make a single probe call to measure real API latency."""
+    import time
+
+    from theaios.trustgate.sampler import EndpointAdapter
+
+    adapter = EndpointAdapter.from_config(config.endpoint)
+    prompt = "Reply with one word: hello"
+
+    try:
+        import asyncio
+
+        import httpx as _httpx
+
+        start = time.monotonic()
+
+        async def _probe() -> str:
+            async with _httpx.AsyncClient(timeout=30.0) as ac:
+                return await adapter.send(ac, prompt, config.endpoint.temperature)
+
+        asyncio.run(_probe())
+        elapsed = time.monotonic() - start
+        return max(elapsed, 0.1)  # floor at 0.1s
+
+    except Exception:
+        return None
+
+
 def _estimate_time(
     config: TrustGateConfig, n_questions: int,
+    latency: float | None = None,
 ) -> dict[str, object]:
     """Estimate wall time for the certification pipeline."""
+    api_latency = latency or _DEFAULT_LATENCY
     k = config.sampling.k_fixed or config.sampling.k_max
     total_samples = n_questions * k
 
@@ -547,24 +600,21 @@ def _estimate_time(
     # Sampling time
     max_concurrent = config.sampling.max_concurrent
     if config.sampling.sequential_stopping:
-        # Sequential: samples are serial per question, but questions run in parallel
-        # Wall time dominated by the slowest question × K
-        sampling_s = (k * _AVG_API_LATENCY * n_questions) / max_concurrent
+        sampling_s = (k * api_latency * n_questions) / max_concurrent
     else:
-        # Fast: all samples in parallel, limited by semaphore
-        sampling_s = (total_samples * _AVG_API_LATENCY) / max_concurrent
+        sampling_s = (total_samples * api_latency) / max_concurrent
 
     # Canonicalization time (only for LLM-based, scales with effective samples)
     uses_llm_canon = config.canonicalization.type in ("llm", "llm_judge")
     if uses_llm_canon:
-        canon_s = (effective_samples * _AVG_API_LATENCY) / _CANON_CONCURRENCY
+        canon_s = (effective_samples * api_latency) / _CANON_CONCURRENCY
     else:
         canon_s = 0.0
 
     # Calibration (auto-judge adds another round)
     judge_ep = config.canonicalization.judge_endpoint
     if judge_ep is not None:
-        cal_s = (n_questions * _AVG_API_LATENCY) / _CANON_CONCURRENCY
+        cal_s = (n_questions * api_latency) / _CANON_CONCURRENCY
     else:
         cal_s = 1.0
 
@@ -588,7 +638,7 @@ def _format_time_estimate(est: dict[str, object]) -> str:
     return f"~{est['total_min']} min"
 
 
-def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
+def _show_preflight(config: TrustGateConfig, n_questions: int, latency: float | None = None) -> None:
     """Show pre-flight cost estimate and cost/reliability arbitrage."""
     from rich.console import Console
     from rich.table import Table
@@ -619,24 +669,25 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
             "[dim]unknown (use --cost-per-request or set cost_per_request in config)[/dim]",
         )
 
-    # Time estimate
-    time_est = _estimate_time(config, n_questions)
-    time_str = _format_time_estimate(time_est)
-    details = f"sampling ~{time_est['sampling_s']}s"
-    if time_est["uses_llm_canon"]:
-        details += f", canonicalization ~{time_est['canon_s']}s"
-    details += f", calibration ~{time_est['cal_s']}s"
-    table.add_row("Est. time", f"{time_str} ({details})")
+    if latency:
+        time_est = _estimate_time(config, n_questions, latency=latency)
+        time_str = _format_time_estimate(time_est)
+        table.add_row("Measured latency", f"{latency:.1f}s per call")
+        table.add_row("Est. time", time_str)
+    else:
+        table.add_row(
+            "Est. time",
+            "[dim]could not measure API latency[/dim]",
+        )
 
     console.print(table)
 
-    # --- Cost / Time / Reliability tradeoff ---
-    arb_table = Table(title="Cost / Time / Reliability Tradeoff")
+    # --- Cost / Reliability tradeoff ---
+    arb_table = Table(title="Cost / Reliability Tradeoff")
     arb_table.add_column("K", justify="right")
     arb_table.add_column("Requests", justify="right")
     if cost_per_req is not None:
         arb_table.add_column("Est. Cost", justify="right")
-    arb_table.add_column("Est. Time", justify="right")
     arb_table.add_column("Resolution", justify="center")
 
     arbitrage = estimate_cost_reliability_arbitrage(config, n_questions)
@@ -649,14 +700,6 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
         else:
             resolution = "[green]fine[/green]"
 
-        # Estimate time for this K value
-        import copy
-        cfg_k = copy.copy(config)
-        cfg_k.sampling = copy.copy(config.sampling)
-        cfg_k.sampling.k_fixed = rk
-        row_time = _estimate_time(cfg_k, n_questions)
-        row_time_str = _format_time_estimate(row_time)
-
         marker = " ←" if rk == k else ""
         row_cells: list[str] = [
             f"{rk}{marker}",
@@ -664,7 +707,6 @@ def _show_preflight(config: TrustGateConfig, n_questions: int) -> None:
         ]
         if cost_per_req is not None:
             row_cells.append(f"${row['est_cost']:.2f}" if row["est_cost"] is not None else "?")
-        row_cells.append(row_time_str)
         row_cells.append(resolution)
         arb_table.add_row(*row_cells)
 
