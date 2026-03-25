@@ -45,7 +45,9 @@ def print_certification_result(
     console.print(table)
     console.print(
         "[dim]What do these metrics mean? → "
-        "https://cohorte-ai.github.io/trustgate/concepts/[/dim]"
+        "[link=https://cohorte-ai.github.io/trustgate/concepts/]"
+        "cohorte-ai.github.io/trustgate/concepts"
+        "[/link][/dim]"
     )
 
     # Verbose: per-alpha coverage breakdown
