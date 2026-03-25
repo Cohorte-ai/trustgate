@@ -498,6 +498,20 @@ trustgate certify --config examples/test_config_e2e.yaml --yes
 
 ---
 
+## 28. Concurrency Control
+
+```bash
+# Low concurrency (safe for rate-limited APIs, slower)
+time trustgate certify --config examples/test_config_e2e.yaml --concurrency 5 --yes
+
+# High concurrency (faster, but may hit rate limits)
+time trustgate certify --config examples/test_config_e2e.yaml --concurrency 30 --yes
+```
+
+Expected: higher concurrency = faster execution (if the API can handle it). If you get connection errors, lower concurrency.
+
+---
+
 # Summary Checklist
 
 | # | Feature | Type | Status |
@@ -529,3 +543,4 @@ trustgate certify --config examples/test_config_e2e.yaml --yes
 | 25 | --min-reliability gating | CLI | |
 | 26 | JSON + gating combined | CLI | |
 | 27 | PASS/FAIL/UNCERTAIN status | CLI | |
+| 28 | Concurrency control (--concurrency) | CLI | |
