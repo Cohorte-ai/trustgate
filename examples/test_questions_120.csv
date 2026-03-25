@@ -1,121 +1,121 @@
 id,question,acceptable_answers
-q001,"What is the capital of France? (A) London (B) Paris (C) Berlin (D) Madrid","B"
-q002,"What is 2+2? (A) 3 (B) 4 (C) 5 (D) 6","B"
-q003,"Which planet is the largest? (A) Earth (B) Mars (C) Jupiter (D) Venus","C"
-q004,"What is the boiling point of water in Celsius? (A) 50 (B) 75 (C) 100 (D) 150","C"
-q005,"Who wrote Romeo and Juliet? (A) Dickens (B) Shakespeare (C) Austen (D) Twain","B"
-q006,"What is the chemical symbol for gold? (A) Go (B) Gd (C) Au (D) Ag","C"
-q007,"How many continents are there? (A) 5 (B) 6 (C) 7 (D) 8","C"
-q008,"What is the speed of light approximately? (A) 300 km/s (B) 300,000 km/s (C) 3,000 km/s (D) 30,000 km/s","B"
-q009,"Who painted the Mona Lisa? (A) Picasso (B) Van Gogh (C) Da Vinci (D) Michelangelo","C"
-q010,"What is the square root of 144? (A) 10 (B) 11 (C) 12 (D) 14","C"
-q011,"Which element has the atomic number 1? (A) Helium (B) Hydrogen (C) Oxygen (D) Carbon","B"
-q012,"In which year did World War II end? (A) 1943 (B) 1944 (C) 1945 (D) 1946","C"
-q013,"What is the largest ocean? (A) Atlantic (B) Indian (C) Arctic (D) Pacific","D"
-q014,"What is the capital of Japan? (A) Beijing (B) Seoul (C) Tokyo (D) Osaka","C"
-q015,"How many sides does a hexagon have? (A) 5 (B) 6 (C) 7 (D) 8","B"
-q016,"What is the freezing point of water in Fahrenheit? (A) 0 (B) 32 (C) 100 (D) 212","B"
-q017,"Who developed the theory of relativity? (A) Newton (B) Einstein (C) Bohr (D) Hawking","B"
-q018,"What is the currency of the United Kingdom? (A) Euro (B) Dollar (C) Pound (D) Franc","C"
-q019,"Which gas do plants absorb from the atmosphere? (A) Oxygen (B) Nitrogen (C) Carbon dioxide (D) Hydrogen","C"
-q020,"What is 15% of 200? (A) 20 (B) 25 (C) 30 (D) 35","C"
-q021,"Which country has the most population? (A) USA (B) India (C) China (D) Indonesia","B"
-q022,"What is the powerhouse of the cell? (A) Nucleus (B) Ribosome (C) Mitochondria (D) Golgi body","C"
-q023,"How many bones are in the adult human body? (A) 186 (B) 196 (C) 206 (D) 216","C"
-q024,"What is the longest river in the world? (A) Amazon (B) Nile (C) Yangtze (D) Mississippi","B"
-q025,"Which planet is known as the Red Planet? (A) Venus (B) Mars (C) Jupiter (D) Saturn","B"
-q026,"What is the main language spoken in Brazil? (A) Spanish (B) Portuguese (C) French (D) English","B"
-q027,"Who is the author of 1984? (A) Huxley (B) Orwell (C) Bradbury (D) Asimov","B"
-q028,"What is the chemical formula for water? (A) H2O (B) CO2 (C) NaCl (D) O2","A"
-q029,"How many minutes are in an hour? (A) 30 (B) 45 (C) 60 (D) 90","C"
-q030,"What is the tallest mountain in the world? (A) K2 (B) Kangchenjunga (C) Everest (D) Lhotse","C"
-q031,"Which vitamin is produced when skin is exposed to sunlight? (A) A (B) B (C) C (D) D","D"
-q032,"What is the capital of Australia? (A) Sydney (B) Melbourne (C) Canberra (D) Brisbane","C"
-q033,"How many players are on a soccer team? (A) 9 (B) 10 (C) 11 (D) 12","C"
-q034,"What is the smallest prime number? (A) 0 (B) 1 (C) 2 (D) 3","C"
-q035,"Which organ pumps blood through the body? (A) Lungs (B) Brain (C) Heart (D) Liver","C"
-q036,"What is the hardest natural substance? (A) Gold (B) Iron (C) Diamond (D) Quartz","C"
-q037,"In which continent is Egypt located? (A) Asia (B) Europe (C) Africa (D) South America","C"
-q038,"What is the value of pi to two decimal places? (A) 3.12 (B) 3.14 (C) 3.16 (D) 3.18","B"
-q039,"Who discovered penicillin? (A) Pasteur (B) Fleming (C) Curie (D) Jenner","B"
-q040,"What is the largest mammal? (A) Elephant (B) Blue whale (C) Giraffe (D) Hippo","B"
-q041,"How many chromosomes do humans have? (A) 23 (B) 44 (C) 46 (D) 48","C"
-q042,"What is the capital of Canada? (A) Toronto (B) Vancouver (C) Montreal (D) Ottawa","D"
-q043,"Which metal is liquid at room temperature? (A) Lead (B) Mercury (C) Tin (D) Zinc","B"
-q044,"What is the largest desert in the world? (A) Sahara (B) Gobi (C) Antarctic (D) Arabian","C"
-q045,"Who wrote The Odyssey? (A) Virgil (B) Homer (C) Sophocles (D) Plato","B"
-q046,"What is the SI unit of force? (A) Joule (B) Watt (C) Newton (D) Pascal","C"
-q047,"How many teeth does an adult human have? (A) 28 (B) 30 (C) 32 (D) 34","C"
-q048,"What is the capital of Germany? (A) Munich (B) Hamburg (C) Berlin (D) Frankfurt","C"
-q049,"Which blood type is the universal donor? (A) A (B) B (C) AB (D) O","D"
-q050,"What year did the Titanic sink? (A) 1910 (B) 1911 (C) 1912 (D) 1913","C"
-q051,"What is the formula for calculating area of a circle? (A) 2*pi*r (B) pi*r^2 (C) pi*d (D) r^2","B"
-q052,"Which planet has the most moons? (A) Jupiter (B) Saturn (C) Uranus (D) Neptune","B"
-q053,"What is the main component of the Sun? (A) Helium (B) Hydrogen (C) Oxygen (D) Carbon","B"
-q054,"Who invented the telephone? (A) Edison (B) Tesla (C) Bell (D) Marconi","C"
-q055,"What is the pH of pure water? (A) 5 (B) 7 (C) 9 (D) 14","B"
-q056,"Which country is known as the Land of the Rising Sun? (A) China (B) Korea (C) Japan (D) Thailand","C"
-q057,"What is the longest bone in the human body? (A) Tibia (B) Femur (C) Humerus (D) Spine","B"
-q058,"How many Great Lakes are there? (A) 3 (B) 4 (C) 5 (D) 6","C"
-q059,"What is the chemical symbol for sodium? (A) So (B) Sd (C) Na (D) S","C"
-q060,"Who was the first person to walk on the moon? (A) Aldrin (B) Armstrong (C) Glenn (D) Shepard","B"
-q061,"What is the capital of Italy? (A) Milan (B) Rome (C) Venice (D) Florence","B"
-q062,"How many days are in a leap year? (A) 364 (B) 365 (C) 366 (D) 367","C"
-q063,"Which animal is the largest land mammal? (A) Rhino (B) Hippo (C) Elephant (D) Giraffe","C"
-q064,"What is the speed of sound in air approximately? (A) 143 m/s (B) 243 m/s (C) 343 m/s (D) 443 m/s","C"
-q065,"Who wrote Pride and Prejudice? (A) Bronte (B) Austen (C) Shelley (D) Eliot","B"
-q066,"What is the most abundant gas in Earth's atmosphere? (A) Oxygen (B) Carbon dioxide (C) Nitrogen (D) Argon","C"
-q067,"How many strings does a standard guitar have? (A) 4 (B) 5 (C) 6 (D) 7","C"
-q068,"What is the capital of Spain? (A) Barcelona (B) Madrid (C) Seville (D) Valencia","B"
-q069,"Which planet is closest to the Sun? (A) Venus (B) Mercury (C) Earth (D) Mars","B"
-q070,"What is the boiling point of water in Fahrenheit? (A) 100 (B) 180 (C) 200 (D) 212","D"
-q071,"Who painted Starry Night? (A) Monet (B) Van Gogh (C) Renoir (D) Cezanne","B"
-q072,"What is the largest organ in the human body? (A) Liver (B) Brain (C) Skin (D) Lungs","C"
-q073,"How many weeks are in a year? (A) 48 (B) 50 (C) 52 (D) 54","C"
-q074,"What is the capital of South Korea? (A) Busan (B) Seoul (C) Incheon (D) Daegu","B"
-q075,"Which element is represented by the symbol Fe? (A) Fluorine (B) Francium (C) Iron (D) Lead","C"
-q076,"What is 7 x 8? (A) 54 (B) 56 (C) 58 (D) 62","B"
-q077,"Who composed the Four Seasons? (A) Bach (B) Mozart (C) Vivaldi (D) Beethoven","C"
-q078,"What is the smallest continent? (A) Europe (B) Antarctica (C) Australia (D) South America","C"
-q079,"How many vertices does a cube have? (A) 4 (B) 6 (C) 8 (D) 12","C"
-q080,"What is the capital of Egypt? (A) Alexandria (B) Cairo (C) Luxor (D) Giza","B"
-q081,"Which is the most spoken language in the world? (A) English (B) Spanish (C) Mandarin (D) Hindi","C"
-q082,"What is the chemical symbol for potassium? (A) Po (B) Pt (C) K (D) Ka","C"
-q083,"How many hours are in a week? (A) 148 (B) 158 (C) 168 (D) 178","C"
-q084,"Who discovered gravity? (A) Galileo (B) Newton (C) Einstein (D) Kepler","B"
-q085,"What is the capital of Brazil? (A) Rio de Janeiro (B) Sao Paulo (C) Brasilia (D) Salvador","C"
-q086,"Which ocean is the smallest? (A) Pacific (B) Atlantic (C) Indian (D) Arctic","D"
-q087,"What is the cube root of 27? (A) 2 (B) 3 (C) 4 (D) 9","B"
-q088,"Who wrote Don Quixote? (A) Cervantes (B) Garcia Marquez (C) Borges (D) Neruda","A"
-q089,"What is the unit of electrical resistance? (A) Volt (B) Ampere (C) Ohm (D) Watt","C"
-q090,"How many planets are in our solar system? (A) 7 (B) 8 (C) 9 (D) 10","B"
-q091,"What is the capital of Russia? (A) St Petersburg (B) Moscow (C) Novosibirsk (D) Kazan","B"
-q092,"Which gas is essential for combustion? (A) Nitrogen (B) Carbon dioxide (C) Oxygen (D) Helium","C"
-q093,"What is the largest country by area? (A) China (B) Canada (C) USA (D) Russia","D"
-q094,"Who painted the ceiling of the Sistine Chapel? (A) Da Vinci (B) Raphael (C) Michelangelo (D) Donatello","C"
-q095,"What is the freezing point of water in Celsius? (A) -10 (B) 0 (C) 10 (D) 32","B"
-q096,"How many legs does a spider have? (A) 6 (B) 8 (C) 10 (D) 12","B"
-q097,"What is the capital of Mexico? (A) Guadalajara (B) Cancun (C) Mexico City (D) Monterrey","C"
-q098,"Which instrument measures atmospheric pressure? (A) Thermometer (B) Barometer (C) Hygrometer (D) Anemometer","B"
-q099,"What is 25% of 80? (A) 15 (B) 20 (C) 25 (D) 30","B"
-q100,"Who is known as the father of computers? (A) Turing (B) Babbage (C) Lovelace (D) Von Neumann","B"
-q101,"What is the capital of Argentina? (A) Santiago (B) Buenos Aires (C) Lima (D) Bogota","B"
-q102,"Which vitamin prevents scurvy? (A) A (B) B (C) C (D) D","C"
-q103,"How many faces does a dodecahedron have? (A) 8 (B) 10 (C) 12 (D) 20","C"
-q104,"What is the chemical formula for table salt? (A) NaOH (B) NaCl (C) KCl (D) CaCl2","B"
-q105,"Who wrote The Great Gatsby? (A) Hemingway (B) Fitzgerald (C) Faulkner (D) Steinbeck","B"
-q106,"What is the deepest ocean trench? (A) Tonga (B) Java (C) Mariana (D) Puerto Rico","C"
-q107,"What is the capital of Turkey? (A) Istanbul (B) Ankara (C) Izmir (D) Antalya","B"
-q108,"How many symphonies did Beethoven compose? (A) 7 (B) 8 (C) 9 (D) 10","C"
-q109,"What is the atomic number of carbon? (A) 4 (B) 6 (C) 8 (D) 12","B"
-q110,"Which is the hottest planet? (A) Mercury (B) Venus (C) Mars (D) Jupiter","B"
-q111,"What is the capital of India? (A) Mumbai (B) Kolkata (C) New Delhi (D) Chennai","C"
-q112,"How many colors are in a rainbow? (A) 5 (B) 6 (C) 7 (D) 8","C"
-q113,"Who formulated the laws of motion? (A) Galileo (B) Newton (C) Kepler (D) Copernicus","B"
-q114,"What is the chemical symbol for silver? (A) Si (B) Sv (C) Ag (D) Au","C"
-q115,"How many cards are in a standard deck? (A) 48 (B) 50 (C) 52 (D) 54","C"
-q116,"What is the capital of Nigeria? (A) Lagos (B) Abuja (C) Kano (D) Ibadan","B"
-q117,"Which is the longest wall in the world? (A) Berlin Wall (B) Hadrian's Wall (C) Great Wall of China (D) Western Wall","C"
-q118,"What is the decimal equivalent of 1/4? (A) 0.20 (B) 0.25 (C) 0.30 (D) 0.40","B"
-q119,"Who discovered X-rays? (A) Curie (B) Roentgen (C) Becquerel (D) Rutherford","B"
-q120,"What is the smallest bone in the human body? (A) Stapes (B) Incus (C) Malleus (D) Phalanx","A"
+q001,What is the capital of France?,Paris
+q002,What is 2+2?,4
+q003,Which planet is the largest?,Jupiter
+q004,What is the boiling point of water in Celsius?,100
+q005,Who wrote Romeo and Juliet?,Shakespeare
+q006,What is the chemical symbol for gold?,Au
+q007,How many continents are there?,7
+q008,What is the speed of light approximately?,"300,000 km/s"
+q009,Who painted the Mona Lisa?,Da Vinci
+q010,What is the square root of 144?,12
+q011,Which element has the atomic number 1?,Hydrogen
+q012,In which year did World War II end?,1945
+q013,What is the largest ocean?,D
+q014,What is the capital of Japan?,Tokyo
+q015,How many sides does a hexagon have?,6
+q016,What is the freezing point of water in Fahrenheit?,32
+q017,Who developed the theory of relativity?,Einstein
+q018,What is the currency of the United Kingdom?,Pound
+q019,Which gas do plants absorb from the atmosphere?,Carbon dioxide
+q020,What is 15% of 200?,30
+q021,Which country has the most population?,India
+q022,What is the powerhouse of the cell?,Mitochondria
+q023,How many bones are in the adult human body?,206
+q024,What is the longest river in the world?,Nile
+q025,Which planet is known as the Red Planet?,Mars
+q026,What is the main language spoken in Brazil?,Portuguese
+q027,Who is the author of 1984?,Orwell
+q028,What is the chemical formula for water?,H2O
+q029,How many minutes are in an hour?,60
+q030,What is the tallest mountain in the world?,Everest
+q031,Which vitamin is produced when skin is exposed to sunlight?,D
+q032,What is the capital of Australia?,Canberra
+q033,How many players are on a soccer team?,11
+q034,What is the smallest prime number?,2
+q035,Which organ pumps blood through the body?,Heart
+q036,What is the hardest natural substance?,Diamond
+q037,In which continent is Egypt located?,Africa
+q038,What is the value of pi to two decimal places?,3.14
+q039,Who discovered penicillin?,Fleming
+q040,What is the largest mammal?,Blue whale
+q041,How many chromosomes do humans have?,46
+q042,What is the capital of Canada?,D
+q043,Which metal is liquid at room temperature?,Mercury
+q044,What is the largest desert in the world?,Antarctic
+q045,Who wrote The Odyssey?,Homer
+q046,What is the SI unit of force?,Newton
+q047,How many teeth does an adult human have?,32
+q048,What is the capital of Germany?,Berlin
+q049,Which blood type is the universal donor?,D
+q050,What year did the Titanic sink?,1912
+q051,What is the formula for calculating area of a circle?,pi*r^2
+q052,Which planet has the most moons?,Saturn
+q053,What is the main component of the Sun?,Hydrogen
+q054,Who invented the telephone?,Bell
+q055,What is the pH of pure water?,7
+q056,Which country is known as the Land of the Rising Sun?,Japan
+q057,What is the longest bone in the human body?,Femur
+q058,How many Great Lakes are there?,5
+q059,What is the chemical symbol for sodium?,Na
+q060,Who was the first person to walk on the moon?,Armstrong
+q061,What is the capital of Italy?,Rome
+q062,How many days are in a leap year?,366
+q063,Which animal is the largest land mammal?,Elephant
+q064,What is the speed of sound in air approximately?,343 m/s
+q065,Who wrote Pride and Prejudice?,Austen
+q066,What is the most abundant gas in Earth's atmosphere?,Nitrogen
+q067,How many strings does a standard guitar have?,6
+q068,What is the capital of Spain?,Madrid
+q069,Which planet is closest to the Sun?,Mercury
+q070,What is the boiling point of water in Fahrenheit?,D
+q071,Who painted Starry Night?,Van Gogh
+q072,What is the largest organ in the human body?,Skin
+q073,How many weeks are in a year?,52
+q074,What is the capital of South Korea?,Seoul
+q075,Which element is represented by the symbol Fe?,Iron
+q076,What is 7 x 8?,56
+q077,Who composed the Four Seasons?,Vivaldi
+q078,What is the smallest continent?,Australia
+q079,How many vertices does a cube have?,8
+q080,What is the capital of Egypt?,Cairo
+q081,Which is the most spoken language in the world?,Mandarin
+q082,What is the chemical symbol for potassium?,K
+q083,How many hours are in a week?,168
+q084,Who discovered gravity?,Newton
+q085,What is the capital of Brazil?,Brasilia
+q086,Which ocean is the smallest?,D
+q087,What is the cube root of 27?,3
+q088,Who wrote Don Quixote?,Cervantes
+q089,What is the unit of electrical resistance?,Ohm
+q090,How many planets are in our solar system?,8
+q091,What is the capital of Russia?,Moscow
+q092,Which gas is essential for combustion?,Oxygen
+q093,What is the largest country by area?,D
+q094,Who painted the ceiling of the Sistine Chapel?,Michelangelo
+q095,What is the freezing point of water in Celsius?,0
+q096,How many legs does a spider have?,8
+q097,What is the capital of Mexico?,Mexico City
+q098,Which instrument measures atmospheric pressure?,Barometer
+q099,What is 25% of 80?,20
+q100,Who is known as the father of computers?,Babbage
+q101,What is the capital of Argentina?,Buenos Aires
+q102,Which vitamin prevents scurvy?,C
+q103,How many faces does a dodecahedron have?,12
+q104,What is the chemical formula for table salt?,NaCl
+q105,Who wrote The Great Gatsby?,Fitzgerald
+q106,What is the deepest ocean trench?,Mariana
+q107,What is the capital of Turkey?,Ankara
+q108,How many symphonies did Beethoven compose?,9
+q109,What is the atomic number of carbon?,6
+q110,Which is the hottest planet?,Venus
+q111,What is the capital of India?,New Delhi
+q112,How many colors are in a rainbow?,7
+q113,Who formulated the laws of motion?,Newton
+q114,What is the chemical symbol for silver?,Ag
+q115,How many cards are in a standard deck?,52
+q116,What is the capital of Nigeria?,Abuja
+q117,Which is the longest wall in the world?,Great Wall of China
+q118,What is the decimal equivalent of 1/4?,0.25
+q119,Who discovered X-rays?,Roentgen
+q120,What is the smallest bone in the human body?,Stapes
