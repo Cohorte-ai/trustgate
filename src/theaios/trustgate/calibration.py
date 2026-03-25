@@ -36,8 +36,9 @@ def compute_nonconformity_score(
     - int M (1-indexed) if the correct answer is in the profile
     - float('inf') if the correct answer is not in the profile at all
     """
+    normalized_correct = correct_answer.strip().lower()
     for i, (answer, _freq) in enumerate(profile, start=1):
-        if answer == correct_answer:
+        if answer.strip().lower() == normalized_correct:
             return i
     return float("inf")
 
@@ -75,8 +76,8 @@ def compute_coverage(
         if qid not in labels:
             continue
         total += 1
-        correct = labels[qid]
-        top_m_answers = {ans for ans, _freq in profile[:m_star]}
+        correct = labels[qid].strip().lower()
+        top_m_answers = {ans.strip().lower() for ans, _freq in profile[:m_star]}
         if correct in top_m_answers:
             covered += 1
 
@@ -97,12 +98,12 @@ def compute_conditional_coverage(
     for qid, profile in profiles.items():
         if qid not in labels:
             continue
-        correct = labels[qid]
-        all_answers = {ans for ans, _freq in profile}
+        correct = labels[qid].strip().lower()
+        all_answers = {ans.strip().lower() for ans, _freq in profile}
         if correct not in all_answers:
             continue  # unsolvable — skip
         solvable += 1
-        top_m_answers = {ans for ans, _freq in profile[:m_star]}
+        top_m_answers = {ans.strip().lower() for ans, _freq in profile[:m_star]}
         if correct in top_m_answers:
             covered += 1
 
@@ -123,8 +124,8 @@ def compute_capability_gap(
         if qid not in labels:
             continue
         total += 1
-        correct = labels[qid]
-        all_answers = {ans for ans, _freq in profile}
+        correct = labels[qid].strip().lower()
+        all_answers = {ans.strip().lower() for ans, _freq in profile}
         if correct not in all_answers:
             unsolvable += 1
 
