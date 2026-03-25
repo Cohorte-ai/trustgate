@@ -19,12 +19,13 @@ needed for conformal calibration.
 
 ## How It Works
 
-1. TrustGate samples K responses per question from your endpoint.
+1. TrustGate samples K responses for **all** your questions.
 2. Responses are canonicalized and ranked by frequency (the self-consistency profile).
-3. The reviewer sees each question alongside **all candidate answers in randomized order** — no frequencies, no rank numbers, preventing anchoring bias.
-4. The reviewer picks the acceptable answer (or "none of these").
-5. The system internally resolves the rank of the selected answer → nonconformity score.
-6. Labels are saved as `{question_id: canonical_answer}` — directly compatible with `trustgate certify --ground-truth`.
+3. A **random subset** is selected for human review (default: `n_cal` from config, typically 50). You don't need to prepare exactly 50 questions — provide as many as you have, and TrustGate selects the calibration subset automatically.
+4. The reviewer sees each question alongside **all candidate answers in randomized order** — no frequencies, no rank numbers, preventing anchoring bias.
+5. The reviewer picks the acceptable answer (or "none of these").
+6. The system internally resolves the rank of the selected answer → nonconformity score.
+7. Labels are saved as `{question_id: canonical_answer}` — directly compatible with `trustgate certify --ground-truth`.
 
 ### What happens to the reviewer's selections
 
