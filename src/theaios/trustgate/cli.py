@@ -114,6 +114,11 @@ def certify_cmd(
 
     if fast:
         config.sampling.sequential_stopping = False
+        from theaios.trustgate.canonicalize.llm_semantic import (
+            _MAX_CONCURRENT_CANON_FAST,
+            set_canon_concurrency,
+        )
+        set_canon_concurrency(_MAX_CONCURRENT_CANON_FAST)
 
     questions = None
     if questions_path:
@@ -534,7 +539,12 @@ def cache_clear(cache_dir: str) -> None:
 # ---------------------------------------------------------------------------
 
 _AVG_API_LATENCY = 1.0  # seconds per API call (conservative estimate)
-_CANON_CONCURRENCY = 20  # matches LLMSemanticCanonicalizer semaphore
+
+
+def _get_canon_concurrency() -> int:
+    """Get current canonicalization concurrency (may be boosted by --fast)."""
+    from theaios.trustgate.canonicalize.llm_semantic import _MAX_CONCURRENT_CANON
+    return _MAX_CONCURRENT_CANON
 
 
 def _estimate_time(
@@ -563,14 +573,14 @@ def _estimate_time(
     # Canonicalization time (only for LLM-based, scales with effective samples)
     uses_llm_canon = config.canonicalization.type in ("llm", "llm_judge")
     if uses_llm_canon:
-        canon_s = (effective_samples * _AVG_API_LATENCY) / _CANON_CONCURRENCY
+        canon_s = (effective_samples * _AVG_API_LATENCY) / _get_canon_concurrency()
     else:
         canon_s = 0.0
 
     # Calibration (auto-judge adds another round)
     judge_ep = config.canonicalization.judge_endpoint
     if judge_ep is not None:
-        cal_s = (n_questions * _AVG_API_LATENCY) / _CANON_CONCURRENCY
+        cal_s = (n_questions * _AVG_API_LATENCY) / _get_canon_concurrency()
     else:
         cal_s = 1.0
 

@@ -56,6 +56,14 @@ Canonical form:"""
 # Shared semaphore to limit concurrent LLM calls (avoid overwhelming the API)
 _CANON_SEMAPHORE: asyncio.Semaphore | None = None
 _MAX_CONCURRENT_CANON = 20
+_MAX_CONCURRENT_CANON_FAST = 50
+
+
+def set_canon_concurrency(n: int) -> None:
+    """Set the canonicalization concurrency limit (called by --fast)."""
+    global _CANON_SEMAPHORE, _MAX_CONCURRENT_CANON  # noqa: PLW0603
+    _MAX_CONCURRENT_CANON = n
+    _CANON_SEMAPHORE = None  # reset so next call creates with new limit
 
 
 def _get_semaphore() -> asyncio.Semaphore:
