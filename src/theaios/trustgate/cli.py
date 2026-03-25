@@ -525,7 +525,7 @@ def cache_clear(cache_dir: str) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
-_AVG_API_LATENCY = 1.0  # seconds per API call (conservative estimate)
+_AVG_API_LATENCY = 2.0  # seconds per API call (includes network + model latency)
 
 
 _CANON_CONCURRENCY = 20  # matches LLMSemanticCanonicalizer semaphore

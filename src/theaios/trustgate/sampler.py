@@ -434,14 +434,15 @@ class Sampler:
                 )
                 await asyncio.sleep(delay)
 
-            except httpx.TimeoutException as exc:
+            except (httpx.TimeoutException, httpx.ConnectError) as exc:
                 last_error = exc
                 delay = _backoff(attempt)
                 logger.warning(
-                    "Request timed out, retrying in %.1fs (attempt %d/%d)",
+                    "Connection failed, retrying in %.1fs (attempt %d/%d): %s",
                     delay,
                     attempt + 1,
                     self.sampling_config.retries,
+                    type(exc).__name__,
                 )
                 await asyncio.sleep(delay)
 
