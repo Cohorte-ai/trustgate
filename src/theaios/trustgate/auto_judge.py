@@ -69,17 +69,13 @@ async def auto_judge_labels_async(
 ) -> dict[str, str]:
     """Use an LLM to label calibration items — like a human reviewer.
 
-    For each question, presents the ranked canonical answers to the judge.
-    If ground truth is provided, the judge matches it to a canonical answer
-    semantically.  If not, the judge picks the correct answer on its own.
-
-    Returns ``{question_id: canonical_answer}`` — the same format as human
-    calibration labels, directly usable for conformal calibration.
+    All judge calls run in parallel for speed.
     """
     adapter = EndpointAdapter.from_config(judge_config)
-    labels: dict[str, str] = {}
 
     async with httpx.AsyncClient(timeout=timeout) as client:
+        coros = []
+        task_meta = []
         for qid, profile in profiles.items():
             question = questions_text.get(qid, "")
             if not profile or not question:
@@ -101,11 +97,16 @@ async def auto_judge_labels_async(
                     candidates=candidates,
                 )
 
-            selected = await _call_judge(
-                adapter, client, prompt, profile, retries,
-            )
-            if selected is not None:
-                labels[qid] = selected
+            coros.append(_call_judge(adapter, client, prompt, profile, retries))
+            task_meta.append((qid, profile))
+
+        # Run all judge calls in parallel
+        results = await asyncio.gather(*coros)
+
+    labels: dict[str, str] = {}
+    for (qid, _profile), selected in zip(task_meta, results):
+        if selected is not None:
+            labels[qid] = selected
 
     return labels
 

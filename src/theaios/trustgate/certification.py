@@ -287,15 +287,22 @@ async def sample_and_profile_async(
     else:
         responses = await sampler.sample_all(questions, k=k)
 
-    # Canonicalize (use async when available — needed for LLM judge)
+    # Canonicalize (parallel async — needed for LLM-based canonicalization)
     canonicalizer = _build_canonicalizer(config)
-    canonical: dict[str, list[str]] = {}
+
+    canon_keys: list[str] = []
+    canon_coros: list[Any] = []
     for qid, resps in responses.items():
         question_text = questions_by_id[qid].text
-        canonical[qid] = [
-            await canonicalizer.canonicalize_async(question_text, r.raw_response)
-            for r in resps
-        ]
+        for r in resps:
+            canon_keys.append(qid)
+            canon_coros.append(canonicalizer.canonicalize_async(question_text, r.raw_response))
+
+    canon_results: list[str] = await asyncio.gather(*canon_coros)
+
+    canonical: dict[str, list[str]] = {qid: [] for qid in responses}
+    for qid_key, result_str in zip(canon_keys, canon_results):
+        canonical[qid_key].append(result_str)
 
     # Build profiles
     profiles: dict[str, list[tuple[str, float]]] = {}
@@ -380,16 +387,22 @@ async def certify_async(
     else:
         responses = await sampler.sample_all(questions, k=k)
 
-    # 5. Canonicalize (use async — needed for LLM judge inside event loop)
+    # 5. Canonicalize (parallel async — needed for LLM-based canonicalization)
     canonicalizer = _build_canonicalizer(config)
 
-    canonical: dict[str, list[str]] = {}
+    canon_keys: list[str] = []
+    canon_coros: list[Any] = []
     for qid, resps in responses.items():
         question_text = questions_by_id[qid].text
-        canonical[qid] = [
-            await canonicalizer.canonicalize_async(question_text, r.raw_response)
-            for r in resps
-        ]
+        for r in resps:
+            canon_keys.append(qid)
+            canon_coros.append(canonicalizer.canonicalize_async(question_text, r.raw_response))
+
+    canon_results_raw: list[str] = await asyncio.gather(*canon_coros)
+
+    canonical: dict[str, list[str]] = {qid: [] for qid in responses}
+    for qid_key, result_str in zip(canon_keys, canon_results_raw):
+        canonical[qid_key].append(result_str)
 
     # 6. Profiles
     profiles = {
