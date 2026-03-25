@@ -28,9 +28,12 @@ TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pip
 
 - **Self-consistency sampling** — ask the same question K times, measure agreement
 - **Conformal calibration** — formal coverage guarantee, distribution-free
+- **LLM semantic canonicalization** — groups equivalent answers via a lightweight LLM
 - **Human calibration** — shareable HTML questionnaire for domain experts (no server needed)
+- **Automated LLM judge** — calibration without human reviewers (`--auto-judge`)
 - **Runtime trust layer** — wrap any endpoint with reliability metadata
 - **Sequential stopping** — Hoeffding bounds reduce API costs by ~50%
+- **Dynamic time estimation** — measures your API latency before running
 - **Profile diagnostics** — automatic detection of canonicalization failures
 
 > [!NOTE]
@@ -108,15 +111,26 @@ If you have correct answers, add them as `acceptable_answers` in the CSV. If not
 trustgate certify
 ```
 
-TrustGate shows a cost estimate and asks for confirmation before making any API calls:
+TrustGate measures your API latency, shows a cost/time estimate, and asks for confirmation:
 
 ```
-     Pre-flight Estimate              Cost / Reliability Tradeoff
-┌─────────────────────────┬──────┐  ┌────┬───────────┬────────────┐
-│ Questions               │ 500  │  │  K │ Est. Cost │ Resolution │
-│ Samples per question    │ 10   │  │  3 │ $9.00     │   coarse   │
-│ Est. cost               │ $30  │  │ 10←│ $30.00    │    fine    │
-└─────────────────────────┴──────┘  └────┴───────────┴────────────┘
+     Pre-flight Estimate
+┌──────────────────────────┬───────────────────────────────┐
+│ Questions                │ 120                           │
+│ Samples per question (K) │ 10                            │
+│ Requests                 │ 600                           │
+│ Sequential stopping      │ enabled (~50% fewer requests) │
+│ Est. cost                │ $0.53                         │
+│ Measured latency         │ 0.8s per call                 │
+│ Est. time                │ ~1.2 min                      │
+└──────────────────────────┴───────────────────────────────┘
+              Cost / Reliability Tradeoff
+┌────┬──────────┬───────────┬───────────┬────────────┐
+│  K │ Requests │ Est. Cost │ Est. Time │ Resolution │
+│  3 │      180 │ $0.16     │ ~20s      │   coarse   │
+│ 10←│      600 │ $0.53     │ ~1.2 min  │    fine    │
+│ 20 │    1,200 │ $1.06     │ ~2.3 min  │    fine    │
+└────┴──────────┴───────────┴───────────┴────────────┘
 Proceed? Enter Y, N, or a number to change K [Y]:
 ```
 
@@ -287,20 +301,19 @@ Each component is just an endpoint — TrustGate certifies it independently with
 
 TrustGate warns you automatically when outputs are too long or diverse for meaningful self-consistency measurement.
 
-## Pre-flight Cost Estimate
+## Tuning Performance
 
-Before spending money, TrustGate shows the cost/reliability tradeoff:
+Use `--concurrency` to control how many API requests run in parallel:
 
-```
-     Cost / Reliability Tradeoff
-┌────┬───────────┬──────────┬────────────┐
-│  K │ Est. Cost │ Max Cost │ Resolution │
-│  3 │ $9.00     │ $18.00   │   coarse   │
-│  5 │ $15.00    │ $30.00   │  moderate  │
-│ 10←│ $30.00    │ $60.00   │    fine    │
-│ 20 │ $60.00    │ $120.00  │    fine    │
-└────┴───────────┴──────────┴────────────┘
-Proceed? [Y/n]:
+```bash
+# Safe for rate-limited APIs (default)
+trustgate certify --concurrency 10
+
+# Faster for high-throughput APIs
+trustgate certify --concurrency 30
+
+# Very conservative for strict rate limits
+trustgate certify --concurrency 3
 ```
 
 ---
@@ -328,8 +341,9 @@ Proceed? [Y/n]:
 - **Black-box** — no model internals, no logprobs, just API access
 - **Any endpoint** — LLMs, agents, RAG, custom APIs
 - **Human-in-the-loop** — shareable questionnaire, no server needed
-- **Cost-aware** — pre-flight estimates, sequential stopping saves ~50%
-- **Production-ready** — passthrough mode, CI/CD gating, periodic recalibration
+- **Cost-aware** — pre-flight estimates with measured latency, sequential stopping saves ~50%
+- **Tunable** — `--concurrency`, `--min-reliability`, `--auto-judge` for any workflow
+- **Production-ready** — CI/CD gating, runtime trust layer, periodic recalibration
 
 ---
 
