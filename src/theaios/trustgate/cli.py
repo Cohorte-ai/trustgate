@@ -132,8 +132,20 @@ def certify_cmd(
     # --- Pre-flight cost estimate ---
     if questions is not None and not yes:
         _show_preflight(config, len(questions))
-        if not click.confirm("Proceed?", default=True):
+        choice = click.prompt(
+            "Proceed? Enter Y to run, N to abort, or a number to change K",
+            default="Y",
+        )
+        if choice.upper() == "N":
             sys.exit(0)
+        if choice.upper() != "Y":
+            try:
+                new_k = int(choice)
+                config.sampling.k_fixed = new_k
+                click.echo(f"K set to {new_k}.")
+            except ValueError:
+                click.echo("Invalid input. Aborting.", err=True)
+                sys.exit(1)
 
     from rich.console import Console
     from rich.status import Status
