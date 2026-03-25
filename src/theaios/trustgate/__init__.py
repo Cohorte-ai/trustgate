@@ -10,6 +10,7 @@ from theaios.trustgate.certification import (
     sample_and_profile,
     sample_and_rank,
 )
+from theaios.trustgate.auto_judge import auto_judge_labels
 from theaios.trustgate.config import load_config
 from theaios.trustgate.gate import GateResponse, TrustGate
 from theaios.trustgate.questionnaire import generate_questionnaire
@@ -37,6 +38,7 @@ __all__ = [
     "Canonicalizer",
     "register_canonicalizer",
     "get_canonicalizer",
+    "auto_judge_labels",
     "TrustGate",
     "GateResponse",
     "generate_questionnaire",

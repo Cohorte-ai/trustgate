@@ -56,9 +56,10 @@ def version() -> None:
 @click.option("--model", help="Model name (overrides config)")
 @click.option(
     "--task-type",
-    type=click.Choice(["numeric", "mcq", "code_exec", "llm_judge", "embedding", "custom"]),
+    type=click.Choice(["numeric", "mcq", "code_exec", "llm_judge", "llm", "embedding", "custom"]),
     help="Canonicalization type (overrides config)",
 )
+@click.option("--auto-judge", is_flag=True, help="Use LLM-as-judge for automated calibration (no human needed)")
 @click.option("--questions", "-q", "questions_path", help="Questions file (CSV or JSON)")
 @click.option("--ground-truth", "-g", "ground_truth_path", help="Ground truth labels file")
 @click.option("--alpha", "-a", type=float, default=0.10, help="Significance level")
@@ -83,6 +84,7 @@ def certify_cmd(
     api_key_env: str | None,
     model: str | None,
     task_type: str | None,
+    auto_judge: bool,
     questions_path: str | None,
     ground_truth_path: str | None,
     alpha: float,
@@ -147,6 +149,30 @@ def certify_cmd(
                 click.echo("Invalid input. Aborting.", err=True)
                 sys.exit(1)
 
+    # --- Auto-judge: generate labels via LLM if no ground truth ---
+    if auto_judge and labels is None and questions is not None:
+        from theaios.trustgate.auto_judge import auto_judge_labels
+
+        if not config.canonicalization.judge_endpoint:
+            click.echo(
+                "Error: --auto-judge requires a judge_endpoint in config "
+                "(canonicalization.judge_endpoint).",
+                err=True,
+            )
+            sys.exit(1)
+
+        from rich.console import Console as _Console
+        from rich.status import Status as _Status
+
+        _con = _Console()
+        with _Status("[bold blue]Auto-judging with LLM...", console=_con):
+            profiles = sample_and_profile(config, questions)
+            q_texts = {q.id: q.text for q in questions}
+            labels = auto_judge_labels(
+                q_texts, profiles, config.canonicalization.judge_endpoint,
+            )
+        click.echo(f"Auto-judge labeled {len(labels)} questions.")
+
     from rich.console import Console
     from rich.status import Status
 
@@ -179,7 +205,7 @@ def certify_cmd(
 @click.option(
     "--task-type",
     required=True,
-    type=click.Choice(["numeric", "mcq", "code_exec", "llm_judge", "embedding", "custom"]),
+    type=click.Choice(["numeric", "mcq", "code_exec", "llm_judge", "llm", "embedding", "custom"]),
 )
 @click.option("--questions", "-q", "questions_path", required=True)
 @click.option("--ground-truth", "-g", "ground_truth_path")

@@ -237,7 +237,7 @@ def estimate_cost(
 def _canon_kwargs(canon_config: CanonConfig) -> dict[str, Any]:
     """Build kwargs for ``get_canonicalizer()`` from config."""
     kwargs: dict[str, Any] = {}
-    if canon_config.type == "llm_judge" and canon_config.judge_endpoint is not None:
+    if canon_config.type in ("llm_judge", "llm") and canon_config.judge_endpoint is not None:
         kwargs["judge_config"] = canon_config.judge_endpoint
     return kwargs
 

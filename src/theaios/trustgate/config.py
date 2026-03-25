@@ -216,9 +216,9 @@ def validate_config(config: TrustGateConfig) -> list[str]:
         errors.append(
             "canonicalization.custom_class is required when type is 'custom'"
         )
-    if config.canonicalization.type == "llm_judge" and not config.canonicalization.judge_endpoint:
+    if config.canonicalization.type in ("llm_judge", "llm") and not config.canonicalization.judge_endpoint:
         errors.append(
-            "canonicalization.judge_endpoint is required when type is 'llm_judge'"
+            f"canonicalization.judge_endpoint is required when type is '{config.canonicalization.type}'"
         )
 
     return errors
