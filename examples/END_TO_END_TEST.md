@@ -229,6 +229,21 @@ Expected:
 
 ## 14. Compare Models
 
+Requires `ground_truth.json` from step 12. If you skipped it, run:
+
+```bash
+python3 -c "
+import csv, json
+labels = {}
+with open('examples/test_questions_120.csv') as f:
+    for row in csv.DictReader(f):
+        labels[row['id']] = row['acceptable_answers']
+json.dump(labels, open('ground_truth.json', 'w'), indent=2)
+"
+```
+
+Then compare:
+
 ```bash
 trustgate compare \
   --config examples/test_config_e2e.yaml \
