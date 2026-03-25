@@ -84,19 +84,29 @@ class SequentialSampler:
 
         assert client is not None
         try:
-            for i in range(k_max):
-                resp = await self.sampler._sample_one(
-                    client=client,
-                    question=question,
-                    index=i,
-                    semaphore=semaphore,
+            # Batch the first min_batch samples in parallel (can't stop before 2)
+            min_batch = min(3, k_max)
+            first_tasks = [
+                self.sampler._sample_one(
+                    client=client, question=question, index=i, semaphore=semaphore,
                 )
-                responses.append(resp)
+                for i in range(min_batch)
+            ]
+            responses = list(await asyncio.gather(*first_tasks))
 
-                # Check stopping criterion
-                raw_answers = [r.raw_response for r in responses]
-                if should_stop(raw_answers, k=i + 1, delta=self.delta):
-                    break
+            # Check if we can already stop
+            raw_answers = [r.raw_response for r in responses]
+            if not should_stop(raw_answers, k=min_batch, delta=self.delta):
+                # Continue one at a time with stopping checks
+                for i in range(min_batch, k_max):
+                    resp = await self.sampler._sample_one(
+                        client=client, question=question, index=i,
+                        semaphore=semaphore,
+                    )
+                    responses.append(resp)
+                    raw_answers.append(resp.raw_response)
+                    if should_stop(raw_answers, k=i + 1, delta=self.delta):
+                        break
         finally:
             if own_client:
                 await client.aclose()

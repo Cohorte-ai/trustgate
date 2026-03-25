@@ -441,6 +441,63 @@ for q in questions[:3]:
 
 ---
 
+## 25. CI/CD Gating: --min-reliability
+
+```bash
+# Should PASS (threshold low)
+trustgate certify \
+  --config examples/test_config_e2e.yaml \
+  --min-reliability 50 --yes
+echo "Exit code: $?"
+# Expected: exit code 0
+
+# Should FAIL (threshold high)
+trustgate certify \
+  --config examples/test_config_e2e.yaml \
+  --min-reliability 99 --yes
+echo "Exit code: $?"
+# Expected: exit code 1 + "FAIL: reliability X% < threshold 99.0%"
+```
+
+---
+
+## 26. CI/CD: JSON Output + Gating Combined
+
+```bash
+trustgate certify \
+  --config examples/test_config_e2e.yaml \
+  --min-reliability 80 \
+  --output json \
+  --output-file result.json \
+  --yes
+
+# Parse result in CI
+python3 -c "
+import json, sys
+r = json.load(open('result.json'))
+print(f'Reliability: {r[\"reliability_level\"]:.1%}')
+print(f'M*: {r[\"m_star\"]}')
+if r['reliability_level'] < 0.80:
+    print('WOULD BLOCK DEPLOYMENT')
+    sys.exit(1)
+print('DEPLOYMENT APPROVED')
+"
+```
+
+---
+
+## 27. Status Display (PASS/FAIL/UNCERTAIN)
+
+```bash
+# Run and check that Status shows:
+# - PASS (green) when reliability > 0 and coverage meets target
+# - FAIL (red) when reliability = 0%
+# - UNCERTAIN (yellow) otherwise
+trustgate certify --config examples/test_config_e2e.yaml --yes
+```
+
+---
+
 # Summary Checklist
 
 | # | Feature | Type | Status |
@@ -469,3 +526,6 @@ for q in questions[:3]:
 | 22 | Reporting (console/json/csv) | Python | |
 | 23 | Custom canonicalizer | Python | |
 | 24 | Built-in datasets | Python | |
+| 25 | --min-reliability gating | CLI | |
+| 26 | JSON + gating combined | CLI | |
+| 27 | PASS/FAIL/UNCERTAIN status | CLI | |
