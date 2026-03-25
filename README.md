@@ -127,24 +127,37 @@ No ground truth labels? No problem — use [human calibration](https://cohorte-a
 
 ## Works With Any Endpoint
 
-LLMs, agents, RAG pipelines — anything with an HTTP API:
+LLMs, agents, RAG pipelines — anything with an HTTP API.
+
+**For known LLMs** — TrustGate auto-estimates cost from its pricing table:
 
 ```yaml
-# LLM
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1"
   api_key_env: "OPENAI_API_KEY"
+```
 
-# Generic agent / RAG / custom API
+**For custom endpoints** (agents, RAG, internal APIs) — you control the endpoint, so you need to tell TrustGate the cost per request. Measure it first (check your billing dashboard or estimate from your infrastructure costs), then set `cost_per_request`:
+
+```yaml
 endpoint:
   url: "https://my-agent.example.com/api/ask"
-  temperature: null
+  temperature: null                          # endpoint controls randomness
   request_template:
     query: "{{question}}"
   response_path: "answer"
-  cost_per_request: 0.03
+  cost_per_request: 0.03                     # USD per request — YOU must provide this
 ```
+
+Or pass it via CLI:
+
+```bash
+trustgate certify --cost-per-request 0.03
+```
+
+> [!IMPORTANT]
+> For custom endpoints, always set `cost_per_request` before running certification. Without it, TrustGate cannot show you a cost estimate in the pre-flight check, and you risk unexpected charges. TrustGate will make `questions × K` API calls (reduced ~50% by sequential stopping).
 
 ## Certify Each Component, Not Just the Final Output
 

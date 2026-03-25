@@ -78,7 +78,13 @@ Connection details for the AI model being certified.
 | `temperature` | float   | `0.7`   | Sampling temperature. Higher values increase response diversity, which is important for conformal prediction. |
 | `api_key_env` | string  | `""`    | Name of the environment variable that holds the API key (e.g., `"OPENAI_API_KEY"`). TrustGate reads the key from the environment at runtime -- the key itself is never stored in the config file. |
 | `max_tokens`  | integer | `4096`  | Maximum tokens per completion response. |
-| `provider`    | string  | `""`    | Provider hint: `"openai"`, `"anthropic"`, `"together"`, or `"generic"`. If left empty, the provider is auto-detected from the URL. |
+| `provider`    | string  | `""`    | Provider hint: `"openai"`, `"anthropic"`, `"together"`, `"generic"`, or `"generic_http"`. If left empty, the provider is auto-detected from the URL. |
+| `headers`     | object  | `{}`    | Custom HTTP headers. Supports `${VAR}` env var expansion (e.g., `Authorization: "Bearer ${MY_KEY}"`). |
+| `request_template` | object | `null` | JSON body template for generic endpoints. Use `{{question}}` as placeholder. When set, provider auto-detects to `generic_http`. |
+| `response_path` | string | `""`  | Dot-notation path to extract the answer from the JSON response (e.g., `"data.answer"`, `"choices.0.text"`). |
+| `cost_per_request` | float | `null` | Cost per API request in USD. **Required for custom endpoints** — TrustGate cannot estimate cost without it. For known LLMs (GPT-4.1, Claude, etc.), cost is auto-estimated from built-in pricing tables. |
+
+> **Cost estimation for custom endpoints:** Before running certification, measure your per-request cost (check your billing dashboard, or estimate from infrastructure costs). Set `cost_per_request` in the config or pass `--cost-per-request` on the CLI. Without it, the pre-flight check cannot show cost estimates, and you risk unexpected charges.
 
 #### Example
 
