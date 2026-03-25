@@ -345,7 +345,11 @@ def calibrate(
     if export_path:
         from theaios.trustgate.questionnaire import generate_questionnaire
 
-        out = generate_questionnaire(questions, profiles, output_path=export_path)
+        try:
+            out = generate_questionnaire(questions, profiles, output_path=export_path)
+        except OSError as exc:
+            click.echo(f"Error writing questionnaire: {exc}", err=True)
+            sys.exit(1)
         click.echo(f"Questionnaire exported to {out}")
         click.echo("Share this file with your reviewer (email, Slack, Drive).")
         click.echo("They open it in a browser, review answers, and download labels.json.")
