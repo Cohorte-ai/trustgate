@@ -43,6 +43,10 @@ def print_certification_result(
     table.add_row("Status", f"[{status_style}]{status}[/{status_style}]")
 
     console.print(table)
+    console.print(
+        "[dim]What do these metrics mean? → "
+        "https://cohorte-ai.github.io/trustgate/concepts/[/dim]"
+    )
 
     # Verbose: per-alpha coverage breakdown
     if verbose and result.alpha_coverage:
