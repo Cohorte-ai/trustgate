@@ -498,6 +498,20 @@ trustgate certify --config examples/test_config_e2e.yaml --yes
 
 ---
 
+## 28. Fast Mode (Skip Sequential Stopping)
+
+```bash
+# Normal mode (slower, cheaper — sequential stopping saves ~50% API cost)
+time trustgate certify --config examples/test_config_e2e.yaml --yes
+
+# Fast mode (faster, all samples in parallel — no cost savings)
+time trustgate certify --config examples/test_config_e2e.yaml --fast --yes
+```
+
+Expected: fast mode completes significantly quicker but uses all K samples per question (no early stopping). Compare the `Est. API cost` in both results.
+
+---
+
 # Summary Checklist
 
 | # | Feature | Type | Status |
@@ -529,3 +543,4 @@ trustgate certify --config examples/test_config_e2e.yaml --yes
 | 25 | --min-reliability gating | CLI | |
 | 26 | JSON + gating combined | CLI | |
 | 27 | PASS/FAIL/UNCERTAIN status | CLI | |
+| 28 | Fast mode (--fast) | CLI | |

@@ -78,6 +78,7 @@ def version() -> None:
     help="Cost per API request in USD (for generic/agent endpoints)",
 )
 @click.option("--min-reliability", type=float, help="Minimum reliability level (0-100). Exit code 1 if below.")
+@click.option("--fast", is_flag=True, help="Skip sequential stopping — all samples in parallel (faster, higher cost)")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 def certify_cmd(
     config_path: str,
@@ -96,6 +97,7 @@ def certify_cmd(
     verbose: bool,
     cost_per_request: float | None,
     min_reliability: float | None,
+    fast: bool,
     yes: bool,
 ) -> None:
     """Certify an AI endpoint's reliability."""
@@ -109,6 +111,9 @@ def certify_cmd(
 
     if cost_per_request is not None:
         config.endpoint.cost_per_request = cost_per_request
+
+    if fast:
+        config.sampling.sequential_stopping = False
 
     questions = None
     if questions_path:
@@ -180,11 +185,13 @@ def certify_cmd(
 
     console = Console()
     try:
-        with Status(
-            "[bold blue]Sampling and certifying... "
-            "[dim](sequential sampling minimizes API costs — this takes a few minutes)[/dim]",
-            console=console,
-        ):
+        spinner_msg = (
+            "[bold blue]Sampling and certifying (fast mode — all parallel)...[/bold blue]"
+            if fast
+            else "[bold blue]Sampling and certifying... "
+            "[dim](sequential sampling minimizes API costs — this takes a few minutes)[/dim]"
+        )
+        with Status(spinner_msg, console=console):
             result = certify(
                 config=config,
                 questions=questions,
