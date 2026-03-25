@@ -10,7 +10,7 @@ sampling:
   delta: 0.05
 
 canonicalization:
-  type: "llm_judge"
+  type: "llm"
   judge_endpoint:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
