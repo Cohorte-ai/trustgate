@@ -44,18 +44,31 @@ pip install theaios-trustgate
 
 ### Step 1: Connect your AI system
 
-Define what you're measuring — an LLM via API key, or any endpoint with auth credentials.
+You need two things: the **endpoint to test** (your AI system) and a **judge LLM** (a cheap model for canonicalization and calibration matching).
 
 ```yaml
 # trustgate.yaml
 
-# Option A: Known LLM (cost auto-estimated)
+# The AI system you're certifying
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1-mini"
   api_key_env: "OPENAI_API_KEY"
 
-# Option B: Custom endpoint (you provide the cost)
+# The judge LLM — used for canonicalization (grouping answers)
+# and calibration (matching ground truth to canonical answers).
+# Use a cheap, fast model.
+canonicalization:
+  type: "llm"
+  judge_endpoint:
+    url: "https://api.openai.com/v1/chat/completions"
+    model: "gpt-4.1-nano"
+    api_key_env: "OPENAI_API_KEY"
+```
+
+For custom endpoints (agents, RAG, internal APIs):
+
+```yaml
 endpoint:
   url: "https://my-agent.example.com/api/ask"
   temperature: null
@@ -63,10 +76,19 @@ endpoint:
     query: "{{question}}"
   response_path: "answer"
   cost_per_request: 0.03      # measure this first from your billing
+
+canonicalization:
+  type: "llm"
+  judge_endpoint:
+    url: "https://api.openai.com/v1/chat/completions"
+    model: "gpt-4.1-nano"
+    api_key_env: "OPENAI_API_KEY"
 ```
 
 > [!IMPORTANT]
-> For custom endpoints, always measure your per-request cost first (check your billing dashboard) and set `cost_per_request`. Without it, TrustGate cannot show cost estimates before running.
+> The `judge_endpoint` is **always required**. It powers both canonicalization (grouping semantically equivalent answers) and calibration (matching ground truth to canonical answers). Use a cheap model like `gpt-4.1-nano` — it only needs to extract short strings and compare meanings, not reason.
+>
+> For custom endpoints, also set `cost_per_request` — TrustGate cannot estimate cost without it.
 
 ### Step 2: Prepare your questions
 

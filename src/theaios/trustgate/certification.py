@@ -411,7 +411,7 @@ async def certify_async(
         n_test=min(config.calibration.n_test, len(all_ids) - len(all_ids) // 2),
     )
 
-    # 8. Labels
+    # 8. Labels — resolve ground truth to canonical answers via LLM matching
     if labels is None:
         if ground_truth_file:
             labels = load_ground_truth(ground_truth_file)
@@ -428,6 +428,23 @@ async def certify_async(
                     "Provide labels via ground_truth_file, labels dict, or "
                     "questions with acceptable_answers."
                 )
+
+    # 8b. When judge_endpoint is available, use LLM to match ground truth
+    #     labels to canonical answers semantically (not by string matching).
+    #     This mirrors human calibration: the LLM picks which canonical
+    #     answer matches the ground truth, giving the exact rank for M*.
+    judge_ep = config.canonicalization.judge_endpoint
+    if judge_ep is not None and labels is not None:
+        from theaios.trustgate.auto_judge import auto_judge_labels_async
+
+        q_texts = {q.id: q.text for q in questions}
+        labels = await auto_judge_labels_async(
+            q_texts, profiles, judge_ep, ground_truth=labels,
+        )
+        logger.info(
+            "LLM judge matched %d ground truth labels to canonical answers",
+            len(labels),
+        )
 
     # 9. Calibrate
     result = calibrate(

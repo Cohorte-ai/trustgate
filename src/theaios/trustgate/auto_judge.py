@@ -1,23 +1,29 @@
 """LLM-as-judge automated calibration.
 
-Replaces human review in the calibration step: given a question and its
-ranked canonical answers, the judge LLM picks the acceptable one.
-This produces the same labels format as human calibration — compatible
-with ``trustgate certify --ground-truth``.
+After sampling and canonicalization produce ranked profiles, the judge
+LLM identifies which canonical answer is correct — exactly like a human
+reviewer would.  This gives the nonconformity score s_i = rank of the
+correct canonical answer, which feeds into conformal calibration for M*.
 
-This is a CALIBRATION method, not a canonicalizer.  Canonicalization
-(grouping semantically equivalent answers) happens first; the judge
-decides which canonical group is correct.
+Two modes:
+
+**With ground truth:** The judge receives the question, the ground truth
+label, and the ranked canonical answers.  It identifies which canonical
+answer matches the ground truth semantically (not by string matching).
+
+**Without ground truth:** The judge receives just the question and the
+ranked canonical answers, and picks the correct one based on its own
+knowledge.
 
 Warning: LLM-as-judge has irreducible bias (Proposition 3.4 in the paper).
-Human calibration is more rigorous.  Use this for rapid iteration or when
-human reviewers are unavailable.
+Human calibration is more rigorous when feasible.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import re
 
 import httpx
 
@@ -26,49 +32,49 @@ from theaios.trustgate.types import EndpointConfig
 
 logger = logging.getLogger(__name__)
 
-_JUDGE_PROMPT = """\
-You are an evaluation judge. Given a question and a list of candidate answers, \
-determine which answer is correct.
+_JUDGE_PROMPT_WITH_GT = """\
+You are a calibration judge. Given a question, the known correct answer, \
+and a list of candidate answers produced by an AI system, determine which \
+candidate matches the correct answer semantically.
+
+Question: {question}
+Correct answer: {ground_truth}
+
+Candidate answers (from the AI system):
+{candidates}
+
+Which candidate matches the correct answer? Reply with ONLY the number \
+(e.g., "1" or "3"). If none of the candidates match, reply "none"."""
+
+_JUDGE_PROMPT_NO_GT = """\
+You are a calibration judge. Given a question and a list of candidate \
+answers produced by an AI system, determine which candidate is correct.
 
 Question: {question}
 
 Candidate answers:
 {candidates}
 
-Reply with ONLY the number of the correct answer (e.g., "1" or "3"). \
-If none of the answers are correct, reply "none"."""
+Which candidate is correct? Reply with ONLY the number (e.g., "1" or "3"). \
+If none of the candidates are correct, reply "none"."""
 
 
 async def auto_judge_labels_async(
     questions_text: dict[str, str],
     profiles: dict[str, list[tuple[str, float]]],
     judge_config: EndpointConfig,
+    ground_truth: dict[str, str] | None = None,
     retries: int = 3,
     timeout: float = 60.0,
 ) -> dict[str, str]:
-    """Use an LLM to automatically label calibration items.
+    """Use an LLM to label calibration items — like a human reviewer.
 
-    For each question, presents the ranked canonical answers to the judge
-    and asks it to pick the correct one.
+    For each question, presents the ranked canonical answers to the judge.
+    If ground truth is provided, the judge matches it to a canonical answer
+    semantically.  If not, the judge picks the correct answer on its own.
 
-    Parameters
-    ----------
-    questions_text : dict[str, str]
-        Mapping of question_id → question text.
-    profiles : dict[str, list[tuple[str, float]]]
-        Self-consistency profiles from ``sample_and_profile()``.
-    judge_config : EndpointConfig
-        Endpoint config for the judge LLM.
-    retries : int
-        Number of retries per judge call.
-    timeout : float
-        Timeout per request.
-
-    Returns
-    -------
-    dict[str, str]
-        Labels mapping ``{question_id: canonical_answer}``.
-        Compatible with ``certify --ground-truth``.
+    Returns ``{question_id: canonical_answer}`` — the same format as human
+    calibration labels, directly usable for conformal calibration.
     """
     adapter = EndpointAdapter.from_config(judge_config)
     labels: dict[str, str] = {}
@@ -79,15 +85,22 @@ async def auto_judge_labels_async(
             if not profile or not question:
                 continue
 
-            # Build candidates list
             candidates = "\n".join(
                 f"{i + 1}. {ans}" for i, (ans, _freq) in enumerate(profile)
             )
-            prompt = _JUDGE_PROMPT.format(
-                question=question, candidates=candidates,
-            )
 
-            # Call judge with retries
+            if ground_truth and qid in ground_truth:
+                prompt = _JUDGE_PROMPT_WITH_GT.format(
+                    question=question,
+                    ground_truth=ground_truth[qid],
+                    candidates=candidates,
+                )
+            else:
+                prompt = _JUDGE_PROMPT_NO_GT.format(
+                    question=question,
+                    candidates=candidates,
+                )
+
             selected = await _call_judge(
                 adapter, client, prompt, profile, retries,
             )
@@ -132,8 +145,6 @@ def _parse_judge_response(
     if "none" in text:
         return None
 
-    # Extract the number
-    import re
     match = re.search(r"\d+", text)
     if not match:
         return None
@@ -148,12 +159,13 @@ def auto_judge_labels(
     questions_text: dict[str, str],
     profiles: dict[str, list[tuple[str, float]]],
     judge_config: EndpointConfig,
+    ground_truth: dict[str, str] | None = None,
     retries: int = 3,
     timeout: float = 60.0,
 ) -> dict[str, str]:
     """Synchronous wrapper for :func:`auto_judge_labels_async`."""
     return asyncio.run(
         auto_judge_labels_async(
-            questions_text, profiles, judge_config, retries, timeout,
+            questions_text, profiles, judge_config, ground_truth, retries, timeout,
         )
     )
