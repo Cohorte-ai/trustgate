@@ -14,13 +14,12 @@ Black-box. No model internals required. Works with any provider.
 pip install theaios-trustgate
 ```
 
-Optional extras:
+This installs everything you need — sampling, canonicalization, calibration, certification, CLI, and the web UI.
+
+Optional extra for embedding-based canonicalization (large ML dependencies):
 
 ```bash
-pip install "theaios-trustgate[judge]"      # LLM semantic canonicalization + auto-judge
-pip install "theaios-trustgate[embedding]"   # Embedding-based clustering
-pip install "theaios-trustgate[serve]"       # Local calibration web UI
-pip install "theaios-trustgate[all]"         # Everything
+pip install "theaios-trustgate[embedding]"
 ```
 
 Requires Python 3.10+.

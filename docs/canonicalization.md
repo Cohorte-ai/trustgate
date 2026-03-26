@@ -95,12 +95,7 @@ Sends the (question, answer) pair to a separate judge LLM that returns
 to evaluate correctness and reply with exactly one word. Includes automatic
 retries with exponential backoff.
 
-Requires a `judge_endpoint` configuration pointing to the judge model. Install
-the judge extra for OpenAI SDK support:
-
-```bash
-pip install "theaios-trustgate[judge]"
-```
+Requires a `judge_endpoint` configuration pointing to the judge model.
 
 **Config:**
 
@@ -134,10 +129,6 @@ or by `--auto-judge`).
 
 Use a cheap, fast model (e.g., `gpt-4.1-nano`) — it only extracts a short
 string.
-
-```bash
-pip install "theaios-trustgate[judge]"
-```
 
 **Config:**
 

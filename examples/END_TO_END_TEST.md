@@ -15,7 +15,7 @@ Test every feature from a fresh install. No repo cloning needed.
 mkdir trustgate-test && cd trustgate-test
 python3 -m venv .venv
 source .venv/bin/activate
-pip install "theaios-trustgate[all]"
+pip install theaios-trustgate
 export OPENAI_API_KEY="sk-your-key-here"
 ```
 
@@ -25,12 +25,10 @@ export OPENAI_API_KEY="sk-your-key-here"
 mkdir trustgate-test; cd trustgate-test
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install "theaios-trustgate[all]"
+pip install theaios-trustgate
 $env:OPENAI_API_KEY="sk-your-key-here"
 ```
 
-> [!NOTE]
-> `[all]` installs the full library including Flask (for the calibration web UI) and the OpenAI SDK (for LLM canonicalization). The core `pip install theaios-trustgate` omits these optional dependencies.
 
 ---
 
