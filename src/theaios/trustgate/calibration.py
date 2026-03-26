@@ -298,37 +298,43 @@ def calibrate(
     if not cal_scores:
         raise ValueError("No valid calibration items (no matching profiles/labels)")
 
-    # --- 2 & 3. For each alpha, compute M* and test coverage ---
-    sorted_alphas = sorted(alpha_values)
-    alpha_coverage: dict[float, float] = {}
-    best_reliability = 0.0
-    best_m_star = 1
+    # --- 2. Reliability level (Definition 2.4 in paper) ---
+    # 1 - α* := |{i : s_i ≤ 1}| / (n + 1)
+    # This is the exact formula — no alpha grid approximation.
+    n_cal = len(cal_scores)
+    n_mode_correct = sum(1 for s in cal_scores if s <= 1)
+    reliability_level = n_mode_correct / (n_cal + 1)
 
+    # --- 3. M* at the reliability level ---
+    # M* is the conformal quantile at alpha = 1 - reliability_level
+    alpha_star = 1 - reliability_level
+    q_hat = conformal_quantile(cal_scores, alpha_star)
+    if math.isinf(q_hat):
+        best_m_star = n_cal  # fallback: include everything
+    else:
+        best_m_star = max(1, int(math.ceil(q_hat)))
+
+    # --- 4. Per-alpha coverage breakdown (for verbose output) ---
     test_profiles = {qid: profiles[qid] for qid in test_ids if qid in profiles}
     test_labels = {qid: labels[qid] for qid in test_ids if qid in labels}
 
+    sorted_alphas = sorted(alpha_values)
+    alpha_coverage: dict[float, float] = {}
     for alpha in sorted_alphas:
-        q_hat = conformal_quantile(cal_scores, alpha)
-        if math.isinf(q_hat):
-            # Infinite quantile means coverage is unattainable at this alpha
+        q_a = conformal_quantile(cal_scores, alpha)
+        if math.isinf(q_a):
             alpha_coverage[alpha] = 0.0
             continue
-        m_star = max(1, int(math.ceil(q_hat)))
-        cov = compute_coverage(test_profiles, test_labels, m_star)
-        alpha_coverage[alpha] = cov
+        m_a = max(1, int(math.ceil(q_a)))
+        alpha_coverage[alpha] = compute_coverage(test_profiles, test_labels, m_a)
 
-        target = 1 - alpha
-        if cov >= target and target > best_reliability:
-            best_reliability = target
-            best_m_star = m_star
-
-    # --- 4 & 5. Compute additional metrics on test set ---
+    # --- 5. Compute additional metrics on test set ---
     coverage = compute_coverage(test_profiles, test_labels, best_m_star)
     cond_cov = compute_conditional_coverage(test_profiles, test_labels, best_m_star)
     cap_gap = compute_capability_gap(test_profiles, test_labels)
 
     return CertificationResult(
-        reliability_level=best_reliability,
+        reliability_level=reliability_level,
         m_star=best_m_star,
         coverage=coverage,
         conditional_coverage=cond_cov,
