@@ -37,7 +37,7 @@ TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pip
 - **Profile diagnostics** — automatic detection of canonicalization failures
 
 > [!NOTE]
-> Part of the [theaios](https://github.com/Cohorte-ai) ecosystem. Install with `pip install theaios-trustgate`.
+> Part of the [theaios](https://github.com/Cohorte-ai) ecosystem. New here? Start with the **[End-to-End Test Guide](examples/END_TO_END_TEST.md)** — it walks you through every feature from a fresh install.
 
 ## How to Use TrustGate
 
@@ -47,7 +47,17 @@ pip install theaios-trustgate
 
 ### Step 1: Connect your AI system
 
-You need two things: the **endpoint to test** (your AI system) and a **judge LLM** (a cheap model for canonicalization and calibration matching).
+Set your API key:
+
+```bash
+# macOS / Linux
+export OPENAI_API_KEY="sk-your-key-here"
+
+# Windows (PowerShell)
+$env:OPENAI_API_KEY="sk-your-key-here"
+```
+
+You need two things in `trustgate.yaml`: the **endpoint to test** (your AI system) and a **judge LLM** (a cheap model for canonicalization and calibration matching).
 
 ```yaml
 # trustgate.yaml
@@ -342,6 +352,7 @@ trustgate certify --concurrency 3
 
 ## Additional Resources
 
+- **[End-to-End Test Guide](examples/END_TO_END_TEST.md)** — Try every feature from a fresh install (26 steps, works on macOS/Linux/Windows)
 - **[Examples](examples/)** — Working certification scripts
 - **[FAQ](https://cohorte-ai.github.io/trustgate/faq/)** — Common questions
 - **[Paper](https://arxiv.org/abs/2602.21368)** — The research behind TrustGate

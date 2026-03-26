@@ -14,7 +14,7 @@ Black-box. No model internals required. Works with any provider.
 pip install theaios-trustgate
 ```
 
-This installs everything you need — sampling, canonicalization, calibration, certification, CLI, and the web UI.
+This installs everything you need — sampling, canonicalization, calibration, certification, CLI, and the web UI. Works on macOS, Linux, and Windows. Requires Python 3.10+.
 
 Optional extra for embedding-based canonicalization (large ML dependencies):
 
@@ -22,7 +22,7 @@ Optional extra for embedding-based canonicalization (large ML dependencies):
 pip install "theaios-trustgate[embedding]"
 ```
 
-Requires Python 3.10+.
+> **New here?** Start with the [End-to-End Test Guide](https://github.com/Cohorte-ai/trustgate/blob/main/examples/END_TO_END_TEST.md) — it walks you through every feature from a fresh install.
 
 ---
 
