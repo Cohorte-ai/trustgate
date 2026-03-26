@@ -46,7 +46,7 @@ trustgate certify [OPTIONS]
 | `--questions` | `-q` | PATH | *(from config)* | Path to a questions file (CSV or JSON). |
 | `--ground-truth` | `-g` | PATH | *(none)* | Path to a ground-truth labels file. Required for some task types. |
 | `--k` | | INT | *(from config)* | Fixed number of samples per question. Overrides `sampling.k_fixed`. |
-| `--alpha` | `-a` | FLOAT | `0.10` | Significance level for conformal calibration (e.g., 0.05 for 95% coverage). |
+| `--alpha` | `-a` | FLOAT | `0.05` | Confidence level for M\*. Controls the prediction set size: `0.05` = 95% confidence, `0.10` = 90%, `0.01` = 99%. Lower α → stricter guarantee → potentially larger M\*. |
 | `--output` | `-o` | CHOICE | `console` | Output format: `console`, `json`, or `csv`. |
 | `--output-file` | | PATH | *(none)* | Write output to a file instead of stdout. When used with `--output console`, the result is printed to the terminal and also saved as JSON to the specified file. |
 | `--no-cache` | | FLAG | `false` | Disable the disk-based response cache for this run. |
@@ -124,7 +124,7 @@ trustgate compare [OPTIONS]
 | `--task-type` | | CHOICE | **(required)** | Canonicalization type. One of: `numeric`, `mcq`, `code_exec`, `llm_judge`, `llm`, `embedding`, `custom`. |
 | `--questions` | `-q` | PATH | **(required)** | Path to the questions file (CSV or JSON). |
 | `--ground-truth` | `-g` | PATH | *(none)* | Path to a ground-truth labels file. |
-| `--alpha` | `-a` | FLOAT | `0.10` | Significance level for conformal calibration. |
+| `--alpha` | `-a` | FLOAT | `0.05` | Confidence level for M\* in compare mode. |
 | `--output` | `-o` | CHOICE | `console` | Output format: `console` or `json`. |
 
 ### Examples

@@ -152,6 +152,14 @@ questions — the highest confidence with a formal guarantee.
 M* = 1: at 95% confidence, the top answer alone is sufficient.
 ```
 
+Use `--alpha` to change the confidence level for M\*:
+
+```bash
+trustgate certify --alpha 0.01   # 99% confidence (stricter, M* may be larger)
+trustgate certify --alpha 0.05   # 95% confidence (default)
+trustgate certify --alpha 0.10   # 90% confidence (looser, M* may be smaller)
+```
+
 ### Step 4: Calibrate (if no ground truth)
 
 If you don't have correct answers, a domain expert provides them. Three options:
