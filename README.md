@@ -80,9 +80,12 @@ canonicalization:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
     api_key_env: "LLM_API_KEY"
+    # Or custom auth (same headers option as endpoint):
+    # headers:
+    #   API-Key: "your-key-here"
 ```
 
-Works with any OpenAI-compatible API: OpenAI, Together, Ollama, LiteLLM, Azure OpenAI, vLLM, Mistral, etc. For providers with non-standard auth, use the `headers` field instead of `api_key_env`.
+Works with any OpenAI-compatible API: OpenAI, Together, Ollama, LiteLLM, Azure OpenAI, vLLM, Mistral, etc. For providers with non-standard auth, use the `headers` field instead of `api_key_env` — works on both `endpoint` and `judge_endpoint`.
 
 For custom endpoints (agents, RAG, internal APIs):
 

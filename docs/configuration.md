@@ -167,7 +167,7 @@ for comparison with ground truth.
 | `embedding`   | Semantic similarity | Uses embedding distance to determine answer equivalence. |
 | `custom`      | Anything else | Load your own canonicalizer class. Requires `custom_class`. |
 
-#### Example -- LLM judge
+#### Example -- LLM judge (standard auth)
 
 ```yaml
 canonicalization:
@@ -175,9 +175,22 @@ canonicalization:
   judge_endpoint:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1"
-    temperature: 0.0
     api_key_env: "LLM_API_KEY"
 ```
+
+#### Example -- LLM judge (custom auth headers)
+
+```yaml
+canonicalization:
+  type: "llm"
+  judge_endpoint:
+    url: "http://localhost:4000/v1/chat/completions"
+    model: "gpt-4.1-nano"
+    headers:
+      API-Key: "your-key-here"
+```
+
+The `judge_endpoint` supports the same `headers` field as the main `endpoint` — use it for LiteLLM, Azure OpenAI, or any provider with non-standard auth.
 
 #### Example -- custom canonicalizer
 
