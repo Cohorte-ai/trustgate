@@ -18,7 +18,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # Install from PyPI
-pip install "theaios-trustgate[serve,judge]"
+pip install "theaios-trustgate[all]"
 
 # Set your API key
 export OPENAI_API_KEY="sk-your-key-here"
