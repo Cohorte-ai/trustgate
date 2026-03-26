@@ -127,13 +127,18 @@ def _parse_config(raw: dict[str, object]) -> TrustGateConfig:
     judge_endpoint = None
     judge_raw = canon_raw.get("judge_endpoint")
     if isinstance(judge_raw, dict):
+        j_temp_raw = judge_raw.get("temperature", 0.0)
+        j_temperature = None if j_temp_raw is None else float(j_temp_raw)
+        j_headers_raw = judge_raw.get("headers")
+        j_headers = dict(j_headers_raw) if isinstance(j_headers_raw, dict) else {}
         judge_endpoint = EndpointConfig(
             url=str(judge_raw.get("url", "")),
             model=str(judge_raw.get("model", "")),
-            temperature=float(judge_raw.get("temperature", 0.0)),
+            temperature=j_temperature,
             api_key_env=str(judge_raw.get("api_key_env", "")),
             max_tokens=int(judge_raw.get("max_tokens", 4096)),
             provider=str(judge_raw.get("provider", "")),
+            headers=j_headers,
         )
 
     canon = CanonConfig(
