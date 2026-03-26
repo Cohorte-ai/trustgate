@@ -89,6 +89,19 @@ class EndpointAdapter(ABC):
             self._api_key = resolve_api_key(self.config)
         return self._api_key
 
+    def _merge_headers(self, defaults: dict[str, str]) -> dict[str, str]:
+        """Merge default headers with user-provided config headers.
+
+        User headers take precedence — this allows overriding the
+        Authorization header for providers that use custom auth
+        (e.g., ``API-Key`` instead of ``Bearer``).
+        """
+        headers = dict(defaults)
+        if self.config.headers:
+            expanded = _expand_headers(self.config.headers)
+            headers.update(expanded)
+        return headers
+
     @abstractmethod
     async def send(
         self,
@@ -122,14 +135,11 @@ class OpenAIAdapter(EndpointAdapter):
         }
         if temperature is not None:
             body["temperature"] = temperature
-        resp = await client.post(
-            self.config.url,
-            json=body,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-        )
+        defaults: dict[str, str] = {"Content-Type": "application/json"}
+        if self.config.api_key_env:
+            defaults["Authorization"] = f"Bearer {self.api_key}"
+        headers = self._merge_headers(defaults)
+        resp = await client.post(self.config.url, json=body, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         return str(data["choices"][0]["message"]["content"])
@@ -151,15 +161,14 @@ class AnthropicAdapter(EndpointAdapter):
         }
         if temperature is not None:
             body["temperature"] = temperature
-        resp = await client.post(
-            self.config.url,
-            json=body,
-            headers={
-                "x-api-key": self.api_key,
-                "anthropic-version": "2023-06-01",
-                "Content-Type": "application/json",
-            },
-        )
+        defaults: dict[str, str] = {
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        }
+        if self.config.api_key_env:
+            defaults["x-api-key"] = self.api_key
+        headers = self._merge_headers(defaults)
+        resp = await client.post(self.config.url, json=body, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         return str(data["content"][0]["text"])
@@ -181,14 +190,11 @@ class GenericOpenAIAdapter(EndpointAdapter):
         }
         if temperature is not None:
             body["temperature"] = temperature
-        resp = await client.post(
-            self.config.url,
-            json=body,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-        )
+        defaults: dict[str, str] = {"Content-Type": "application/json"}
+        if self.config.api_key_env:
+            defaults["Authorization"] = f"Bearer {self.api_key}"
+        headers = self._merge_headers(defaults)
+        resp = await client.post(self.config.url, json=body, headers=headers)
         resp.raise_for_status()
         data = resp.json()
         return str(data["choices"][0]["message"]["content"])
