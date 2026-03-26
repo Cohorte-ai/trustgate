@@ -1,26 +1,112 @@
 # TrustGate — End-to-End Test Guide
 
-Test every feature of the library. Requires an OpenAI API key.
+Test every feature from a fresh install. No repo cloning needed.
 
-**Estimated cost:** ~$1–$2 (120 questions × multiple sampling rounds × gpt-4.1-mini)
-**Estimated time:** ~10 minutes
+**Requirements:** Python 3.10+, an OpenAI API key
+**Estimated cost:** ~$0.50–$2.00 depending on K and number of questions
 
 ---
 
 ## Setup
 
 ```bash
-# Create a venv and install from source (for testing local changes)
-cd /path/to/trustgate
+# Create a fresh directory
+mkdir trustgate-test && cd trustgate-test
+
+# Create a venv
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,serve,judge]"
 
-# Or install from PyPI
+# Install from PyPI
 pip install "theaios-trustgate[serve,judge]"
 
 # Set your API key
 export OPENAI_API_KEY="sk-your-key-here"
+```
+
+---
+
+## Generate test data
+
+Create a config file and test questions:
+
+```bash
+cat > trustgate.yaml << 'EOF'
+endpoint:
+  url: "https://api.openai.com/v1/chat/completions"
+  model: "gpt-4.1-mini"
+  api_key_env: "OPENAI_API_KEY"
+
+canonicalization:
+  type: "llm"
+  judge_endpoint:
+    url: "https://api.openai.com/v1/chat/completions"
+    model: "gpt-4.1-nano"
+    api_key_env: "OPENAI_API_KEY"
+
+sampling:
+  k_fixed: 5
+  sequential_stopping: true
+
+calibration:
+  alpha_values: [0.01, 0.05, 0.10, 0.20]
+  n_cal: 25
+  n_test: 25
+EOF
+
+cat > questions.csv << 'EOF'
+id,question,acceptable_answers
+q01,What is the capital of France?,Paris
+q02,What is 2+2?,4
+q03,Who painted the Mona Lisa?,Da Vinci
+q04,What is the chemical symbol for gold?,Au
+q05,How many continents are there?,7
+q06,What is the largest ocean?,Pacific
+q07,Who wrote Romeo and Juliet?,Shakespeare
+q08,What is the boiling point of water in Celsius?,100
+q09,What is the square root of 144?,12
+q10,Which planet is the largest?,Jupiter
+q11,What is the capital of Japan?,Tokyo
+q12,Who developed the theory of relativity?,Einstein
+q13,What is the chemical formula for water?,H2O
+q14,What is the tallest mountain in the world?,Everest
+q15,How many minutes are in an hour?,60
+q16,What is the smallest prime number?,2
+q17,What is the longest river in the world?,Nile
+q18,Which element has atomic number 1?,Hydrogen
+q19,What is the capital of Australia?,Canberra
+q20,Who discovered penicillin?,Fleming
+q21,What is the speed of light approximately?,300000 km/s
+q22,What is the capital of Germany?,Berlin
+q23,How many bones in the adult human body?,206
+q24,What is the largest mammal?,Blue whale
+q25,Who invented the telephone?,Bell
+q26,What is the pH of pure water?,7
+q27,What is the capital of Brazil?,Brasilia
+q28,How many planets in our solar system?,8
+q29,What is the hardest natural substance?,Diamond
+q30,Who painted Starry Night?,Van Gogh
+q31,What is the capital of Canada?,Ottawa
+q32,What is the freezing point of water in Celsius?,0
+q33,How many legs does a spider have?,8
+q34,What is the chemical symbol for sodium?,Na
+q35,Who was the first person to walk on the moon?,Armstrong
+q36,What is the capital of Italy?,Rome
+q37,What is the cube root of 27?,3
+q38,Who wrote Don Quixote?,Cervantes
+q39,What is the unit of electrical resistance?,Ohm
+q40,What is the capital of India?,New Delhi
+q41,How many strings does a standard guitar have?,6
+q42,What is the largest desert in the world?,Antarctic
+q43,What is the capital of Mexico?,Mexico City
+q44,Who composed the Four Seasons?,Vivaldi
+q45,What is the smallest continent?,Australia
+q46,What is the capital of Egypt?,Cairo
+q47,What is the atomic number of carbon?,6
+q48,Which is the hottest planet?,Venus
+q49,How many colors are in a rainbow?,7
+q50,What is the capital of Spain?,Madrid
+EOF
 ```
 
 ---
@@ -33,41 +119,38 @@ export OPENAI_API_KEY="sk-your-key-here"
 trustgate version
 trustgate --help
 trustgate certify --help
-trustgate calibrate --help
 ```
 
-Expected: version shown, all commands listed (`certify`, `calibrate`, `compare`, `sample`, `cache`, `version`). Certify help shows `--auto-judge`, `--cost-per-request`, `--yes`, `--task-type` with `llm` option.
+Expected: version number, all commands listed, all flags shown (including `--alpha`, `--concurrency`, `--auto-judge`, `--min-reliability`).
 
 ---
 
-## 2. Pre-flight Cost Estimate (Interactive)
+## 2. Pre-flight Estimate + K Selection
 
 ```bash
-trustgate certify --config examples/test_config_e2e.yaml
+trustgate certify
 ```
 
 Expected:
-- Pre-flight Estimate table (questions, K, requests, cost)
-- Cost / Reliability Tradeoff table (K=3,5,10,15,20)
-- Prompt: `Proceed? Enter Y to run, N to abort, or a number to change K`
-- Type `N` to abort (no API calls)
-- Type `10` to change K to 10
+- "Measuring API latency..." spinner
+- Pre-flight Estimate table with measured latency and estimated time
+- Cost / Reliability Tradeoff table with Est. Time per K
+- Prompt: `Proceed? Enter Y, N, or a number to change K`
+- Type `N` to abort
 
 ---
 
 ## 3. Certify with Ground Truth
 
 ```bash
-trustgate certify \
-  --config examples/test_config_e2e.yaml \
-  --yes
+trustgate certify --yes
 ```
 
 Expected:
-- Spinner while running
+- Spinner with estimated time
 - TrustGate Certification Result table
-- Docs link below the table
-- Status = PASS
+- Plain-English explanation of Reliability Level and M*
+- Docs link
 
 ---
 
@@ -75,13 +158,13 @@ Expected:
 
 ```bash
 # JSON
-trustgate certify --config examples/test_config_e2e.yaml --yes --output json
+trustgate certify --yes --output json
 
 # CSV
-trustgate certify --config examples/test_config_e2e.yaml --yes --output csv
+trustgate certify --yes --output csv
 
 # To file
-trustgate certify --config examples/test_config_e2e.yaml --yes --output json --output-file result.json
+trustgate certify --yes --output json --output-file result.json
 cat result.json
 ```
 
@@ -90,38 +173,72 @@ cat result.json
 ## 5. Verbose (Per-Alpha Breakdown)
 
 ```bash
-trustgate certify --config examples/test_config_e2e.yaml --yes --verbose
+trustgate certify --yes --verbose
 ```
 
-Expected: main result table + "Coverage by Alpha" table.
+Expected: result table + Coverage by Alpha table.
 
 ---
 
-## 6. Cost Per Request Flag
+## 6. Change Alpha (M* Confidence Level)
 
 ```bash
-trustgate certify \
-  --config examples/test_config_e2e.yaml \
-  --cost-per-request 0.05
-```
+# 99% confidence — stricter, M* may be larger
+trustgate certify --yes --alpha 0.01
 
-Expected: Pre-flight table shows `$0.0500` per request. Type `N` to abort.
+# 90% confidence — looser, M* may be smaller
+trustgate certify --yes --alpha 0.10
+```
 
 ---
 
-## 7. Sample Only
+## 7. Cost Per Request
 
 ```bash
-trustgate sample \
-  --config examples/test_config_e2e.yaml \
-  --questions examples/test_questions_120.csv
+trustgate certify --cost-per-request 0.05
 ```
 
-Expected: "Sampled X responses for 120 questions" + cache hit stats.
+Expected: pre-flight shows $0.0500 per request. Type `N` to abort.
 
 ---
 
-## 8. Cache Management
+## 8. Concurrency Control
+
+```bash
+# Conservative (safe for rate-limited APIs)
+trustgate certify --yes --concurrency 5
+
+# Aggressive (faster, may hit rate limits)
+trustgate certify --yes --concurrency 30
+```
+
+---
+
+## 9. CI/CD Gating
+
+```bash
+# Should PASS
+trustgate certify --yes --min-reliability 50
+echo "Exit code: $?"
+
+# Should FAIL
+trustgate certify --yes --min-reliability 99
+echo "Exit code: $?"
+```
+
+Expected: exit code 0 for PASS, 1 for FAIL.
+
+---
+
+## 10. Sample Only
+
+```bash
+trustgate sample --questions questions.csv
+```
+
+---
+
+## 11. Cache Management
 
 ```bash
 trustgate cache stats
@@ -130,297 +247,211 @@ trustgate cache clear
 
 ---
 
-## 9. Calibrate: Export HTML Questionnaire
+## 12. Calibrate: Export HTML Questionnaire
 
 ```bash
-trustgate calibrate \
-  --config examples/test_config_e2e.yaml \
-  --export questionnaire.html \
-  --yes
-```
-
-Expected: "Questionnaire exported to questionnaire.html"
-
-```bash
-open questionnaire.html    # macOS
-```
-
-Expected in browser:
-- Progress bar
-- Question text (clean, no MCQ options)
-- Answer buttons with enriched text (e.g., "paris" not just a letter)
-- Randomized order, NO frequencies, NO ranks
-- "None of these are correct" button
-- Keyboard shortcuts (1-9, 0)
-- "Download Labels" button at the end → saves `labels.json`
-
----
-
-## 10. Calibrate: Local Web UI
-
-```bash
-trustgate calibrate \
-  --config examples/test_config_e2e.yaml \
-  --serve \
-  --port 9999 \
-  --yes
+trustgate calibrate --export questionnaire.html --yes
+open questionnaire.html   # macOS (or xdg-open on Linux)
 ```
 
 Expected:
-- Browser opens to `http://localhost:9999`
-- Same review interface as HTML export
-- Admin panel at `http://localhost:9999/admin` (shows rank stats)
-- Press Ctrl+C to stop
+- "Selected N questions for human calibration (out of 50 total)"
+- HTML file opens in browser
+- Questions with randomized answer buttons (no ranks, no frequencies)
+- "Download Labels" at the end
 
 ---
 
-## 11. Calibrate: Profile Dump (no --serve or --export)
+## 13. Calibrate: Local Web UI
 
 ```bash
-trustgate calibrate \
-  --config examples/test_config_e2e.yaml \
-  --yes
+trustgate calibrate --serve --port 9999 --yes
 ```
 
-Expected: creates `calibration_labels_profiles.json` with ranked answers.
+Expected: browser opens, review UI, admin at `/admin`. Press Ctrl+C when done.
+
+---
+
+## 14. Certify with Human Labels
+
+After reviewing in the questionnaire or web UI:
 
 ```bash
-python3 -m json.tool calibration_labels_profiles.json | head -20
+trustgate certify --ground-truth labels.json --yes
 ```
 
 ---
 
-## 12. Certify with External Ground Truth
+## 15. Auto-Judge (LLM Calibration)
 
 ```bash
+trustgate certify --auto-judge --yes
+```
+
+Expected: "Auto-judging with LLM..." then certification result.
+
+---
+
+## 16. Compare Models
+
+```bash
+# Generate ground truth file
 python3 -c "
 import csv, json
 labels = {}
-with open('examples/test_questions_120.csv') as f:
-    for row in csv.DictReader(f):
-        labels[row['id']] = row['acceptable_answers']
-json.dump(labels, open('ground_truth.json', 'w'), indent=2)
-print(f'Wrote {len(labels)} labels')
-"
-
-trustgate certify \
-  --config examples/test_config_e2e.yaml \
-  --ground-truth ground_truth.json \
-  --yes
-```
-
----
-
-## 13. Auto-Judge (LLM Calibration)
-
-```bash
-trustgate certify \
-  --config examples/test_config_e2e.yaml \
-  --auto-judge \
-  --yes
-```
-
-Expected:
-- "Auto-judging with LLM..." spinner
-- "Auto-judge labeled N questions."
-- Certification result (may differ from ground-truth result due to judge bias)
-
----
-
-## 14. Compare Models
-
-Requires `ground_truth.json` from step 12. If you skipped it, run:
-
-```bash
-python3 -c "
-import csv, json
-labels = {}
-with open('examples/test_questions_120.csv') as f:
+with open('questions.csv') as f:
     for row in csv.DictReader(f):
         labels[row['id']] = row['acceptable_answers']
 json.dump(labels, open('ground_truth.json', 'w'), indent=2)
 "
-```
 
-Then compare:
-
-```bash
 trustgate compare \
-  --config examples/test_config_e2e.yaml \
   --models gpt-4.1-mini,gpt-4.1-nano \
   --task-type llm \
-  --questions examples/test_questions_120.csv \
+  --questions questions.csv \
   --ground-truth ground_truth.json
 ```
-
-Expected: side-by-side table with reliability, M*, coverage for each model.
 
 ---
 
 # Part 2: Python API
 
-## 15. Certify
+Run each block with `python3 -c "..."` or in a Python shell.
+
+## 17. Certify
 
 ```python
 from theaios import trustgate
 
-result = trustgate.certify(config_path="examples/test_config_e2e.yaml")
+result = trustgate.certify(config_path="trustgate.yaml")
 print(f"Reliability: {result.reliability_level:.1%}")
-print(f"M*: {result.m_star}")
+print(f"M* (at {1-result.target_alpha:.0%} confidence): {result.m_star}")
 print(f"Coverage: {result.coverage:.3f}")
 print(f"Capability Gap: {result.capability_gap:.1%}")
 ```
 
 ---
 
-## 16. Sample and Profile
+## 18. Sample and Profile
 
 ```python
 from theaios.trustgate import sample_and_profile
 from theaios.trustgate.config import load_config, load_questions
 
-config = load_config("examples/test_config_e2e.yaml")
-questions = load_questions("examples/test_questions_120.csv")
+config = load_config("trustgate.yaml")
+questions = load_questions("questions.csv")
 
 profiles = sample_and_profile(config, questions)
 for qid in list(profiles.keys())[:5]:
     print(f"{qid}: {profiles[qid]}")
 ```
 
-Expected: ranked profiles per question.
-
 ---
 
-## 17. Profile Diagnostic
+## 19. Profile Diagnostic
 
 ```python
-from theaios.trustgate import sample_and_profile, diagnose_profiles
+from theaios.trustgate import diagnose_profiles, sample_and_profile
 from theaios.trustgate.config import load_config, load_questions
 
-config = load_config("examples/test_config_e2e.yaml")
-questions = load_questions("examples/test_questions_120.csv")
-
+config = load_config("trustgate.yaml")
+questions = load_questions("questions.csv")
 profiles = sample_and_profile(config, questions)
+
 diag = diagnose_profiles(profiles)
 print(f"Status: {diag.status}")
 print(f"Mean consensus: {diag.mean_consensus:.2f}")
-print(f"Mean classes: {diag.mean_n_classes:.1f}")
-print(f"All-unique fraction: {diag.frac_all_unique:.1%}")
 print(f"Warnings: {diag.warnings}")
 ```
 
-Expected: status = "good" or "weak" depending on canonicalization.
-
 ---
 
-## 18. Generate Questionnaire
+## 20. Generate Questionnaire
 
 ```python
 from theaios.trustgate import sample_and_profile, generate_questionnaire
 from theaios.trustgate.config import load_config, load_questions
 
-config = load_config("examples/test_config_e2e.yaml")
-questions = load_questions("examples/test_questions_120.csv")
+config = load_config("trustgate.yaml")
+questions = load_questions("questions.csv")
 profiles = sample_and_profile(config, questions)
 
 path = generate_questionnaire(questions, profiles, "test_questionnaire.html")
 print(f"Generated: {path}")
 ```
 
-Then open `test_questionnaire.html` in a browser.
-
 ---
 
-## 19. Auto-Judge Labels (Python API)
+## 21. Auto-Judge Labels
 
 ```python
 from theaios.trustgate import sample_and_profile, auto_judge_labels
 from theaios.trustgate.config import load_config, load_questions
 
-config = load_config("examples/test_config_e2e.yaml")
-questions = load_questions("examples/test_questions_120.csv")
-
+config = load_config("trustgate.yaml")
+questions = load_questions("questions.csv")
 profiles = sample_and_profile(config, questions)
-q_texts = {q.id: q.text for q in questions}
 
-labels = auto_judge_labels(
-    q_texts, profiles,
-    config.canonicalization.judge_endpoint,
-)
+q_texts = {q.id: q.text for q in questions}
+labels = auto_judge_labels(q_texts, profiles, config.canonicalization.judge_endpoint)
 print(f"Labeled {len(labels)} questions")
 for qid in list(labels.keys())[:5]:
     print(f"  {qid}: {labels[qid]}")
 ```
 
-Expected: labels like `{"q001": "correct", "q002": "correct", ...}` (from llm_judge canonicalization) or `{"q001": "paris", ...}` (from llm canonicalization).
-
 ---
 
-## 20. TrustGate Runtime — Passthrough
+## 22. TrustGate Runtime — Passthrough
 
 ```python
 from theaios.trustgate import TrustGate, certify
 from theaios.trustgate.config import load_config
 
-config = load_config("examples/test_config_e2e.yaml")
+config = load_config("trustgate.yaml")
 result = certify(config=config)
 
 gate = TrustGate(config=config, certification=result)
-print(f"Mode: {gate.mode}")  # passthrough
-print(f"Reliability: {gate.reliability_level:.1%}")
-
 response = gate.query("What is the capital of France?")
 print(f"Answer: {response.answer}")
 print(f"Reliability: {response.reliability_level:.1%}")
-print(f"Samples: {response.n_samples}")  # 1 (single call)
+print(f"Mode: {response.mode}")
 ```
 
 ---
 
-## 21. TrustGate Runtime — Sampled
+## 23. TrustGate Runtime — Sampled
 
 ```python
 from theaios.trustgate import TrustGate, certify
 from theaios.trustgate.config import load_config
 
-config = load_config("examples/test_config_e2e.yaml")
+config = load_config("trustgate.yaml")
 result = certify(config=config)
 
 gate = TrustGate(config=config, certification=result, mode="sampled")
 response = gate.query("What is the capital of France?")
-
 print(f"Answer: {response.answer}")
 print(f"Prediction set: {response.prediction_set}")
 print(f"Consensus: {response.consensus:.0%}")
-print(f"Margin: {response.margin:.2f}")
 print(f"Singleton: {response.is_singleton}")
-print(f"Samples: {response.n_samples}")
-print(f"Profile: {response.profile}")
 ```
 
 ---
 
-## 22. Reporting
+## 24. Reporting
 
 ```python
 from theaios.trustgate import certify
 from theaios.trustgate.reporting import export_json, export_csv, print_certification_result
 
-result = certify(config_path="examples/test_config_e2e.yaml")
-
-# Console output
+result = certify(config_path="trustgate.yaml")
 print_certification_result(result, verbose=True)
-
-# JSON
 print(export_json(result)[:200] + "...")
-
-# CSV
-print(export_csv(result)[:200] + "...")
 ```
 
 ---
 
-## 23. Custom Canonicalizer
+## 25. Custom Canonicalizer
 
 ```python
 from theaios.trustgate import Canonicalizer, register_canonicalizer, get_canonicalizer
@@ -432,98 +463,22 @@ class UpperCanonicalizer(Canonicalizer):
 
 c = get_canonicalizer("upper")
 print(c.canonicalize("Q?", "The answer is hello"))
-# Expected: THE ANSWER IS HELLO
 
-# Verify all 6 built-in canonicalizers
 from theaios.trustgate.canonicalize import list_canonicalizers
 print(f"All canonicalizers: {list_canonicalizers()}")
-# Expected: ['code_exec', 'embedding', 'llm', 'llm_judge', 'mcq', 'numeric', 'upper']
 ```
 
 ---
 
-## 24. Built-in Datasets
+## 26. Built-in Datasets
 
 ```python
-from theaios.trustgate.datasets import load_mmlu, load_gsm8k
+from theaios.trustgate.datasets import load_mmlu
 
-# MMLU (requires network for first download)
-questions = load_mmlu(subjects=["abstract_algebra"], n=10)
-for q in questions[:3]:
-    print(f"{q.id}: {q.text[:80]}...")
-    print(f"  Answer: {q.acceptable_answers}")
+questions = load_mmlu(subjects=["abstract_algebra"], n=5)
+for q in questions:
+    print(f"{q.id}: {q.text[:60]}...")
 ```
-
----
-
-## 25. CI/CD Gating: --min-reliability
-
-```bash
-# Should PASS (threshold low)
-trustgate certify \
-  --config examples/test_config_e2e.yaml \
-  --min-reliability 50 --yes
-echo "Exit code: $?"
-# Expected: exit code 0
-
-# Should FAIL (threshold high)
-trustgate certify \
-  --config examples/test_config_e2e.yaml \
-  --min-reliability 99 --yes
-echo "Exit code: $?"
-# Expected: exit code 1 + "FAIL: reliability X% < threshold 99.0%"
-```
-
----
-
-## 26. CI/CD: JSON Output + Gating Combined
-
-```bash
-trustgate certify \
-  --config examples/test_config_e2e.yaml \
-  --min-reliability 80 \
-  --output json \
-  --output-file result.json \
-  --yes
-
-# Parse result in CI
-python3 -c "
-import json, sys
-r = json.load(open('result.json'))
-print(f'Reliability: {r[\"reliability_level\"]:.1%}')
-print(f'M*: {r[\"m_star\"]}')
-if r['reliability_level'] < 0.80:
-    print('WOULD BLOCK DEPLOYMENT')
-    sys.exit(1)
-print('DEPLOYMENT APPROVED')
-"
-```
-
----
-
-## 27. Status Display (PASS/FAIL/UNCERTAIN)
-
-```bash
-# Run and check that Status shows:
-# - PASS (green) when reliability > 0 and coverage meets target
-# - FAIL (red) when reliability = 0%
-# - UNCERTAIN (yellow) otherwise
-trustgate certify --config examples/test_config_e2e.yaml --yes
-```
-
----
-
-## 28. Concurrency Control
-
-```bash
-# Low concurrency (safe for rate-limited APIs, slower)
-time trustgate certify --config examples/test_config_e2e.yaml --concurrency 5 --yes
-
-# High concurrency (faster, but may hit rate limits)
-time trustgate certify --config examples/test_config_e2e.yaml --concurrency 30 --yes
-```
-
-Expected: higher concurrency = faster execution (if the API can handle it). If you get connection errors, lower concurrency.
 
 ---
 
@@ -532,30 +487,37 @@ Expected: higher concurrency = faster execution (if the API can handle it). If y
 | # | Feature | Type | Status |
 |---|---------|------|--------|
 | 1 | Version/help | CLI | |
-| 2 | Pre-flight estimate + K selection | CLI | |
+| 2 | Pre-flight + K selection | CLI | |
 | 3 | Certify with ground truth | CLI | |
 | 4 | JSON/CSV/file output | CLI | |
 | 5 | Verbose per-alpha breakdown | CLI | |
-| 6 | Cost per request flag | CLI | |
-| 7 | Sample only | CLI | |
-| 8 | Cache stats/clear | CLI | |
-| 9 | Export HTML questionnaire | CLI | |
-| 10 | Local web UI + admin | CLI | |
-| 11 | Profile dump | CLI | |
-| 12 | External ground truth | CLI | |
-| 13 | Auto-judge (LLM calibration) | CLI | |
-| 14 | Model comparison | CLI | |
-| 15 | certify() | Python | |
-| 16 | sample_and_profile() | Python | |
-| 17 | diagnose_profiles() | Python | |
-| 18 | generate_questionnaire() | Python | |
-| 19 | auto_judge_labels() | Python | |
-| 20 | TrustGate passthrough | Python | |
-| 21 | TrustGate sampled | Python | |
-| 22 | Reporting (console/json/csv) | Python | |
-| 23 | Custom canonicalizer | Python | |
-| 24 | Built-in datasets | Python | |
-| 25 | --min-reliability gating | CLI | |
-| 26 | JSON + gating combined | CLI | |
-| 27 | PASS/FAIL/UNCERTAIN status | CLI | |
-| 28 | Concurrency control (--concurrency) | CLI | |
+| 6 | --alpha for M* confidence | CLI | |
+| 7 | Cost per request | CLI | |
+| 8 | Concurrency control | CLI | |
+| 9 | CI/CD gating (--min-reliability) | CLI | |
+| 10 | Sample only | CLI | |
+| 11 | Cache stats/clear | CLI | |
+| 12 | Export HTML questionnaire | CLI | |
+| 13 | Local web UI | CLI | |
+| 14 | Certify with human labels | CLI | |
+| 15 | Auto-judge (--auto-judge) | CLI | |
+| 16 | Model comparison | CLI | |
+| 17 | certify() | Python | |
+| 18 | sample_and_profile() | Python | |
+| 19 | diagnose_profiles() | Python | |
+| 20 | generate_questionnaire() | Python | |
+| 21 | auto_judge_labels() | Python | |
+| 22 | TrustGate passthrough | Python | |
+| 23 | TrustGate sampled | Python | |
+| 24 | Reporting | Python | |
+| 25 | Custom canonicalizer | Python | |
+| 26 | Built-in datasets | Python | |
+
+---
+
+## Cleanup
+
+```bash
+cd ..
+rm -rf trustgate-test
+```
