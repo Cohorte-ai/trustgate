@@ -89,7 +89,7 @@ generate_questionnaire(questions, profiles, "questionnaire.html")
 
 ## Option B: Local Web UI
 
-For reviewers on the same network. Requires Flask (`pip install "theaios-trustgate[serve]"`).
+For reviewers on the same network:
 
 ```bash
 trustgate calibrate --serve --port 8080
@@ -213,7 +213,7 @@ This format is directly compatible with `trustgate certify --ground-truth`.
 
 ```bash
 # 1. Install
-pip install "theaios-trustgate[serve]"
+pip install theaios-trustgate
 
 # 2. Prepare questions
 # questions.csv:
