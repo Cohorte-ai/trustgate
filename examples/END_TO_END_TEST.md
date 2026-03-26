@@ -16,7 +16,7 @@ mkdir trustgate-test && cd trustgate-test
 python3 -m venv .venv
 source .venv/bin/activate
 pip install theaios-trustgate
-export OPENAI_API_KEY="sk-your-key-here"
+export LLM_API_KEY="sk-your-key-here"   # any OpenAI-compatible API key
 ```
 
 ### Windows (PowerShell)
@@ -26,7 +26,7 @@ mkdir trustgate-test; cd trustgate-test
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install theaios-trustgate
-$env:OPENAI_API_KEY="sk-your-key-here"
+$env:LLM_API_KEY="sk-your-key-here"   # any OpenAI-compatible API key
 ```
 
 
@@ -38,17 +38,18 @@ Create a config file and test questions. On macOS/Linux use the commands below. 
 
 ```bash
 cat > trustgate.yaml << 'EOF'
+# Works with any OpenAI-compatible API (OpenAI, Together, Ollama, LiteLLM, etc.)
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1-mini"
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
 
 canonicalization:
   type: "llm"
   judge_endpoint:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "LLM_API_KEY"
 
 sampling:
   k_fixed: 5
@@ -122,13 +123,13 @@ python -c "
 config = '''endpoint:
   url: https://api.openai.com/v1/chat/completions
   model: gpt-4.1-mini
-  api_key_env: OPENAI_API_KEY
+  api_key_env: LLM_API_KEY
 canonicalization:
   type: llm
   judge_endpoint:
     url: https://api.openai.com/v1/chat/completions
     model: gpt-4.1-nano
-    api_key_env: OPENAI_API_KEY
+    api_key_env: LLM_API_KEY
 sampling:
   k_fixed: 5
   sequential_stopping: true

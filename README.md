@@ -47,14 +47,14 @@ pip install theaios-trustgate
 
 ### Step 1: Connect your AI system
 
-Set your API key:
+Set your API key (works with any OpenAI-compatible provider):
 
 ```bash
 # macOS / Linux
-export OPENAI_API_KEY="sk-your-key-here"
+export LLM_API_KEY="sk-your-key-here"
 
 # Windows (PowerShell)
-$env:OPENAI_API_KEY="sk-your-key-here"
+$env:LLM_API_KEY="sk-your-key-here"
 ```
 
 You need two things in `trustgate.yaml`: the **endpoint to test** (your AI system) and a **judge LLM** (a cheap model for canonicalization and calibration matching).
@@ -62,21 +62,25 @@ You need two things in `trustgate.yaml`: the **endpoint to test** (your AI syste
 ```yaml
 # trustgate.yaml
 
-# The AI system you're certifying
+# The AI system you're certifying (any OpenAI-compatible endpoint)
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
+  # Or any OpenAI-compatible API:
+  # url: "https://api.together.xyz/v1/chat/completions"
+  # url: "http://localhost:11434/v1/chat/completions"  # Ollama
+  # url: "http://localhost:4000/v1/chat/completions"   # LiteLLM
   model: "gpt-4.1-mini"
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
 
 # The judge LLM — used for canonicalization (grouping answers)
 # and calibration (matching ground truth to canonical answers).
-# Use a cheap, fast model.
+# Use a cheap, fast model. Can be the same or different provider.
 canonicalization:
   type: "llm"
   judge_endpoint:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "LLM_API_KEY"
 ```
 
 For custom endpoints (agents, RAG, internal APIs):
@@ -95,7 +99,7 @@ canonicalization:
   judge_endpoint:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "LLM_API_KEY"
 ```
 
 > [!IMPORTANT]
@@ -211,7 +215,7 @@ trustgate certify --min-reliability 90 --yes
 - name: AI Reliability Gate
   run: trustgate certify --min-reliability 90 --yes
   env:
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
 ```
 
 ### Runtime trust layer — confidence on every query
@@ -273,7 +277,7 @@ LLMs, agents, RAG pipelines — anything with an HTTP API.
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1"
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
 ```
 
 **For custom endpoints** (agents, RAG, internal APIs) — you control the endpoint, so you need to tell TrustGate the cost per request. Measure it first (check your billing dashboard or estimate from your infrastructure costs), then set `cost_per_request`:

@@ -183,7 +183,7 @@ canonicalization:
   judge_endpoint:    # also used by --auto-judge for calibration
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "LLM_API_KEY"
 ```
 
 The auto-judge replaces the human in the calibration step — it looks at

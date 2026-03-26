@@ -16,7 +16,7 @@ The only required field is `endpoint.url`. Everything else has sensible defaults
 ```yaml
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
 
 questions:
   file: "questions.csv"
@@ -31,7 +31,7 @@ endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1-mini"
   temperature: 0.7
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
   max_tokens: 4096
   provider: ""                  # auto-detected from URL if left empty
 
@@ -49,7 +49,7 @@ canonicalization:
   # judge_endpoint:             # required when type is "llm_judge" or "llm"
   #   url: "https://api.openai.com/v1/chat/completions"
   #   model: "gpt-4.1"
-  #   api_key_env: "OPENAI_API_KEY"
+  #   api_key_env: "LLM_API_KEY"
   # custom_class: "mymodule.MyCanonicalizer"  # required only when type is "custom"
 
 calibration:
@@ -76,7 +76,7 @@ Connection details for the AI model being certified.
 | `url`         | string  | **(required)** | Base URL of the chat completions endpoint. Must be a valid `http` or `https` URL. |
 | `model`       | string  | `""`    | Model identifier sent in API requests (e.g., `"gpt-4.1-mini"`, `"claude-sonnet-4-20250514"`). |
 | `temperature` | float   | `0.7`   | Sampling temperature. Higher values increase response diversity, which is important for conformal prediction. |
-| `api_key_env` | string  | `""`    | Name of the environment variable that holds the API key (e.g., `"OPENAI_API_KEY"`). TrustGate reads the key from the environment at runtime -- the key itself is never stored in the config file. |
+| `api_key_env` | string  | `""`    | Name of the environment variable that holds the API key (e.g., `"LLM_API_KEY"`). Works with any OpenAI-compatible provider. TrustGate reads the key from the environment at runtime — never stored in the config file. |
 | `max_tokens`  | integer | `4096`  | Maximum tokens per completion response. |
 | `provider`    | string  | `""`    | Provider hint: `"openai"`, `"anthropic"`, `"together"`, `"generic"`, or `"generic_http"`. If left empty, the provider is auto-detected from the URL. |
 | `headers`     | object  | `{}`    | Custom HTTP headers. Supports `${VAR}` env var expansion (e.g., `Authorization: "Bearer ${MY_KEY}"`). |
@@ -93,7 +93,7 @@ endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1-mini"
   temperature: 0.7
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
 ```
 
 ---
@@ -163,7 +163,7 @@ canonicalization:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1"
     temperature: 0.0
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "LLM_API_KEY"
 ```
 
 #### Example -- custom canonicalizer
@@ -300,13 +300,13 @@ TrustGate never stores API keys in configuration files. Instead, set
 
 ```yaml
 endpoint:
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
 ```
 
 Then export the key in your shell:
 
 ```bash
-export OPENAI_API_KEY="sk-..."
+export LLM_API_KEY="sk-..."
 ```
 
 TrustGate will read the key at runtime and raise a `ConfigError` if the

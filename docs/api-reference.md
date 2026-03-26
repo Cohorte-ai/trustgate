@@ -264,7 +264,7 @@ the URL if left empty. Supported providers:
 - **generic** -- Any OpenAI-compatible endpoint (vLLM, Ollama, LiteLLM, etc.)
 
 The `api_key_env` field specifies the name of the environment variable holding
-the API key (e.g., `"OPENAI_API_KEY"`).
+the API key (e.g., `"LLM_API_KEY"`).
 
 ---
 

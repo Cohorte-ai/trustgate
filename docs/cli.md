@@ -77,7 +77,7 @@ trustgate certify --model gpt-4.1 --alpha 0.05
 trustgate certify \
     --endpoint "https://api.openai.com/v1/chat/completions" \
     --model "gpt-4.1-mini" \
-    --api-key-env "OPENAI_API_KEY" \
+    --api-key-env "LLM_API_KEY" \
     --task-type mcq \
     --questions questions.csv \
     --ground-truth labels.json \

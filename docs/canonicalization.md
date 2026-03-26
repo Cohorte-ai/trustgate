@@ -105,7 +105,7 @@ canonicalization:
   judge_endpoint:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1"
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "LLM_API_KEY"
 ```
 
 **Source:** `trustgate.canonicalize.llm_judge.LLMJudgeCanonicalizer`
@@ -138,7 +138,7 @@ canonicalization:
   judge_endpoint:
     url: "https://api.openai.com/v1/chat/completions"
     model: "gpt-4.1-nano"
-    api_key_env: "OPENAI_API_KEY"
+    api_key_env: "LLM_API_KEY"
 ```
 
 **Source:** `trustgate.canonicalize.llm_semantic.LLMSemanticCanonicalizer`
@@ -338,7 +338,7 @@ result = trustgate.certify(
         endpoint=trustgate.EndpointConfig(
             url="https://api.openai.com/v1/chat/completions",
             model="gpt-4.1",
-            api_key_env="OPENAI_API_KEY",
+            api_key_env="LLM_API_KEY",
         ),
         canonicalization=trustgate.CanonConfig(type="icd10"),
     ),

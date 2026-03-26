@@ -167,7 +167,7 @@ Jenkins. A typical workflow:
 - name: Run TrustGate certification
   run: trustgate certify --config trustgate.yaml --min-reliability 0.90
   env:
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
 ```
 
 You can also export results to JSON or CSV for artifact storage:

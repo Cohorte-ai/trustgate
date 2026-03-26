@@ -36,7 +36,7 @@ endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1"
   temperature: 0.7
-  api_key_env: "OPENAI_API_KEY"
+  api_key_env: "LLM_API_KEY"
 
 sampling:
   k_fixed: 10
