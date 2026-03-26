@@ -460,12 +460,15 @@ async def certify_async(
         )
 
     # 9. Calibrate
+    # Use the smallest alpha as the target for M* computation
+    target_alpha = min(config.calibration.alpha_values) if config.calibration.alpha_values else 0.05
     result = calibrate(
         profiles=profiles,
         labels=labels,
         cal_ids=cal_ids,
         test_ids=test_ids,
         alpha_values=config.calibration.alpha_values,
+        target_alpha=target_alpha,
     )
 
     # 10. Enrich

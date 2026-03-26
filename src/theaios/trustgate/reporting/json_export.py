@@ -21,6 +21,7 @@ def export_json(result: CertificationResult, path: str | None = None) -> str:
         "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         "reliability_level": result.reliability_level,
         "m_star": result.m_star,
+        "target_alpha": result.target_alpha,
         "coverage": result.coverage,
         "conditional_coverage": result.conditional_coverage,
         "capability_gap": result.capability_gap,

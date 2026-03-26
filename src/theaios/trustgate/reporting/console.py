@@ -29,6 +29,8 @@ def print_certification_result(
         status = "UNCERTAIN"
         status_style = "bold yellow"
 
+    confidence_pct = f"{(1 - result.target_alpha):.0%}"
+
     # Main results table
     table = Table(
         title="TrustGate Certification Result",
@@ -39,24 +41,41 @@ def print_certification_result(
     table.add_column("Value")
 
     table.add_row("Reliability Level", f"{result.reliability_level:.1%}")
-    table.add_row("M* (prediction set)", str(result.m_star))
+    table.add_row(f"M* (at {confidence_pct} confidence)", str(result.m_star))
     table.add_row("Empirical Coverage", f"{result.coverage:.3f}")
     table.add_row("Conditional Coverage", f"{result.conditional_coverage:.3f}")
     table.add_row("Capability Gap", f"{result.capability_gap:.1%}")
     table.add_row("Calibration items", str(result.n_cal))
     table.add_row("Test items", str(result.n_test))
-    table.add_row("Avg K used", str(result.k_used))
-    if result.api_cost_estimate > 0:
-        table.add_row("Est. API cost", f"${result.api_cost_estimate:.2f}")
     table.add_row("Status", f"[{status_style}]{status}[/{status_style}]")
 
     console.print(table)
+
+    # Plain-English explanation
+    console.print()
+    console.print(
+        f"[bold]Reliability Level[/bold]: your AI's top answer is correct for "
+        f"{result.reliability_level:.1%} of questions — the highest confidence "
+        f"with a formal guarantee."
+    )
+    if result.m_star == 1:
+        console.print(
+            f"[bold]M* = 1[/bold]: at {confidence_pct} confidence, the top "
+            f"answer alone is sufficient."
+        )
+    else:
+        console.print(
+            f"[bold]M* = {result.m_star}[/bold]: at {confidence_pct} confidence, "
+            f"you need the top {result.m_star} answers to guarantee coverage."
+        )
+    console.print()
+
     console.print(
         "[dim]What do these metrics mean? → "
         "https://cohorte-ai.github.io/trustgate/concepts/[/dim]"
     )
 
-    # Cache hint — caller sets this flag before the run
+    # Cache hint
     if had_cache:
         console.print(
             "[dim]This run used cached data. "
@@ -102,7 +121,6 @@ def print_comparison_result(
     table.add_column("Coverage", justify="right")
     table.add_column("Cond. Coverage", justify="right")
     table.add_column("Capability Gap", justify="right")
-    table.add_column("K Used", justify="right")
 
     for model_name, result in results:
         table.add_row(
@@ -112,7 +130,6 @@ def print_comparison_result(
             f"{result.coverage:.3f}",
             f"{result.conditional_coverage:.3f}",
             f"{result.capability_gap:.1%}",
-            str(result.k_used),
         )
 
     console.print(table)

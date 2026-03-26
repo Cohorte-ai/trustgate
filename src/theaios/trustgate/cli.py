@@ -62,7 +62,7 @@ def version() -> None:
 @click.option("--auto-judge", is_flag=True, help="Use LLM-as-judge for automated calibration (no human needed)")
 @click.option("--questions", "-q", "questions_path", help="Questions file (CSV or JSON)")
 @click.option("--ground-truth", "-g", "ground_truth_path", help="Ground truth labels file")
-@click.option("--alpha", "-a", type=float, default=0.10, help="Significance level")
+@click.option("--alpha", "-a", type=float, default=0.05, help="Significance level (default 0.05 = 95% confidence)")
 @click.option("--k", "k_fixed", type=int, help="Samples per question (overrides config)")
 @click.option(
     "--output", "-o",
@@ -272,7 +272,7 @@ def certify_cmd(
 )
 @click.option("--questions", "-q", "questions_path", required=True)
 @click.option("--ground-truth", "-g", "ground_truth_path")
-@click.option("--alpha", "-a", type=float, default=0.10)
+@click.option("--alpha", "-a", type=float, default=0.05)
 @click.option(
     "--output", "-o",
     type=click.Choice(["console", "json", "csv"]),

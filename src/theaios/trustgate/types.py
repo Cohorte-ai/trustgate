@@ -126,5 +126,6 @@ class CertificationResult:
     n_test: int
     k_used: int
     api_cost_estimate: float
+    target_alpha: float = 0.05
     alpha_coverage: dict[float, float] = field(default_factory=dict)
     per_item: list[dict[str, object]] = field(default_factory=list)

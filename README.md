@@ -138,13 +138,18 @@ Then the result:
 
 ```
      TrustGate Certification Result
-┌──────────────────────┬──────────┐
-│ Reliability Level    │ 94.6%    │
-│ M* (prediction set)  │ 1        │
-│ Coverage             │ 0.956    │
-│ Capability Gap       │ 2.4%     │
-│ Status               │ PASS     │
-└──────────────────────┴──────────┘
+┌──────────────────────────┬───────┐
+│ Reliability Level        │ 98.0% │
+│ M* (at 95% confidence)   │ 1     │
+│ Empirical Coverage       │ 1.000 │
+│ Capability Gap           │ 0.0%  │
+│ Status                   │ PASS  │
+└──────────────────────────┴───────┘
+
+Reliability Level: your AI's top answer is correct for 98.0% of
+questions — the highest confidence with a formal guarantee.
+
+M* = 1: at 95% confidence, the top answer alone is sufficient.
 ```
 
 ### Step 4: Calibrate (if no ground truth)

@@ -278,6 +278,7 @@ def calibrate(
     cal_ids: list[str],
     test_ids: list[str],
     alpha_values: list[float],
+    target_alpha: float = 0.05,
 ) -> CertificationResult:
     """Full calibration pipeline.
 
@@ -305,10 +306,8 @@ def calibrate(
     n_mode_correct = sum(1 for s in cal_scores if s <= 1)
     reliability_level = n_mode_correct / (n_cal + 1)
 
-    # --- 3. M* at the reliability level ---
-    # M* is the conformal quantile at alpha = 1 - reliability_level
-    alpha_star = 1 - reliability_level
-    q_hat = conformal_quantile(cal_scores, alpha_star)
+    # --- 3. M* at the user's target confidence (default α=0.05 → 95%) ---
+    q_hat = conformal_quantile(cal_scores, target_alpha)
     if math.isinf(q_hat):
         best_m_star = n_cal  # fallback: include everything
     else:
@@ -336,6 +335,7 @@ def calibrate(
     return CertificationResult(
         reliability_level=reliability_level,
         m_star=best_m_star,
+        target_alpha=target_alpha,
         coverage=coverage,
         conditional_coverage=cond_cov,
         capability_gap=cap_gap,
