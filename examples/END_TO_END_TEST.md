@@ -39,6 +39,11 @@ Create a config file and test questions. On macOS/Linux use the commands below. 
 ```bash
 cat > trustgate.yaml << 'EOF'
 # Works with any OpenAI-compatible API (OpenAI, Together, Ollama, LiteLLM, etc.)
+# Auth option 1: env var (standard Bearer token)
+#   api_key_env: "LLM_API_KEY"
+# Auth option 2: custom headers (LiteLLM, Azure, etc.)
+#   headers:
+#     API-Key: "your-key-here"
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
   model: "gpt-4.1-mini"

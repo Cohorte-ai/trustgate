@@ -65,12 +65,11 @@ You need two things in `trustgate.yaml`: the **endpoint to test** (your AI syste
 # The AI system you're certifying (any OpenAI-compatible endpoint)
 endpoint:
   url: "https://api.openai.com/v1/chat/completions"
-  # Or any OpenAI-compatible API:
-  # url: "https://api.together.xyz/v1/chat/completions"
-  # url: "http://localhost:11434/v1/chat/completions"  # Ollama
-  # url: "http://localhost:4000/v1/chat/completions"   # LiteLLM
   model: "gpt-4.1-mini"
-  api_key_env: "LLM_API_KEY"
+  api_key_env: "LLM_API_KEY"               # reads from environment variable
+  # Or use custom auth headers for LiteLLM, Azure, etc.:
+  # headers:
+  #   API-Key: "your-key-here"
 
 # The judge LLM — used for canonicalization (grouping answers)
 # and calibration (matching ground truth to canonical answers).
@@ -82,6 +81,8 @@ canonicalization:
     model: "gpt-4.1-nano"
     api_key_env: "LLM_API_KEY"
 ```
+
+Works with any OpenAI-compatible API: OpenAI, Together, Ollama, LiteLLM, Azure OpenAI, vLLM, Mistral, etc. For providers with non-standard auth, use the `headers` field instead of `api_key_env`.
 
 For custom endpoints (agents, RAG, internal APIs):
 

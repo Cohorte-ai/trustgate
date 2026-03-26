@@ -79,14 +79,14 @@ Connection details for the AI model being certified.
 | `api_key_env` | string  | `""`    | Name of the environment variable that holds the API key (e.g., `"LLM_API_KEY"`). Works with any OpenAI-compatible provider. TrustGate reads the key from the environment at runtime — never stored in the config file. |
 | `max_tokens`  | integer | `4096`  | Maximum tokens per completion response. |
 | `provider`    | string  | `""`    | Provider hint: `"openai"`, `"anthropic"`, `"together"`, `"generic"`, or `"generic_http"`. If left empty, the provider is auto-detected from the URL. |
-| `headers`     | object  | `{}`    | Custom HTTP headers. Supports `${VAR}` env var expansion (e.g., `Authorization: "Bearer ${MY_KEY}"`). |
+| `headers`     | object  | `{}`    | Custom HTTP headers. Override default auth for providers that use non-standard headers (LiteLLM, Azure OpenAI, etc.). Supports `${VAR}` env var expansion. When set, these headers take precedence over the default `Authorization: Bearer` header. |
 | `request_template` | object | `null` | JSON body template for generic endpoints. Use `{{question}}` as placeholder. When set, provider auto-detects to `generic_http`. |
 | `response_path` | string | `""`  | Dot-notation path to extract the answer from the JSON response (e.g., `"data.answer"`, `"choices.0.text"`). |
 | `cost_per_request` | float | `null` | Cost per API request in USD. **Required for custom endpoints** — TrustGate cannot estimate cost without it. For known LLMs (GPT-4.1, Claude, etc.), cost is auto-estimated from built-in pricing tables. |
 
 > **Cost estimation for custom endpoints:** Before running certification, measure your per-request cost (check your billing dashboard, or estimate from infrastructure costs). Set `cost_per_request` in the config or pass `--cost-per-request` on the CLI. Without it, the pre-flight check cannot show cost estimates, and you risk unexpected charges.
 
-#### Example
+#### Example — standard auth (OpenAI, Together, Ollama, etc.)
 
 ```yaml
 endpoint:
@@ -95,6 +95,19 @@ endpoint:
   temperature: 0.7
   api_key_env: "LLM_API_KEY"
 ```
+
+#### Example — custom auth headers (LiteLLM, Azure OpenAI, etc.)
+
+```yaml
+endpoint:
+  url: "http://localhost:4000/v1/chat/completions"
+  model: "gpt-4"
+  headers:
+    API-Key: "your-key-here"
+    Accept: "application/json"
+```
+
+When `headers` is set, the default `Authorization: Bearer` header is replaced by your custom headers. No `api_key_env` needed.
 
 ---
 
