@@ -59,6 +59,9 @@ calibration:
   alpha_values: [0.01, 0.05, 0.10, 0.20]
   n_cal: 25
   n_test: 25
+
+questions:
+  file: "questions.csv"
 EOF
 
 cat > questions.csv << 'EOF'
@@ -137,6 +140,8 @@ calibration:
   alpha_values: [0.01, 0.05, 0.10, 0.20]
   n_cal: 25
   n_test: 25
+questions:
+  file: questions.csv
 '''
 open('trustgate.yaml','w').write(config)
 questions = 'id,question,acceptable_answers\n'

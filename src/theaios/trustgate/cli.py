@@ -236,11 +236,13 @@ def certify_cmd(
         sys.exit(1)
     except Exception as exc:
         click.echo(f"Error: {exc}", err=True)
-        click.echo(
-            "Hint: if this is a connection or rate limit error, try reducing "
-            "--concurrency (default 30) or K.",
-            err=True,
-        )
+        exc_str = str(type(exc).__name__).lower()
+        if "connect" in exc_str or "sampler" in exc_str or "timeout" in exc_str:
+            click.echo(
+                "Hint: if this is a connection or rate limit error, try reducing "
+                "--concurrency (default 10) or K.",
+                err=True,
+            )
         sys.exit(1)
 
     _output_result(result, output, output_file, verbose, had_cache=had_cache)
