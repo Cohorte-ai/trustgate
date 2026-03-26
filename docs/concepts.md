@@ -36,7 +36,7 @@ Here is how it works at a high level:
 
 3. **Test set:** Apply this threshold to a held-out test set and verify that coverage actually holds.
 
-The key property of conformal prediction is that the coverage guarantee is **distribution-free** -- it holds regardless of the underlying data distribution, with no assumptions about how the model generates answers. If TrustGate reports a reliability level of 94.6% at alpha=0.10, that means the guarantee holds with at least 90% confidence.
+The key property of conformal prediction is that the coverage guarantee is **distribution-free** -- it holds regardless of the underlying data distribution, with no assumptions about how the model generates answers. If TrustGate reports a reliability level of 98.0%, that means the model's top answer is correct for at least 98.0% of questions, with a formal guarantee.
 
 ### Where do the correct answers come from?
 
@@ -68,23 +68,23 @@ Now we have 50 scores: mostly 1s (the AI's top answer was correct), some 2s (cor
 
 ## 3. Reliability Level
 
-**The idea:** The reliability level is the largest confidence level where the coverage guarantee holds. It is the single headline number TrustGate produces.
+**The idea:** The reliability level is the highest confidence at which the model's top answer (mode) is trustworthy. It is the single headline number TrustGate produces.
 
-TrustGate tests multiple **alpha values** (significance levels). For each alpha, it checks whether the empirical coverage on the test set meets or exceeds the target of (1 - alpha). The reliability level is the largest (1 - alpha) that passes.
+The formula (Definition 2.4 in the paper):
 
-For example, with alpha values `[0.01, 0.05, 0.10, 0.15, 0.20]`:
+```
+reliability level = |{calibration items where mode is correct}| / (n + 1)
+```
 
-| Alpha | Target coverage (1 - alpha) | Actual coverage | Pass? |
-|-------|----------------------------|-----------------|-------|
-| 0.01  | 99.0%                      | 95.6%           | No    |
-| 0.05  | 95.0%                      | 95.6%           | Yes   |
-| 0.10  | 90.0%                      | 95.6%           | Yes   |
-| 0.15  | 85.0%                      | 95.6%           | Yes   |
-| 0.20  | 80.0%                      | 95.6%           | Yes   |
+For example, if 49 out of 50 calibration items have the correct answer as the mode:
 
-In this case the reliability level is **95.0%** (the largest target that passes). The model is certified reliable at the 95% level.
+```
+reliability = 49 / (49 + 1) = 98.0%
+```
 
-**Understanding alpha:** A smaller alpha means a stricter guarantee. Alpha = 0.05 means "I want to be wrong on at most 5% of questions." Alpha = 0.01 means "at most 1%." Smaller alpha requires stronger consistency from the model to pass.
+This means: "the model's top answer is correct for 98.0% of questions, with a formal guarantee." The `n+1` denominator (instead of `n`) is the conformal correction that ensures the guarantee is conservative.
+
+**Understanding alpha (for M\*):** The `--alpha` parameter controls the confidence level for the prediction set size M\*. Alpha = 0.05 means "at 95% confidence, how many top answers do I need?" A smaller alpha demands stricter guarantees, so M\* may be larger.
 
 ---
 
@@ -100,7 +100,13 @@ In practice:
 - **M\*=2** means the model is sometimes torn between two plausible answers. You still get the guarantee, but you need to present two candidate answers instead of one.
 - **M\*=3+** means the model is frequently uncertain. The guarantee holds, but the prediction set is large, which is less useful in practice.
 
-M\* is computed from the conformal quantile of the nonconformity scores on the calibration set. It is the smallest prediction set size that achieves the desired coverage.
+M\* is computed from the conformal quantile of the nonconformity scores on the calibration set at the user's target alpha (default 0.05 = 95% confidence). Use `--alpha` to change the confidence level:
+
+```bash
+trustgate certify --alpha 0.01   # 99% confidence → M* may be larger
+trustgate certify --alpha 0.05   # 95% confidence (default)
+trustgate certify --alpha 0.10   # 90% confidence → M* may be smaller
+```
 
 ---
 
