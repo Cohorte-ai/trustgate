@@ -9,26 +9,34 @@ Test every feature from a fresh install. No repo cloning needed.
 
 ## Setup
 
-```bash
-# Create a fresh directory
-mkdir trustgate-test && cd trustgate-test
+### macOS / Linux
 
-# Create a venv
+```bash
+mkdir trustgate-test && cd trustgate-test
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Install from PyPI
 pip install "theaios-trustgate[all]"
-
-# Set your API key
 export OPENAI_API_KEY="sk-your-key-here"
 ```
+
+### Windows (PowerShell)
+
+```powershell
+mkdir trustgate-test; cd trustgate-test
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install "theaios-trustgate[all]"
+$env:OPENAI_API_KEY="sk-your-key-here"
+```
+
+> [!NOTE]
+> `[all]` installs the full library including Flask (for the calibration web UI) and the OpenAI SDK (for LLM canonicalization). The core `pip install theaios-trustgate` omits these optional dependencies.
 
 ---
 
 ## Generate test data
 
-Create a config file and test questions:
+Create a config file and test questions. On macOS/Linux use the commands below. On Windows, create these two files manually or use the Python script at the end of this section.
 
 ```bash
 cat > trustgate.yaml << 'EOF'
@@ -107,6 +115,37 @@ q48,Which is the hottest planet?,Venus
 q49,How many colors are in a rainbow?,7
 q50,What is the capital of Spain?,Madrid
 EOF
+```
+
+**Windows alternative** — run this Python script to create both files:
+
+```python
+python -c "
+config = '''endpoint:
+  url: https://api.openai.com/v1/chat/completions
+  model: gpt-4.1-mini
+  api_key_env: OPENAI_API_KEY
+canonicalization:
+  type: llm
+  judge_endpoint:
+    url: https://api.openai.com/v1/chat/completions
+    model: gpt-4.1-nano
+    api_key_env: OPENAI_API_KEY
+sampling:
+  k_fixed: 5
+  sequential_stopping: true
+calibration:
+  alpha_values: [0.01, 0.05, 0.10, 0.20]
+  n_cal: 25
+  n_test: 25
+'''
+open('trustgate.yaml','w').write(config)
+questions = 'id,question,acceptable_answers\n'
+qs = [('q01','What is the capital of France?','Paris'),('q02','What is 2+2?','4'),('q03','Who painted the Mona Lisa?','Da Vinci'),('q04','What is the chemical symbol for gold?','Au'),('q05','How many continents are there?','7'),('q06','What is the largest ocean?','Pacific'),('q07','Who wrote Romeo and Juliet?','Shakespeare'),('q08','What is the boiling point of water in Celsius?','100'),('q09','What is the square root of 144?','12'),('q10','Which planet is the largest?','Jupiter'),('q11','What is the capital of Japan?','Tokyo'),('q12','Who developed the theory of relativity?','Einstein'),('q13','What is the chemical formula for water?','H2O'),('q14','What is the tallest mountain in the world?','Everest'),('q15','How many minutes are in an hour?','60'),('q16','What is the smallest prime number?','2'),('q17','What is the longest river in the world?','Nile'),('q18','Which element has atomic number 1?','Hydrogen'),('q19','What is the capital of Australia?','Canberra'),('q20','Who discovered penicillin?','Fleming'),('q21','What is the speed of light approximately?','300000 km/s'),('q22','What is the capital of Germany?','Berlin'),('q23','How many bones in the adult human body?','206'),('q24','What is the largest mammal?','Blue whale'),('q25','Who invented the telephone?','Bell'),('q26','What is the pH of pure water?','7'),('q27','What is the capital of Brazil?','Brasilia'),('q28','How many planets in our solar system?','8'),('q29','What is the hardest natural substance?','Diamond'),('q30','Who painted Starry Night?','Van Gogh'),('q31','What is the capital of Canada?','Ottawa'),('q32','What is the freezing point of water in Celsius?','0'),('q33','How many legs does a spider have?','8'),('q34','What is the chemical symbol for sodium?','Na'),('q35','Who was the first person to walk on the moon?','Armstrong'),('q36','What is the capital of Italy?','Rome'),('q37','What is the cube root of 27?','3'),('q38','Who wrote Don Quixote?','Cervantes'),('q39','What is the unit of electrical resistance?','Ohm'),('q40','What is the capital of India?','New Delhi'),('q41','How many strings does a standard guitar have?','6'),('q42','What is the largest desert in the world?','Antarctic'),('q43','What is the capital of Mexico?','Mexico City'),('q44','Who composed the Four Seasons?','Vivaldi'),('q45','What is the smallest continent?','Australia'),('q46','What is the capital of Egypt?','Cairo'),('q47','What is the atomic number of carbon?','6'),('q48','Which is the hottest planet?','Venus'),('q49','How many colors are in a rainbow?','7'),('q50','What is the capital of Spain?','Madrid')]
+for qid,q,a in qs: questions+=f'{qid},{q},{a}\n'
+open('questions.csv','w').write(questions)
+print('Created trustgate.yaml and questions.csv')
+"
 ```
 
 ---
@@ -518,6 +557,9 @@ for q in questions:
 ## Cleanup
 
 ```bash
-cd ..
-rm -rf trustgate-test
+# macOS / Linux
+cd .. && rm -rf trustgate-test
+
+# Windows (PowerShell)
+cd ..; Remove-Item -Recurse -Force trustgate-test
 ```
