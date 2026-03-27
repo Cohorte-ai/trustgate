@@ -57,7 +57,7 @@ Verify it works:
 ### macOS / Linux
 
 ```bash
-curl -X POST http://localhost:8000/ask \
+curl -X POST http://127.0.0.1:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"query": "What is the capital of France?"}'
 ```
@@ -65,7 +65,7 @@ curl -X POST http://localhost:8000/ask \
 ### Windows (PowerShell)
 
 ```powershell
-curl.exe -X POST http://localhost:8000/ask -H "Content-Type: application/json" -d "{\"query\": \"What is the capital of France?\"}"
+curl.exe -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" -d "{\"query\": \"What is the capital of France?\"}"
 ```
 
 Expected: `{"answer": "From france data:\n# France\n..."}`

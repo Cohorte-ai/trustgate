@@ -2,7 +2,7 @@
 # Run the agent first: uvicorn agent:app --port 8000
 
 endpoint:
-  url: "http://localhost:8000/ask"
+  url: "http://127.0.0.1:8000/ask"
   temperature: null                      # agent controls its own behavior
   request_template:
     query: "{{question}}"
