@@ -265,16 +265,8 @@ def create_app(
 
     Labels are saved as ``{qid: canonical_answer}`` — directly compatible
     with ``trustgate certify --ground-truth``.
-
-    Requires Flask: ``pip install 'theaios-trustgate[serve]'``
     """
-    try:
-        from flask import Flask, Response, jsonify, request
-    except ImportError as exc:
-        raise ImportError(
-            "Flask is required for the calibration UI. "
-            "Install with: pip install 'theaios-trustgate[serve]'"
-        ) from exc
+    from flask import Flask, Response, jsonify, request
 
     app = Flask(__name__)
 

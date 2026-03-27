@@ -276,7 +276,7 @@ trustgate version
 ```
 
 ```
-trustgate 0.1.0
+trustgate 0.x.y
 ```
 
 ---

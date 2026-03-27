@@ -498,15 +498,7 @@ def calibrate(
         return
 
     # Launch review UI
-    try:
-        from theaios.trustgate.serve import serve_calibration
-    except ImportError:
-        click.echo(
-            "Flask is required for the calibration UI.\n"
-            "Install with: pip install 'theaios-trustgate[serve]'",
-            err=True,
-        )
-        sys.exit(1)
+    from theaios.trustgate.serve import serve_calibration
 
     click.echo(f"\nStarting calibration UI on http://localhost:{port}")
     click.echo(f"Admin panel at http://localhost:{port}/admin")

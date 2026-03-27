@@ -125,7 +125,7 @@ A low reliability level (e.g., below 0.80) can have several causes:
 
 ## 7. How does caching work?
 
-All API responses are cached on disk in `~/.trustgate/cache/`. The cache key
+All API responses are cached on disk in `.trustgate_cache`. The cache key
 is derived from the provider, model name, prompt text, temperature, and sample
 index.
 
@@ -139,7 +139,7 @@ index.
   text, new API calls are made (different cache key). Previous cached responses
   are not deleted.
 
-To clear the cache, delete the `~/.trustgate/cache/` directory.
+To clear the cache, delete the `.trustgate_cache` directory.
 
 ---
 

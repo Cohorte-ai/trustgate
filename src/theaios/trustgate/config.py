@@ -116,7 +116,7 @@ def _parse_config(raw: dict[str, object]) -> TrustGateConfig:
         k_fixed=_parse_optional_int(sampling_raw.get("k_fixed", 10)),
         sequential_stopping=bool(sampling_raw.get("sequential_stopping", True)),
         delta=float(sampling_raw.get("delta", 0.05)),
-        max_concurrent=int(sampling_raw.get("max_concurrent", 50)),
+        max_concurrent=int(sampling_raw.get("max_concurrent", 10)),
         timeout=float(sampling_raw.get("timeout", 120.0)),
         retries=int(sampling_raw.get("retries", 10)),
     )

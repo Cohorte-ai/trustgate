@@ -209,7 +209,7 @@ canonicalization:
     api_key_env: "LLM_API_KEY"
 ```
 
-#### Example -- LLM judge (custom auth headers)
+#### Example -- LLM canonicalization (custom auth headers)
 
 ```yaml
 canonicalization:
