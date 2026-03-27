@@ -31,4 +31,5 @@ calibration:
   n_test: 20
 
 questions:
-  file: "questions.csv"
+  file: "questions.csv"            # easy: factual lookups
+  # file: "questions_hard.csv"     # hard: multi-hop, ambiguous, out-of-scope

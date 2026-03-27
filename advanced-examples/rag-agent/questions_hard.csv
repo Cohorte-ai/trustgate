@@ -1,0 +1,41 @@
+id,question,acceptable_answers
+h01,What is the largest country?,Russia
+h02,Which country is the most populated?,India
+h03,Which European country has the higher GDP?,Germany
+h04,Which country has the highest life expectancy?,Japan
+h05,Which African country has the larger economy?,Nigeria
+h06,Which country has a higher population density France or Germany?,Germany
+h07,Which Asian country has the highest GDP per capita Japan or South Korea?,Japan
+h08,Is India's population density higher or lower than Japan's?,higher
+h09,Which country has more people Mexico or Germany?,Mexico
+h10,Does France or Canada have a larger area?,Canada
+h11,What is the combined GDP of France and Germany?,$7.24 trillion
+h12,What is the total population of all Asian countries in the database?,1616.7 million
+h13,How many European countries are in the database?,3
+h14,What is the average life expectancy across all countries?,77.8 years
+h15,Which country has the smallest area?,South Korea
+h16,Name a country with a population over 200 million,India
+h17,Which country has the lowest GDP per capita?,Nigeria
+h18,Is Australia's population larger or smaller than South Korea's?,smaller
+h19,What is the GDP difference between Japan and India?,$0.29 trillion
+h20,Which country has a larger metro area Tokyo or São Paulo?,Tokyo
+h21,What is the population of Antarctica?,unknown
+h22,What is the capital of Switzerland?,unknown
+h23,What is the GDP of Argentina?,unknown
+h24,What language do they speak in Peru?,unknown
+h25,What is the life expectancy in Sweden?,unknown
+h26,Is Russia's GDP per capita higher or lower than Mexico's?,lower
+h27,Which has more people the capital of India or the largest city of Brazil?,São Paulo
+h28,What percentage of the world population lives in India?,approximately 18%
+h29,If France's GDP grew by 10% what would it be?,$3.058 trillion
+h30,What is the population density of the largest country by area?,8.41 people per km²
+h31,Which country's currency is worth less the Nigerian Naira or Egyptian Pound?,Naira
+h32,Does Japan or Germany have more people per square kilometer?,Japan
+h33,What is the ratio of India's population to Australia's population?,54.2x
+h34,Which continent has more countries represented in the database Asia or Europe?,Asia
+h35,Name all countries in the database that use the Euro,France and Germany
+h36,Is the life expectancy gap between Japan and Nigeria more or less than 30 years?,more
+h37,What would be the combined area of Japan and South Korea?,478185 km²
+h38,Which country has the closest GDP to Mexico?,South Korea
+h39,If Egypt's population grew by 5% what would it be?,118.3 million
+h40,Rank the top 3 countries by GDP,Germany Japan India

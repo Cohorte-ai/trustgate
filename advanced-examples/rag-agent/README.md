@@ -97,6 +97,34 @@ You'll see:
 2. Pre-flight cost estimate ($0 for the agent, small cost for LLM canonicalization)
 3. Certification result
 
+## Try the hard dataset
+
+The default `questions.csv` has easy factual lookups (high reliability). Switch to the hard dataset to see realistic variation:
+
+Edit `trustgate.yaml`:
+
+```yaml
+questions:
+  # file: "questions.csv"           # easy: factual lookups
+  file: "questions_hard.csv"        # hard: multi-hop, ambiguous, out-of-scope
+```
+
+Then re-run:
+
+```bash
+trustgate cache clear
+trustgate certify
+```
+
+The hard dataset includes:
+- **Ambiguous questions**: "What is the largest country?" (by area? population? GDP?)
+- **Multi-hop reasoning**: "Which European country has a higher population density?"
+- **Out-of-scope questions**: "What is the capital of Switzerland?" (not in knowledge base)
+- **Approximate answers**: "What percentage of the world population lives in India?"
+- **Multi-step calculation**: "If France's GDP grew by 10% what would it be?"
+
+Expect: lower reliability, higher capability gap, potentially M* > 1.
+
 ## What to observe
 
 - **Retrieval questions** (q01-q12): high consistency — the agent always finds the same doc
