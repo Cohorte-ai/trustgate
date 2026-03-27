@@ -31,8 +31,8 @@ calibration:
   n_test: 20
 
 questions:
-  file: "questions_hard.csv" # easy: factual lookups
-  # file: "questions_hard.csv"     # hard: multi-hop, ambiguous, out-of-scope
+  # file: "questions.csv" # easy: factual lookups
+  file: "questions_hard.csv" # hard: multi-hop, ambiguous, out-of-scope
 
 thresholds:
   pass: 0.80

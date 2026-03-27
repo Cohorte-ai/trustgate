@@ -67,7 +67,7 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
 .raw-list{display:none;margin-top:8px;padding:0}
 .raw-list.open{display:block}
 .raw-item{padding:10px 14px;margin-bottom:6px;background:#f8f9fa;border-radius:8px;
-  font-size:14px;line-height:1.5;color:#444;border:1px solid #eee;word-break:break-word}
+  font-size:14px;line-height:1.5;color:#444;border:1px solid #eee;word-break:break-word;max-height:200px;overflow-y:auto}
 .done{text-align:center;font-size:20px;padding:40px}
 .hint{text-align:center;color:#999;font-size:13px;margin-top:12px}
 .key{display:inline-block;background:#eee;border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px}
@@ -80,8 +80,6 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
 <div class="hint" id="hint"></div>
 <script>
 let qid=null,answerValues=[],singleMode=false;
-
-function truncate(s,n){return s.length>n?s.slice(0,n)+'...':s;}
 
 async function load(){
  const r=await fetch('/api/next');const d=await r.json();
@@ -109,10 +107,13 @@ async function load(){
   if(d.raw_variants && d.raw_variants.length>0){
    const toggleId='raw-toggle-'+qid;
    const listId='raw-list-'+qid;
+   const uCnt=d.raw_variants.length;
+   const tCnt=d.raw_total||uCnt;
+   const countLabel=uCnt+' unique out of '+tCnt;
    let rawHtml='<button class="raw-toggle" onclick="toggleRaw(\\''+listId+'\\',\\''+toggleId+'\\')" id="'+toggleId+'">'+
-    '<span class="arrow">&#9654;</span> Show model responses ('+d.raw_variants.length+')</button>'+
+    '<span class="arrow">&#9654;</span> Show model responses ('+countLabel+')</button>'+
     '<div class="raw-list" id="'+listId+'">';
-   d.raw_variants.forEach(v=>{rawHtml+='<div class="raw-item">'+escapeHtml(truncate(v,500))+'</div>';});
+   d.raw_variants.forEach(v=>{rawHtml+='<div class="raw-item">'+escapeHtml(v)+'</div>';});
    rawHtml+='</div>';
    card.innerHTML+=rawHtml;
   }
@@ -131,15 +132,19 @@ async function load(){
   // Raw variants per answer (collapsible)
   if(d.raw_by_answer){
    d.answers.forEach((a,i)=>{
-    const variants=d.raw_by_answer[a.answer];
-    if(variants && variants.length>0){
-     const listId='raw-'+i+'-'+qid;
-     const toggleId='rawt-'+i+'-'+qid;
-     html+='<button class="raw-toggle" onclick="toggleRaw(\\''+listId+'\\',\\''+toggleId+'\\')" id="'+toggleId+'">'+
-      '<span class="arrow">&#9654;</span> Raw responses for "'+escapeHtml(truncate(a.answer,40))+'" ('+variants.length+')</button>'+
-      '<div class="raw-list" id="'+listId+'">';
-     variants.forEach(v=>{html+='<div class="raw-item">'+escapeHtml(truncate(v,500))+'</div>';});
-     html+='</div>';
+    const entry=d.raw_by_answer[a.answer];
+    if(entry){
+     const variants=entry.variants||entry;
+     const total=entry.total||variants.length;
+     if(variants.length>0){
+      const listId='raw-'+i+'-'+qid;
+      const toggleId='rawt-'+i+'-'+qid;
+      html+='<button class="raw-toggle" onclick="toggleRaw(\\''+listId+'\\',\\''+toggleId+'\\')" id="'+toggleId+'">'+
+       '<span class="arrow">&#9654;</span> Raw responses for "'+escapeHtml(a.answer)+'" ('+variants.length+' unique out of '+total+')</button>'+
+       '<div class="raw-list" id="'+listId+'">';
+      variants.forEach(v=>{html+='<div class="raw-item">'+escapeHtml(v)+'</div>';});
+      html+='</div>';
+     }
     }
    });
   }
@@ -305,12 +310,6 @@ def create_app(
         export = {qid: ans for qid, ans in labels.items() if ans is not None}
         output_path.write_text(json.dumps(export, indent=2), encoding="utf-8")
 
-    def _truncate_raw(text: str, max_len: int = 300) -> str:
-        """Truncate long raw responses for display."""
-        if len(text) <= max_len:
-            return text
-        return text[:max_len] + "..."
-
     def _deduplicate_raw(raw_list: list[str]) -> list[str]:
         """Remove duplicate raw responses, preserving order."""
         seen: set[str] = set()
@@ -355,17 +354,17 @@ def create_app(
                         # Single answer: flat list of all raw variants
                         canon_key = answers[0]["answer"]
                         raw_list = qid_raw.get(canon_key, [])
-                        response_data["raw_variants"] = [
-                            _truncate_raw(r) for r in _deduplicate_raw(raw_list)
-                        ]
+                        response_data["raw_variants"] = _deduplicate_raw(raw_list)
+                        response_data["raw_total"] = len(raw_list)
                     else:
                         # Multiple answers: raw variants keyed by canonical answer
                         raw_by_answer = {}
                         for a in answers:
                             raw_list = qid_raw.get(a["answer"], [])
-                            raw_by_answer[a["answer"]] = [
-                                _truncate_raw(r) for r in _deduplicate_raw(raw_list)
-                            ]
+                            raw_by_answer[a["answer"]] = {
+                                "variants": _deduplicate_raw(raw_list),
+                                "total": len(raw_list),
+                            }
                         response_data["raw_by_answer"] = raw_by_answer
 
                 return jsonify(response_data)

@@ -7,7 +7,7 @@ from theaios.trustgate.calibration import diagnose_profiles
 
 class TestDiagnoseProfiles:
     def test_perfect_consensus(self) -> None:
-        """All questions have unanimous agreement."""
+        """All questions have unanimous agreement — warns about determinism."""
         profiles = {
             "q1": [("B", 1.0)],
             "q2": [("C", 1.0)],
@@ -17,7 +17,9 @@ class TestDiagnoseProfiles:
         assert diag.status == "good"
         assert diag.mean_consensus == 1.0
         assert diag.frac_all_unique == 0.0
-        assert diag.warnings == []
+        # Perfect consensus triggers deterministic endpoint warning
+        assert len(diag.warnings) == 1
+        assert "zero variance" in diag.warnings[0]
 
     def test_strong_consensus(self) -> None:
         """Most questions have a clear winner."""

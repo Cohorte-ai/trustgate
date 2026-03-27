@@ -1,9 +1,12 @@
 """Country facts agent with two tools: retriever + calculator.
 
-A simple FastAPI agent that:
+A FastAPI agent that:
 1. Searches a local knowledge base of country facts
 2. Can perform math calculations
-3. Combines both to answer questions
+3. Uses an LLM to generate natural-language answers from retrieved context
+
+The LLM generation step introduces natural variance in phrasing, which is
+what TrustGate's self-consistency sampling measures.
 
 Run: uvicorn agent:app --port 8000
 Test: curl -X POST http://localhost:8000/ask -H "Content-Type: application/json" \
@@ -13,12 +16,25 @@ Test: curl -X POST http://localhost:8000/ask -H "Content-Type: application/json"
 from __future__ import annotations
 
 import math
+import os
 import re
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI
 
 app = FastAPI(title="Country Facts Agent")
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+_LLM_URL = os.environ.get(
+    "AGENT_LLM_URL", "https://api.openai.com/v1/chat/completions"
+)
+_LLM_MODEL = os.environ.get("AGENT_LLM_MODEL", "gpt-4.1-nano")
+_LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+_LLM_TEMPERATURE = float(os.environ.get("AGENT_LLM_TEMPERATURE", "0.7"))
 
 # ---------------------------------------------------------------------------
 # Knowledge base (loaded once at startup)
@@ -91,58 +107,83 @@ _CALC_KEYWORDS = {
 }
 
 
-def agent_answer(query: str) -> str:
-    """Process a query using retriever + calculator as needed."""
+def _build_context(query: str) -> str:
+    """Retrieve docs and optionally run calculations to build answer context."""
     query_lower = query.lower()
 
     # Always retrieve relevant docs
     docs = retrieve(query)
-    context = "\n\n".join(
-        f"## {d['country']}\n{d['content']}" for d in docs
-    )
+    context_parts = [
+        f"From {d['country']}:\n{d['content']}" for d in docs
+    ]
 
     # Check if calculation is needed
     needs_calc = any(kw in query_lower for kw in _CALC_KEYWORDS)
 
     if needs_calc:
         # Extract numbers from context for calculation
-        numbers = _extract_numbers(context, query_lower)
-        calc_result = None
+        full_context = "\n\n".join(context_parts)
+        numbers = _extract_numbers(full_context, query_lower)
 
-        if "density" in query_lower or "per capita" in query_lower:
-            # population / area or gdp / population
-            if "density" in query_lower and len(numbers) >= 2:
-                pop = numbers.get("population")
-                area = numbers.get("area")
-                if pop and area:
-                    calc_result = calculate(f"{pop} / {area}")
-                    return f"Based on the data: population {pop:,.0f} / area {area:,.0f} km² = {calc_result} people per km²"
+        if "density" in query_lower and numbers.get("population") and numbers.get("area"):
+            pop = numbers["population"]
+            area = numbers["area"]
+            result = calculate(f"{pop} / {area}")
+            context_parts.append(
+                f"\nCalculation: population {pop:,.0f} / area {area:,.0f} km² = {result} people per km²"
+            )
 
-            if "per capita" in query_lower and len(numbers) >= 2:
-                gdp = numbers.get("gdp")
-                pop = numbers.get("population")
-                if gdp and pop:
-                    calc_result = calculate(f"{gdp} / {pop}")
-                    return f"Based on the data: GDP ${gdp:,.0f} / population {pop:,.0f} = ${calc_result} per capita"
+        elif "per capita" in query_lower and numbers.get("gdp") and numbers.get("population"):
+            gdp = numbers["gdp"]
+            pop = numbers["population"]
+            result = calculate(f"{gdp} / {pop}")
+            context_parts.append(
+                f"\nCalculation: GDP ${gdp:,.0f} / population {pop:,.0f} = ${result} per capita"
+            )
 
-        if "percentage" in query_lower or "percent" in query_lower or "ratio" in query_lower:
+        elif ("percentage" in query_lower or "percent" in query_lower or "ratio" in query_lower):
             if len(numbers) >= 2:
                 vals = list(numbers.values())
-                calc_result = calculate(f"{vals[0]} / {vals[1]} * 100")
-                return f"Ratio: {vals[0]:,.0f} / {vals[1]:,.0f} = {calc_result}%"
+                result = calculate(f"{vals[0]} / {vals[1]} * 100")
+                context_parts.append(
+                    f"\nCalculation: {vals[0]:,.0f} / {vals[1]:,.0f} = {result}%"
+                )
 
-        if "compared to" in query_lower and len(numbers) >= 2:
-            vals = list(numbers.values())
-            calc_result = calculate(f"{vals[0]} / {vals[1]}")
-            return f"Comparison: {vals[0]:,.0f} / {vals[1]:,.0f} = {calc_result}x"
+    return "\n\n".join(context_parts)
 
-    # Pure retrieval — answer from context
-    # Return the most relevant doc's key facts
-    if docs:
-        top_doc = docs[0]
-        return f"From {top_doc['country']} data:\n{top_doc['content']}"
 
-    return "I don't have information about that."
+async def _llm_answer(query: str, context: str) -> str:
+    """Use an LLM to generate a concise answer from retrieved context."""
+    if not _LLM_API_KEY:
+        # Fallback: return raw context if no LLM configured
+        return context
+
+    system_prompt = (
+        "You are a helpful assistant that answers questions based on provided context. "
+        "Give a concise, direct answer. If the context doesn't contain enough information, "
+        "say so. Do not make up facts not in the context."
+    )
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            _LLM_URL,
+            headers={
+                "Authorization": f"Bearer {_LLM_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": _LLM_MODEL,
+                "temperature": _LLM_TEMPERATURE,
+                "max_tokens": 512,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"},
+                ],
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
 
 
 def _extract_numbers(context: str, query: str) -> dict[str, float]:
@@ -182,11 +223,18 @@ async def ask(request: dict) -> dict:
     query = request.get("query", "")
     if not query:
         return {"answer": "Please provide a query."}
-    answer = agent_answer(query)
+
+    context = _build_context(query)
+    answer = await _llm_answer(query, context)
     return {"answer": answer}
 
 
 @app.get("/health")
 async def health() -> dict:
     """Health check."""
-    return {"status": "ok", "docs_loaded": len(_DOCS)}
+    return {
+        "status": "ok",
+        "docs_loaded": len(_DOCS),
+        "llm_configured": bool(_LLM_API_KEY),
+        "llm_model": _LLM_MODEL,
+    }

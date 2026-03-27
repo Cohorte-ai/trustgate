@@ -203,6 +203,17 @@ def diagnose_profiles(
     # Assess status and generate warnings
     warnings: list[str] = []
 
+    # Deterministic endpoint: all K samples produce the same answer every time
+    frac_deterministic = sum(1 for c in consensus_strengths if c >= 1.0 - 1e-9) / n
+    if frac_deterministic > 0.9:
+        warnings.append(
+            f"{frac_deterministic:.0%} of questions produced identical responses "
+            f"across all K samples (zero variance). Your endpoint appears "
+            f"deterministic — self-consistency measures variance, so reliability "
+            f"reflects pure bias. To measure stochastic reliability, increase "
+            f"temperature or add randomness to your endpoint."
+        )
+
     if frac_all_unique > 0.5:
         warnings.append(
             f"{frac_all_unique:.0%} of questions produced all-unique canonical "

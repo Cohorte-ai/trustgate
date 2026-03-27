@@ -87,7 +87,7 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
 .raw-list{display:none;margin-top:8px;padding:0}
 .raw-list.open{display:block}
 .raw-item{padding:10px 14px;margin-bottom:6px;background:#f8f9fa;border-radius:8px;
-  font-size:14px;line-height:1.5;color:#444;border:1px solid #eee;word-break:break-word}
+  font-size:14px;line-height:1.5;color:#444;border:1px solid #eee;word-break:break-word;max-height:200px;overflow-y:auto}
 .hint{text-align:center;color:#999;font-size:13px;margin-top:12px}
 .key{display:inline-block;background:#eee;border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px}
 .done{text-align:center;padding:40px}
@@ -129,8 +129,6 @@ function escapeHtml(s){
  const d=document.createElement('div');d.textContent=s;return d.innerHTML;
 }
 
-function truncate(s,n){return s.length>n?s.slice(0,n)+'...':s;}
-
 function toggleRaw(listId,toggleId){
  const list=document.getElementById(listId);
  const arrow=document.getElementById(toggleId).querySelector('.arrow');
@@ -169,11 +167,14 @@ function render() {
     if (item.raw_variants && item.raw_variants.length > 0) {
       const toggleId = 'raw-toggle-' + idx;
       const listId = 'raw-list-' + idx;
+      const uCnt = item.raw_variants.length;
+      const tCnt = item.raw_total || uCnt;
+      const countLabel = uCnt + ' unique out of ' + tCnt;
       html += '<button class="raw-toggle" onclick="toggleRaw(\\'' + listId + '\\',\\'' + toggleId + '\\')" id="' + toggleId + '">' +
-        '<span class="arrow">&#9654;</span> Show model responses (' + item.raw_variants.length + ')</button>' +
+        '<span class="arrow">&#9654;</span> Show model responses (' + countLabel + ')</button>' +
         '<div class="raw-list" id="' + listId + '">';
       item.raw_variants.forEach(function(v) {
-        html += '<div class="raw-item">' + escapeHtml(truncate(v, 500)) + '</div>';
+        html += '<div class="raw-item">' + escapeHtml(v) + '</div>';
       });
       html += '</div>';
     }
@@ -191,17 +192,21 @@ function render() {
 
     if (item.raw_by_answer) {
       item.answers.forEach(function(a, i) {
-        const variants = item.raw_by_answer[a.answer];
-        if (variants && variants.length > 0) {
-          const listId = 'raw-' + i + '-' + idx;
-          const toggleId = 'rawt-' + i + '-' + idx;
-          html += '<button class="raw-toggle" onclick="toggleRaw(\\'' + listId + '\\',\\'' + toggleId + '\\')" id="' + toggleId + '">' +
-            '<span class="arrow">&#9654;</span> Raw responses for "' + escapeHtml(truncate(a.answer, 40)) + '" (' + variants.length + ')</button>' +
-            '<div class="raw-list" id="' + listId + '">';
-          variants.forEach(function(v) {
-            html += '<div class="raw-item">' + escapeHtml(truncate(v, 500)) + '</div>';
-          });
-          html += '</div>';
+        const entry = item.raw_by_answer[a.answer];
+        if (entry) {
+          const variants = entry.variants || entry;
+          const total = entry.total || variants.length;
+          if (variants.length > 0) {
+            const listId = 'raw-' + i + '-' + idx;
+            const toggleId = 'rawt-' + i + '-' + idx;
+            html += '<button class="raw-toggle" onclick="toggleRaw(\\'' + listId + '\\',\\'' + toggleId + '\\')" id="' + toggleId + '">' +
+              '<span class="arrow">&#9654;</span> Raw responses for "' + escapeHtml(a.answer) + '" (' + variants.length + ' unique out of ' + total + ')</button>' +
+              '<div class="raw-list" id="' + listId + '">';
+            variants.forEach(function(v) {
+              html += '<div class="raw-item">' + escapeHtml(v) + '</div>';
+            });
+            html += '</div>';
+          }
         }
       });
     }
@@ -247,13 +252,6 @@ render();
 </body>
 </html>
 """
-
-
-def _truncate_raw(text: str, max_len: int = 300) -> str:
-    """Truncate long raw responses for display."""
-    if len(text) <= max_len:
-        return text
-    return text[:max_len] + "..."
 
 
 def _deduplicate_raw(raw_list: list[str]) -> list[str]:
@@ -311,17 +309,17 @@ def generate_questionnaire(
                 # Single answer: flat list of all raw variants
                 canon_key = answers[0]
                 raw_list = qid_raw.get(canon_key, [])
-                item["raw_variants"] = [
-                    _truncate_raw(r) for r in _deduplicate_raw(raw_list)
-                ]
+                item["raw_variants"] = _deduplicate_raw(raw_list)
+                item["raw_total"] = len(raw_list)
             else:
                 # Multiple answers: raw variants keyed by canonical answer
                 raw_by_answer = {}
                 for ans in answers:
                     raw_list = qid_raw.get(ans, [])
-                    raw_by_answer[ans] = [
-                        _truncate_raw(r) for r in _deduplicate_raw(raw_list)
-                    ]
+                    raw_by_answer[ans] = {
+                        "variants": _deduplicate_raw(raw_list),
+                        "total": len(raw_list),
+                    }
                 item["raw_by_answer"] = raw_by_answer
 
         items.append(item)
