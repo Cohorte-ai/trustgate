@@ -17,6 +17,9 @@ This is a realistic pattern — most production agents combine knowledge retriev
 ### macOS / Linux
 
 ```bash
+cd advanced-examples/rag-agent
+python3 -m venv .venv
+source .venv/bin/activate
 pip install theaios-trustgate fastapi uvicorn
 export LLM_API_KEY="sk-your-key-here"
 ```
@@ -24,6 +27,9 @@ export LLM_API_KEY="sk-your-key-here"
 ### Windows (PowerShell)
 
 ```powershell
+cd advanced-examples\rag-agent
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install theaios-trustgate fastapi uvicorn
 $env:LLM_API_KEY="sk-your-key-here"
 ```
