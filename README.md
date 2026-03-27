@@ -361,6 +361,7 @@ trustgate certify --concurrency 3
 ## Additional Resources
 
 - **[End-to-End Test Guide](examples/END_TO_END_TEST.md)** — Try every feature from a fresh install (26 steps, works on macOS/Linux/Windows)
+- **[RAG Agent Example](advanced-examples/rag-agent/)** — Certify a real agent with retriever + calculator tools
 - **[Examples](examples/)** — Working certification scripts
 - **[FAQ](https://cohorte-ai.github.io/trustgate/faq/)** — Common questions
 - **[Paper](https://arxiv.org/abs/2602.21368)** — The research behind TrustGate

@@ -1,0 +1,34 @@
+# TrustGate config for the local RAG agent
+# Run the agent first: uvicorn agent:app --port 8000
+
+endpoint:
+  url: "http://localhost:8000/ask"
+  temperature: null                      # agent controls its own behavior
+  request_template:
+    query: "{{question}}"
+  response_path: "answer"
+  cost_per_request: 0.0                  # local agent, no API cost
+
+# LLM for canonicalization — groups semantically equivalent answers.
+# Change the URL and auth to match your LLM provider.
+canonicalization:
+  type: "llm"
+  judge_endpoint:
+    url: "https://api.openai.com/v1/chat/completions"
+    model: "gpt-4.1-nano"
+    api_key_env: "LLM_API_KEY"
+    # Or custom auth:
+    # headers:
+    #   API-Key: "your-key-here"
+
+sampling:
+  k_fixed: 5
+  sequential_stopping: true
+
+calibration:
+  alpha_values: [0.01, 0.05, 0.10, 0.20]
+  n_cal: 20
+  n_test: 20
+
+questions:
+  file: "questions.csv"

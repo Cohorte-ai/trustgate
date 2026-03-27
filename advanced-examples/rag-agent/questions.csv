@@ -1,0 +1,41 @@
+id,question,acceptable_answers
+q01,What is the capital of France?,Paris
+q02,What is the capital of Japan?,Tokyo
+q03,What is the capital of Brazil?,Brasilia
+q04,What is the population of India?,1441.7 million
+q05,What currency does Nigeria use?,Naira
+q06,What is the GDP of Germany?,$4.46 trillion
+q07,What language is spoken in Mexico?,Spanish
+q08,What is the life expectancy in Egypt?,72.1 years
+q09,What continent is Australia in?,Oceania
+q10,What is the largest city in South Korea?,Seoul
+q11,What is the area of Canada?,9984670 km²
+q12,What type of government does Russia have?,Federal semi-presidential constitutional republic
+q13,What is the population density of Japan?,326 people per km²
+q14,What is the GDP per capita of France?,$41040 per capita
+q15,What is the population density of Australia?,3.46 people per km²
+q16,What is the GDP per capita of India?,$2733 per capita
+q17,What is the population density of Nigeria?,242 people per km²
+q18,What is the GDP per capita of Germany?,$52781 per capita
+q19,What is the population density of Brazil?,25 people per km²
+q20,What is the GDP per capita of Japan?,$34307 per capita
+q21,How does France's GDP compare to Brazil's GDP?,1.31x
+q22,How does Japan's population compare to South Korea's population?,2.39x
+q23,What percentage of India's population lives compared to Japan?,1169%
+q24,What is the ratio of Canada's area to France's area?,18.10
+q25,How does Germany's life expectancy compare to Nigeria's?,1.51x
+q26,What is the capital of Canada?,Ottawa
+q27,What is the population of Egypt?,112.7 million
+q28,What is the GDP of South Korea?,$1.71 trillion
+q29,What languages are spoken in Canada?,English and French
+q30,What is the largest city in Brazil?,São Paulo
+q31,What is the life expectancy in Japan?,84.8 years
+q32,What currency does Egypt use?,Pound
+q33,What is the area of Russia?,17098242 km²
+q34,What continent is Nigeria in?,Africa
+q35,What type of government does Japan have?,Unitary parliamentary constitutional monarchy
+q36,What is the population density of Germany?,237 people per km²
+q37,What is the GDP per capita of Canada?,$53366 per capita
+q38,What is the GDP per capita of Mexico?,$13832 per capita
+q39,How does India's GDP compare to Nigeria's GDP?,8.38x
+q40,What is the population density of Egypt?,113 people per km²
