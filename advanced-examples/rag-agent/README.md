@@ -72,12 +72,14 @@ Expected: `{"answer": "From france data:\n# France\n..."}`
 
 ## Certify
 
-In another terminal:
+Open a **second terminal**, activate the same venv, and set the API key:
 
 ### macOS / Linux
 
 ```bash
 cd advanced-examples/rag-agent
+source .venv/bin/activate
+export LLM_API_KEY="sk-your-key-here"
 trustgate certify
 ```
 
@@ -85,6 +87,8 @@ trustgate certify
 
 ```powershell
 cd advanced-examples\rag-agent
+.venv\Scripts\Activate.ps1
+$env:LLM_API_KEY="sk-your-key-here"
 trustgate certify
 ```
 
