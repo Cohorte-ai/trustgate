@@ -1,41 +1,41 @@
 id,question,acceptable_answers
-h01,What is the largest country?,Russia
-h02,Which country is the most populated?,India
-h03,Which European country has the higher GDP?,Germany
-h04,Which country has the highest life expectancy?,Japan
-h05,Which African country has the larger economy?,Nigeria
-h06,Which country has a higher population density France or Germany?,Germany
-h07,Which Asian country has the highest GDP per capita Japan or South Korea?,Japan
-h08,Is India's population density higher or lower than Japan's?,higher
-h09,Which country has more people Mexico or Germany?,Mexico
-h10,Does France or Canada have a larger area?,Canada
-h11,What is the combined GDP of France and Germany?,$7.24 trillion
-h12,What is the total population of all Asian countries in the database?,1616.7 million
-h13,How many European countries are in the database?,3
-h14,What is the average life expectancy across all countries?,77.8 years
-h15,Which country has the smallest area?,South Korea
-h16,Name a country with a population over 200 million,India
-h17,Which country has the lowest GDP per capita?,Nigeria
-h18,Is Australia's population larger or smaller than South Korea's?,smaller
-h19,What is the GDP difference between Japan and India?,$0.29 trillion
-h20,Which country has a larger metro area Tokyo or São Paulo?,Tokyo
-h21,What is the population of Antarctica?,unknown
-h22,What is the capital of Switzerland?,unknown
-h23,What is the GDP of Argentina?,unknown
-h24,What language do they speak in Peru?,unknown
-h25,What is the life expectancy in Sweden?,unknown
-h26,Is Russia's GDP per capita higher or lower than Mexico's?,lower
-h27,Which has more people the capital of India or the largest city of Brazil?,São Paulo
-h28,What percentage of the world population lives in India?,approximately 18%
-h29,If France's GDP grew by 10% what would it be?,$3.058 trillion
-h30,What is the population density of the largest country by area?,8.41 people per km²
-h31,Which country's currency is worth less the Nigerian Naira or Egyptian Pound?,Naira
-h32,Does Japan or Germany have more people per square kilometer?,Japan
-h33,What is the ratio of India's population to Australia's population?,54.2x
-h34,Which continent has more countries represented in the database Asia or Europe?,Asia
-h35,Name all countries in the database that use the Euro,France and Germany
-h36,Is the life expectancy gap between Japan and Nigeria more or less than 30 years?,more
-h37,What would be the combined area of Japan and South Korea?,478185 km²
-h38,Which country has the closest GDP to Mexico?,South Korea
-h39,If Egypt's population grew by 5% what would it be?,118.3 million
-h40,Rank the top 3 countries by GDP,Germany Japan India
+h01,"What is the total GDP of all countries in the database that have a life expectancy above 80 years?","$14.12 trillion|14.12 trillion"
+h02,"How many times larger is Russia's area than South Korea's? Round to the nearest whole number.","171|171x|171 times"
+h03,"What is the combined metro population of all cities that have a metro population above 20 million?","166.4 million|166.4"
+h04,"Which country has the highest GDP per capita? Show the value rounded to the nearest thousand.","$46000|$46,000|46000|Japan"
+h05,"List all countries where the largest city is NOT the capital, in alphabetical order.","Australia, Brazil, India, Mexico, Nigeria, South Korea, Turkey|Australia, Brazil, India, Mexico, Nigeria, South Korea"
+h06,"What percentage of the total database population does India represent? Round to one decimal.","56.5%|56.5"
+h07,"If every country's GDP grew by the same amount so that Nigeria's GDP reached $1 trillion, what would be the total GDP of all countries in the database?","$32.87 trillion|32.87 trillion"
+h08,"Rank all 12 countries by population density from highest to lowest. List the top 3.","South Korea, India, Japan"
+h09,"What is the average GDP per capita of African countries in the database? Round to the nearest dollar.","$1294|1294|$1,294"
+h10,"How many countries in the database have a federal system of government?","7|seven"
+h11,"What is the difference in life expectancy between the country with the highest and lowest life expectancy in the database?","30.9 years|30.9"
+h12,"What is the total area of all countries on the Asian continent?","3,765,448 km²|3765448"
+h13,"If you combined the populations of all European countries in the database, would it exceed the population of Brazil?","no|No"
+h14,"What is the ratio of Japan's GDP to Nigeria's GDP? Round to one decimal.","9.0|9.0x|9.0:1|9:1"
+h15,"Name every country in the database that is a constitutional monarchy.","Australia, Canada, Japan|Australia Canada Japan"
+h16,"What is the weighted average life expectancy across all countries, weighted by population?","72.5 years|72.5|72.4|72.6"
+h17,"Which two countries have the closest GDP values to each other?","Canada and Brazil|Brazil and Canada"
+h18,"What is the total population of countries that use a dollar-based currency?","66.7 million|66.7"
+h19,"How many countries in the database have their capital as their largest city?","6|six"
+h20,"If all countries in the database merged into one, what would be the overall population density in people per km²?","49.0|49|48.9|49.0 people per km²"
+h21,"What fraction of the database's total GDP comes from Asia? Express as a percentage.","37.6%|37.6|37.5%"
+h22,"Which country has the largest gap between its city proper population and metro population for its largest city?","Tokyo|Japan"
+h23,"List all countries that have exactly one official language AND a GDP above $2 trillion.","France, Germany, Japan, Russia|France Germany Japan Russia"
+h24,"What is the median life expectancy across all 12 countries?","77.6|77.6 years|77.55"
+h25,"How many countries in the database are in the Southern Hemisphere?","2|two"
+h26,"What is the total GDP of countries whose currency is neither the dollar nor the euro?","$14.43 trillion|14.43 trillion"
+h27,"If Russia's area were divided equally among its population, how many km² would each person get? Round to two decimal places.","0.12|0.12 km²"
+h28,"Which country has the highest ratio of metro population to total country population for its largest city?","South Korea|south korea"
+h29,"Name all countries in the database where the official language is also an official language in at least one other country in the database.","Australia, Canada, Egypt, India, Nigeria|Australia Canada Egypt India Nigeria"
+h30,"What is the combined GDP of all G7 countries present in the database?","$15.33 trillion|15.33 trillion"
+h31,"Which country's largest city metro population is closest to its total country population?","South Korea"
+h32,"Calculate the Gini-like spread: what is the ratio of the highest GDP to the lowest GDP in the database?","11.15|11.15x|11.2"
+h33,"What is the population-weighted average GDP per capita across all countries in the database? Round to the nearest hundred.","$9500|$9,500|9500|$9600|$9,600"
+h34,"How many countries in the database span more than one continent?","1|one|Russia"
+h35,"What is the total area of countries with a population between 50 million and 150 million?","21,422,832 km²|21422832"
+h36,"If you ranked countries by the population of their largest city (city proper), which country would be 4th?","India|Mumbai"
+h37,"What is the GDP per square kilometer for Germany? Round to the nearest million.","$12 million|12 million|$12.5 million|12.5 million|$13 million"
+h38,"Which continent represented in the database has the highest average life expectancy?","Oceania|Australia"
+h39,"Name all countries in the database that are both federal AND republics.","Brazil, India, Mexico, Nigeria, Russia|Brazil India Mexico Nigeria Russia"
+h40,"What would be the total GDP of the database if you excluded the two richest and two poorest countries?","$14.32 trillion|14.32 trillion"
