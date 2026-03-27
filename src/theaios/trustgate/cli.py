@@ -465,7 +465,7 @@ def calibrate(
         from theaios.trustgate.questionnaire import generate_questionnaire
 
         try:
-            out = generate_questionnaire(cal_questions, cal_profiles, output_path=export_path)
+            out = generate_questionnaire(cal_questions, cal_profiles, cal_raw, output_path=export_path)
         except OSError as exc:
             click.echo(f"Error writing questionnaire: {exc}", err=True)
             sys.exit(1)

@@ -5,6 +5,10 @@ canonical answers as inline JSON.  The reviewer opens it in any browser
 (works offline, no server), picks the acceptable answer for each
 question, and downloads a ``labels.json`` at the end.
 
+When a question has only one canonical answer (all K samples agree),
+the UI shows "Is this correct? Yes/No" with expandable raw model
+responses for context.
+
 The developer imports the labels with:
     trustgate certify --ground-truth labels.json
 """
@@ -66,6 +70,24 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
 .none-btn{display:block;width:100%;padding:14px;margin-top:4px;border:2px dashed #ccc;border-radius:10px;
   background:white;font-size:16px;color:#888;cursor:pointer;text-align:center;transition:all .15s}
 .none-btn:hover{border-color:#f44336;color:#f44336;background:#fff5f5}
+.yes-btn{display:inline-block;width:48%;padding:14px;border:2px solid #4CAF50;border-radius:10px;
+  background:white;font-size:16px;color:#4CAF50;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.yes-btn:hover{background:#4CAF50;color:white}
+.no-btn{display:inline-block;width:48%;padding:14px;border:2px solid #f44336;border-radius:10px;
+  background:white;font-size:16px;color:#f44336;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.no-btn:hover{background:#f44336;color:white}
+.btn-row{display:flex;justify-content:space-between;gap:4%}
+.consensus-answer{font-size:20px;font-weight:600;padding:16px;background:#f8f9fa;border-radius:8px;
+  margin-bottom:16px;text-align:center;border:1px solid #e0e0e0}
+.raw-toggle{background:none;border:none;color:#666;cursor:pointer;font-size:13px;
+  padding:8px 0;display:flex;align-items:center;gap:6px}
+.raw-toggle:hover{color:#333}
+.raw-toggle .arrow{transition:transform .2s;display:inline-block}
+.raw-toggle .arrow.open{transform:rotate(90deg)}
+.raw-list{display:none;margin-top:8px;padding:0}
+.raw-list.open{display:block}
+.raw-item{padding:10px 14px;margin-bottom:6px;background:#f8f9fa;border-radius:8px;
+  font-size:14px;line-height:1.5;color:#444;border:1px solid #eee;word-break:break-word}
 .hint{text-align:center;color:#999;font-size:13px;margin-top:12px}
 .key{display:inline-block;background:#eee;border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px}
 .done{text-align:center;padding:40px}
@@ -85,12 +107,8 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
 <div class="progress"><div class="progress-bar" id="bar"></div><div class="progress-text" id="ptext"></div></div>
 <div id="review">
 <div class="card"><div class="label">Question</div><div class="question" id="q"></div></div>
-<div class="card">
-  <h3>Which answer is acceptable?</h3>
-  <div id="answers"></div>
-  <button class="none-btn" onclick="pick(null)">None of these are correct</button>
-</div>
-<div class="hint">Keyboard: <span class="key">1</span>–<span class="key">9</span> to pick, <span class="key">0</span> for none</div>
+<div class="card" id="answer-card"></div>
+<div class="hint" id="hint"></div>
 </div>
 <div id="finish" class="done">
   <h2>All done!</h2>
@@ -105,6 +123,20 @@ const ITEMS = __ITEMS_JSON__;
 const labels = {};
 let idx = 0;
 let answerValues = [];
+let singleMode = false;
+
+function escapeHtml(s){
+ const d=document.createElement('div');d.textContent=s;return d.innerHTML;
+}
+
+function truncate(s,n){return s.length>n?s.slice(0,n)+'...':s;}
+
+function toggleRaw(listId,toggleId){
+ const list=document.getElementById(listId);
+ const arrow=document.getElementById(toggleId).querySelector('.arrow');
+ list.classList.toggle('open');
+ arrow.classList.toggle('open');
+}
 
 function render() {
   const total = ITEMS.length;
@@ -119,16 +151,64 @@ function render() {
   }
   const item = ITEMS[idx];
   document.getElementById('q').textContent = item.question;
-  const c = document.getElementById('answers');
-  c.innerHTML = '';
-  answerValues = item.answers.map(a => a.answer);
-  item.answers.forEach((a) => {
-    const b = document.createElement('button');
-    b.className = 'answer-btn';
-    b.textContent = a.display || a.answer;
-    b.onclick = () => pick(a.answer);
-    c.appendChild(b);
-  });
+  const card = document.getElementById('answer-card');
+  const hint = document.getElementById('hint');
+
+  singleMode = item.answers.length === 1;
+
+  if (singleMode) {
+    const ans = item.answers[0];
+    let html = '<h3>The model consistently answered:</h3>' +
+      '<div class="consensus-answer">' + escapeHtml(ans.display || ans.answer) + '</div>' +
+      '<div class="btn-row">' +
+      '<button class="yes-btn" onclick="pick(\\'' + ans.answer.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'") + '\\')">Yes, correct</button>' +
+      '<button class="no-btn" onclick="pick(null)">No, incorrect</button>' +
+      '</div>';
+    answerValues = [ans.answer];
+
+    if (item.raw_variants && item.raw_variants.length > 0) {
+      const toggleId = 'raw-toggle-' + idx;
+      const listId = 'raw-list-' + idx;
+      html += '<button class="raw-toggle" onclick="toggleRaw(\\'' + listId + '\\',\\'' + toggleId + '\\')" id="' + toggleId + '">' +
+        '<span class="arrow">&#9654;</span> Show model responses (' + item.raw_variants.length + ')</button>' +
+        '<div class="raw-list" id="' + listId + '">';
+      item.raw_variants.forEach(function(v) {
+        html += '<div class="raw-item">' + escapeHtml(truncate(v, 500)) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    card.innerHTML = html;
+    hint.innerHTML = 'Keyboard: <span class="key">Y</span> correct, <span class="key">N</span> incorrect';
+  } else {
+    let html = '<h3>Which answer is acceptable?</h3><div>';
+    answerValues = item.answers.map(function(a) { return a.answer; });
+    item.answers.forEach(function(a) {
+      html += '<button class="answer-btn" onclick="pick(\\'' + a.answer.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'") + '\\')">' +
+        escapeHtml(a.display || a.answer) + '</button>';
+    });
+    html += '</div><button class="none-btn" onclick="pick(null)">None of these are correct</button>';
+
+    if (item.raw_by_answer) {
+      item.answers.forEach(function(a, i) {
+        const variants = item.raw_by_answer[a.answer];
+        if (variants && variants.length > 0) {
+          const listId = 'raw-' + i + '-' + idx;
+          const toggleId = 'rawt-' + i + '-' + idx;
+          html += '<button class="raw-toggle" onclick="toggleRaw(\\'' + listId + '\\',\\'' + toggleId + '\\')" id="' + toggleId + '">' +
+            '<span class="arrow">&#9654;</span> Raw responses for "' + escapeHtml(truncate(a.answer, 40)) + '" (' + variants.length + ')</button>' +
+            '<div class="raw-list" id="' + listId + '">';
+          variants.forEach(function(v) {
+            html += '<div class="raw-item">' + escapeHtml(truncate(v, 500)) + '</div>';
+          });
+          html += '</div>';
+        }
+      });
+    }
+
+    card.innerHTML = html;
+    hint.innerHTML = 'Keyboard: <span class="key">1</span>&ndash;<span class="key">9</span> to pick, <span class="key">0</span> for none';
+  }
 }
 
 function pick(answer) {
@@ -137,7 +217,6 @@ function pick(answer) {
   if (answer !== null) {
     labels[item.question_id] = answer;
   }
-  // null = none acceptable → skip (not included in labels)
   idx++;
   render();
 }
@@ -152,10 +231,15 @@ function download() {
   URL.revokeObjectURL(url);
 }
 
-document.addEventListener('keydown', e => {
-  const k = parseInt(e.key);
-  if (k === 0) pick(null);
-  else if (k >= 1 && k <= answerValues.length) pick(answerValues[k - 1]);
+document.addEventListener('keydown', function(e) {
+  if (singleMode) {
+    if (e.key === 'y' || e.key === 'Y') pick(answerValues[0]);
+    else if (e.key === 'n' || e.key === 'N') pick(null);
+  } else {
+    const k = parseInt(e.key);
+    if (k === 0) pick(null);
+    else if (k >= 1 && k <= answerValues.length) pick(answerValues[k - 1]);
+  }
 });
 
 render();
@@ -165,9 +249,28 @@ render();
 """
 
 
+def _truncate_raw(text: str, max_len: int = 300) -> str:
+    """Truncate long raw responses for display."""
+    if len(text) <= max_len:
+        return text
+    return text[:max_len] + "..."
+
+
+def _deduplicate_raw(raw_list: list[str]) -> list[str]:
+    """Remove duplicate raw responses, preserving order."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for r in raw_list:
+        if r not in seen:
+            seen.add(r)
+            result.append(r)
+    return result
+
+
 def generate_questionnaire(
     questions: list[Question],
     profiles: dict[str, list[tuple[str, float]]],
+    raw_by_canonical: dict[str, dict[str, list[str]]] | None = None,
     output_path: str = "questionnaire.html",
     seed: int = 42,
 ) -> str:
@@ -176,6 +279,9 @@ def generate_questionnaire(
     The file embeds all questions and shuffled canonical answers as inline
     JSON.  No server or network access required — the reviewer opens the
     file in any browser, reviews answers, and downloads ``labels.json``.
+
+    When *raw_by_canonical* is provided, raw model responses are embedded
+    alongside canonical answers so reviewers can see original phrasings.
 
     Returns the output file path.
     """
@@ -191,11 +297,34 @@ def generate_questionnaire(
         enriched = [_enrich_mcq_answer(ans, q.text) for ans in answers]
         shuffled = list(zip(answers, enriched))
         rng.shuffle(shuffled)
-        items.append({
+
+        item: dict = {
             "question_id": q.id,
             "question": q.text,
             "answers": [{"answer": ans, "display": disp} for ans, disp in shuffled],
-        })
+        }
+
+        # Include raw variants if available
+        if raw_by_canonical and q.id in raw_by_canonical:
+            qid_raw = raw_by_canonical[q.id]
+            if len(answers) == 1:
+                # Single answer: flat list of all raw variants
+                canon_key = answers[0]
+                raw_list = qid_raw.get(canon_key, [])
+                item["raw_variants"] = [
+                    _truncate_raw(r) for r in _deduplicate_raw(raw_list)
+                ]
+            else:
+                # Multiple answers: raw variants keyed by canonical answer
+                raw_by_answer = {}
+                for ans in answers:
+                    raw_list = qid_raw.get(ans, [])
+                    raw_by_answer[ans] = [
+                        _truncate_raw(r) for r in _deduplicate_raw(raw_list)
+                    ]
+                item["raw_by_answer"] = raw_by_answer
+
+        items.append(item)
 
     items_json = json.dumps(items, ensure_ascii=False)
     html = _QUESTIONNAIRE_HTML.replace("__ITEMS_JSON__", items_json)
