@@ -71,6 +71,14 @@ class QuestionsConfig:
 
 
 @dataclass
+class ThresholdsConfig:
+    """Status thresholds for PASS/WEAK/FAIL."""
+
+    pass_level: float = 0.80  # reliability >= 80% → PASS
+    weak_level: float = 0.50  # reliability >= 50% → WEAK, below → FAIL
+
+
+@dataclass
 class TrustGateConfig:
     """Top-level configuration — maps 1:1 to trustgate.yaml."""
 
@@ -79,6 +87,7 @@ class TrustGateConfig:
     canonicalization: CanonConfig = field(default_factory=CanonConfig)
     calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
     questions: QuestionsConfig = field(default_factory=QuestionsConfig)
+    thresholds: ThresholdsConfig = field(default_factory=ThresholdsConfig)
 
 
 @dataclass

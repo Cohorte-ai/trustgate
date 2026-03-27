@@ -20,3 +20,7 @@ calibration:
 
 questions:
   file: "examples/example_questions.csv"
+
+thresholds:
+  pass: 0.80
+  weak: 0.50

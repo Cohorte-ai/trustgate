@@ -61,6 +61,10 @@ calibration:
 questions:
   file: "examples/example_questions.csv"
   # source: "gsm8k"            # alternative: load a built-in benchmark
+
+thresholds:
+  pass: 0.80                    # reliability >= 80% → PASS
+  weak: 0.50                    # reliability >= 50% → WEAK, below → FAIL
 ```
 
 ---
@@ -307,6 +311,25 @@ questions:
 questions:
   source: "gsm8k"
 ```
+
+---
+
+### `thresholds`
+
+Controls the PASS/WEAK/FAIL status in the certification result.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `pass` | float | `0.80` | Reliability level ≥ this → **PASS** (green). |
+| `weak` | float | `0.50` | Reliability level ≥ this but < `pass` → **WEAK** (yellow). Below → **FAIL** (red). |
+
+```yaml
+thresholds:
+  pass: 0.80    # 80%+ → PASS
+  weak: 0.50    # 50-80% → WEAK, below 50% → FAIL
+```
+
+Adjust per project — a medical AI might require `pass: 0.95`, while a chatbot might accept `pass: 0.70`.
 
 ---
 

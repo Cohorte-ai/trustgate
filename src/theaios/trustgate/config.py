@@ -19,6 +19,7 @@ from theaios.trustgate.types import (
     Question,
     QuestionsConfig,
     SamplingConfig,
+    ThresholdsConfig,
     TrustGateConfig,
 )
 
@@ -169,12 +170,21 @@ def _parse_config(raw: dict[str, object]) -> TrustGateConfig:
         source=str(q_source) if q_source is not None else None,
     )
 
+    thresholds_raw = raw.get("thresholds", {})
+    if not isinstance(thresholds_raw, dict):
+        thresholds_raw = {}
+    thresholds = ThresholdsConfig(
+        pass_level=float(thresholds_raw.get("pass", 0.80)),
+        weak_level=float(thresholds_raw.get("weak", 0.50)),
+    )
+
     return TrustGateConfig(
         endpoint=endpoint,
         sampling=sampling,
         canonicalization=canon,
         calibration=calibration,
         questions=questions,
+        thresholds=thresholds,
     )
 
 

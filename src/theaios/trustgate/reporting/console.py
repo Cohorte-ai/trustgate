@@ -13,21 +13,23 @@ def print_certification_result(
     verbose: bool = False,
     console: Console | None = None,
     had_cache: bool = False,
+    pass_level: float = 0.80,
+    weak_level: float = 0.50,
 ) -> None:
     """Print a formatted certification result to the terminal using Rich."""
     if console is None:
         console = Console()
 
-    # Status — PASS if reliability > 0 and coverage meets target
-    if result.reliability_level > 0 and result.coverage >= result.reliability_level:
+    # Status based on configurable thresholds
+    if result.reliability_level >= pass_level:
         status = "PASS"
         status_style = "bold green"
-    elif result.reliability_level == 0:
+    elif result.reliability_level >= weak_level:
+        status = "WEAK"
+        status_style = "bold yellow"
+    else:
         status = "FAIL"
         status_style = "bold red"
-    else:
-        status = "UNCERTAIN"
-        status_style = "bold yellow"
 
     confidence_pct = f"{(1 - result.target_alpha):.0%}"
 

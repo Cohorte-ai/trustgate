@@ -3,11 +3,11 @@
 
 endpoint:
   url: "http://127.0.0.1:8000/ask"
-  temperature: null                      # agent controls its own behavior
+  temperature: null # agent controls its own behavior
   request_template:
     query: "{{question}}"
   response_path: "answer"
-  cost_per_request: 0.0                  # local agent, no API cost
+  cost_per_request: 0.0 # local agent, no API cost
 
 # LLM for canonicalization — groups semantically equivalent answers.
 # Change the URL and auth to match your LLM provider.
@@ -31,5 +31,9 @@ calibration:
   n_test: 20
 
 questions:
-  file: "questions.csv"            # easy: factual lookups
+  file: "questions_hard.csv" # easy: factual lookups
   # file: "questions_hard.csv"     # hard: multi-hop, ambiguous, out-of-scope
+
+thresholds:
+  pass: 0.80
+  weak: 0.50

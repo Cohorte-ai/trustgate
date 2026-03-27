@@ -245,7 +245,11 @@ def certify_cmd(
             )
         sys.exit(1)
 
-    _output_result(result, output, output_file, verbose, had_cache=had_cache)
+    _output_result(
+        result, output, output_file, verbose, had_cache=had_cache,
+        pass_level=config.thresholds.pass_level,
+        weak_level=config.thresholds.weak_level,
+    )
 
     # --- CI/CD gating: exit code 1 if below threshold ---
     if min_reliability is not None:
@@ -810,6 +814,8 @@ def _output_result(
     output_file: str | None,
     verbose: bool,
     had_cache: bool = False,
+    pass_level: float = 0.80,
+    weak_level: float = 0.50,
 ) -> None:
     """Route the certification result to the correct reporter."""
     from theaios.trustgate.types import CertificationResult
@@ -832,7 +838,10 @@ def _output_result(
             click.echo(f"Results written to {output_file}")
 
     else:  # console
-        print_certification_result(result, verbose=verbose, had_cache=had_cache)
+        print_certification_result(
+            result, verbose=verbose, had_cache=had_cache,
+            pass_level=pass_level, weak_level=weak_level,
+        )
         if output_file:
             export_json(result, path=output_file)
             click.echo(f"\nResults also written to {output_file}")
