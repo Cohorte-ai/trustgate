@@ -68,7 +68,7 @@ class TestSampleAndProfile:
             instance.k = 3
             instance.sample_all = AsyncMock(return_value=self._mock_responses())
 
-            profiles = sample_and_profile(config, questions)
+            profiles, raw = sample_and_profile(config, questions)
 
         # q1: all 3 said B → B at 100%
         assert profiles["q1"][0][0] == "B"
@@ -79,6 +79,11 @@ class TestSampleAndProfile:
         assert profiles["q2"][0][1] == pytest.approx(2 / 3)
         assert profiles["q2"][1][0] == "A"
         assert profiles["q2"][1][1] == pytest.approx(1 / 3)
+
+        # raw_by_canonical should have raw responses grouped
+        assert "B" in raw["q1"]
+        assert "B" in raw["q2"]
+        assert "A" in raw["q2"]
 
     def test_sample_and_rank_returns_top_answers(self) -> None:
         config = self._make_config()
@@ -110,7 +115,7 @@ class TestSampleAndProfile:
             instance.k = 3
             instance.sample_all = AsyncMock(return_value=mock_responses)
 
-            profiles = sample_and_profile(config, questions)
+            profiles, _ = sample_and_profile(config, questions)
 
         # All equal frequency — profile should have 3 entries
         assert len(profiles["q1"]) == 3

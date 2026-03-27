@@ -189,7 +189,7 @@ def certify_cmd(
 
         _con = _Console()
         with _Status("[bold blue]Auto-judging with LLM...", console=_con):
-            profiles = sample_and_profile(config, questions)
+            profiles, _ = sample_and_profile(config, questions)
             q_texts = {q.id: q.text for q in questions}
             labels = auto_judge_labels(
                 q_texts, profiles, config.canonicalization.judge_endpoint,
@@ -424,8 +424,7 @@ def calibrate(
             "[dim](sequential sampling minimizes API costs — this takes a few minutes)[/dim]",
             console=console,
         ):
-            result = sample_and_profile(config, questions, include_raw=True)
-            profiles, raw_by_canonical = result  # type: ignore[misc]
+            profiles, raw_by_canonical = sample_and_profile(config, questions)
     except ConfigError as exc:
         click.echo(f"Configuration error: {exc}", err=True)
         sys.exit(1)

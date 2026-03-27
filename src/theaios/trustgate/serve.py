@@ -341,7 +341,7 @@ def create_app(
                     for ans in shuffled_answers.get(qid, [])
                 ]
 
-                response_data: dict = {
+                response_data: dict[str, object] = {
                     "question_id": qid,
                     "question": question_map[qid].text,
                     "answers": answers,

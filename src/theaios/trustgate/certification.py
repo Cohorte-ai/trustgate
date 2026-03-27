@@ -260,21 +260,14 @@ def _build_canonicalizer(config: TrustGateConfig) -> Any:  # noqa: ANN401
 async def sample_and_profile_async(
     config: TrustGateConfig,
     questions: list[Question],
-    *,
-    include_raw: bool = False,
-) -> (
-    dict[str, list[tuple[str, float]]]
-    | tuple[dict[str, list[tuple[str, float]]], dict[str, dict[str, list[str]]]]
-):
+) -> tuple[dict[str, list[tuple[str, float]]], dict[str, dict[str, list[str]]]]:
     """Sample K responses, canonicalize, and return ranked profiles.
 
-    For each question, returns the self-consistency profile: a list of
-    ``(canonical_answer, frequency)`` tuples sorted by frequency descending.
-
-    When *include_raw* is True, also returns a mapping of
-    ``{qid: {canonical_answer: [raw_response, ...]}}`` so callers (e.g. the
-    calibration UI) can show the original model outputs grouped by canonical
-    answer.
+    Returns a tuple of:
+    - profiles: ``{qid: [(canonical_answer, frequency), ...]}`` sorted by
+      frequency descending.
+    - raw_by_canonical: ``{qid: {canonical_answer: [raw_response, ...]}}``
+      mapping each canonical answer back to the original model outputs.
 
     This is the reusable core shared by ``calibrate`` (to show humans the
     ranked answers for labeling) and ``certify`` (to compute nonconformity
@@ -313,7 +306,6 @@ async def sample_and_profile_async(
     canon_results: list[str] = await asyncio.gather(*canon_coros)
 
     canonical: dict[str, list[str]] = {qid: [] for qid in responses}
-    # Build raw-by-canonical mapping: {qid: {canonical: [raw, ...]}}
     raw_by_canonical: dict[str, dict[str, list[str]]] = {qid: {} for qid in responses}
     for qid_key, result_str, raw_str in zip(canon_keys, canon_results, canon_raws):
         canonical[qid_key].append(result_str)
@@ -330,22 +322,15 @@ async def sample_and_profile_async(
     for warning in diag.warnings:
         logger.warning("Profile quality: %s", warning)
 
-    if include_raw:
-        return profiles, raw_by_canonical
-    return profiles
+    return profiles, raw_by_canonical
 
 
 def sample_and_profile(
     config: TrustGateConfig,
     questions: list[Question],
-    *,
-    include_raw: bool = False,
-) -> (
-    dict[str, list[tuple[str, float]]]
-    | tuple[dict[str, list[tuple[str, float]]], dict[str, dict[str, list[str]]]]
-):
+) -> tuple[dict[str, list[tuple[str, float]]], dict[str, dict[str, list[str]]]]:
     """Synchronous wrapper for :func:`sample_and_profile_async`."""
-    return asyncio.run(sample_and_profile_async(config, questions, include_raw=include_raw))
+    return asyncio.run(sample_and_profile_async(config, questions))
 
 
 def sample_and_rank(
@@ -353,7 +338,7 @@ def sample_and_rank(
     questions: list[Question],
 ) -> dict[str, str]:
     """Sample and return just the top-ranked (mode) answer per question."""
-    profiles = sample_and_profile(config, questions)
+    profiles, _ = sample_and_profile(config, questions)
     return {qid: profile[0][0] for qid, profile in profiles.items() if profile}
 
 

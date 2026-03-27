@@ -298,7 +298,7 @@ def generate_questionnaire(
         shuffled = list(zip(answers, enriched))
         rng.shuffle(shuffled)
 
-        item: dict = {
+        item: dict[str, object] = {
             "question_id": q.id,
             "question": q.text,
             "answers": [{"answer": ans, "display": disp} for ans, disp in shuffled],
