@@ -5,6 +5,10 @@ in **randomized order with no frequency or rank information** — preventing
 anchoring bias.  The reviewer picks the acceptable answer (or "none"),
 and the system internally resolves the rank for the nonconformity score
 (Definition 6.2 in the paper).
+
+When a question has only one canonical answer (all K samples agree), the
+UI switches to a "Is this correct?" Yes/No layout and shows the raw model
+responses as expandable context so the reviewer can judge quality.
 """
 
 from __future__ import annotations
@@ -46,6 +50,24 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
 .none-btn{display:block;width:100%;padding:14px;margin-top:4px;border:2px dashed #ccc;border-radius:10px;
   background:white;font-size:16px;color:#888;cursor:pointer;text-align:center;transition:all .15s}
 .none-btn:hover{border-color:#f44336;color:#f44336;background:#fff5f5}
+.yes-btn{display:inline-block;width:48%;padding:14px;border:2px solid #4CAF50;border-radius:10px;
+  background:white;font-size:16px;color:#4CAF50;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.yes-btn:hover{background:#4CAF50;color:white}
+.no-btn{display:inline-block;width:48%;padding:14px;border:2px solid #f44336;border-radius:10px;
+  background:white;font-size:16px;color:#f44336;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.no-btn:hover{background:#f44336;color:white}
+.btn-row{display:flex;justify-content:space-between;gap:4%}
+.consensus-answer{font-size:20px;font-weight:600;padding:16px;background:#f8f9fa;border-radius:8px;
+  margin-bottom:16px;text-align:center;border:1px solid #e0e0e0}
+.raw-toggle{background:none;border:none;color:#666;cursor:pointer;font-size:13px;
+  padding:8px 0;display:flex;align-items:center;gap:6px}
+.raw-toggle:hover{color:#333}
+.raw-toggle .arrow{transition:transform .2s;display:inline-block}
+.raw-toggle .arrow.open{transform:rotate(90deg)}
+.raw-list{display:none;margin-top:8px;padding:0}
+.raw-list.open{display:block}
+.raw-item{padding:10px 14px;margin-bottom:6px;background:#f8f9fa;border-radius:8px;
+  font-size:14px;line-height:1.5;color:#444;border:1px solid #eee;word-break:break-word}
 .done{text-align:center;font-size:20px;padding:40px}
 .hint{text-align:center;color:#999;font-size:13px;margin-top:12px}
 .key{display:inline-block;background:#eee;border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px}
@@ -54,38 +76,109 @@ h3{margin-bottom:12px;font-size:15px;color:#444}
 <body>
 <div class="progress"><div class="progress-bar" id="bar"></div><div class="progress-text" id="ptext"></div></div>
 <div class="card"><div class="label">Question</div><div class="question" id="q"></div></div>
-<div class="card">
-  <h3>Which answer is acceptable?</h3>
-  <div id="answers"></div>
-  <button class="none-btn" onclick="pick(null)">None of these are correct</button>
-</div>
-<div class="hint">Keyboard: <span class="key">1</span>–<span class="key">9</span> to pick, <span class="key">0</span> for none</div>
+<div class="card" id="answer-card"></div>
+<div class="hint" id="hint"></div>
 <script>
-let qid=null,answerValues=[];
+let qid=null,answerValues=[],singleMode=false;
+
+function truncate(s,n){return s.length>n?s.slice(0,n)+'...':s;}
+
 async function load(){
  const r=await fetch('/api/next');const d=await r.json();
  if(d.done){document.body.innerHTML='<div class="done">All done! Labels saved.</div>';return}
  qid=d.question_id;
  document.getElementById('q').textContent=d.question;
- const c=document.getElementById('answers');c.innerHTML='';
- answerValues=d.answers.map(a=>a.answer);
- d.answers.forEach((a,i)=>{
-  const b=document.createElement('button');b.className='answer-btn';
-  b.textContent=a.display||a.answer;
-  b.onclick=()=>pick(a.answer);c.appendChild(b);
- });
+ const card=document.getElementById('answer-card');
+ const hint=document.getElementById('hint');
+ card.innerHTML='';
+
+ singleMode=d.answers.length===1;
+
+ if(singleMode){
+  // Single canonical answer — show "Is this correct?" layout
+  const ans=d.answers[0];
+  card.innerHTML='<h3>The model consistently answered:</h3>'+
+   '<div class="consensus-answer">'+escapeHtml(ans.display||ans.answer)+'</div>'+
+   '<div class="btn-row">'+
+   '<button class="yes-btn" onclick="pick(\\''+escapeJs(ans.answer)+'\\')">Yes, correct</button>'+
+   '<button class="no-btn" onclick="pick(null)">No, incorrect</button>'+
+   '</div>';
+  answerValues=[ans.answer];
+
+  // Raw variants
+  if(d.raw_variants && d.raw_variants.length>0){
+   const toggleId='raw-toggle-'+qid;
+   const listId='raw-list-'+qid;
+   let rawHtml='<button class="raw-toggle" onclick="toggleRaw(\\''+listId+'\\',\\''+toggleId+'\\')" id="'+toggleId+'">'+
+    '<span class="arrow">&#9654;</span> Show model responses ('+d.raw_variants.length+')</button>'+
+    '<div class="raw-list" id="'+listId+'">';
+   d.raw_variants.forEach(v=>{rawHtml+='<div class="raw-item">'+escapeHtml(truncate(v,500))+'</div>';});
+   rawHtml+='</div>';
+   card.innerHTML+=rawHtml;
+  }
+
+  hint.innerHTML='Keyboard: <span class="key">Y</span> correct, <span class="key">N</span> incorrect';
+ } else {
+  // Multiple canonical answers — original multi-button layout
+  let html='<h3>Which answer is acceptable?</h3><div id="answers">';
+  answerValues=d.answers.map(a=>a.answer);
+  d.answers.forEach((a,i)=>{
+   html+='<button class="answer-btn" onclick="pick(\\''+escapeJs(a.answer)+'\\')">'+
+    escapeHtml(a.display||a.answer)+'</button>';
+  });
+  html+='</div><button class="none-btn" onclick="pick(null)">None of these are correct</button>';
+
+  // Raw variants per answer (collapsible)
+  if(d.raw_by_answer){
+   d.answers.forEach((a,i)=>{
+    const variants=d.raw_by_answer[a.answer];
+    if(variants && variants.length>0){
+     const listId='raw-'+i+'-'+qid;
+     const toggleId='rawt-'+i+'-'+qid;
+     html+='<button class="raw-toggle" onclick="toggleRaw(\\''+listId+'\\',\\''+toggleId+'\\')" id="'+toggleId+'">'+
+      '<span class="arrow">&#9654;</span> Raw responses for "'+escapeHtml(truncate(a.answer,40))+'" ('+variants.length+')</button>'+
+      '<div class="raw-list" id="'+listId+'">';
+     variants.forEach(v=>{html+='<div class="raw-item">'+escapeHtml(truncate(v,500))+'</div>';});
+     html+='</div>';
+    }
+   });
+  }
+
+  card.innerHTML=html;
+  hint.innerHTML='Keyboard: <span class="key">1</span>&ndash;<span class="key">9</span> to pick, <span class="key">0</span> for none';
+ }
+
  const p=await(await fetch('/api/progress')).json();
  document.getElementById('bar').style.width=p.pct+'%';
  document.getElementById('ptext').textContent=p.completed+'/'+p.total+' ('+Math.round(p.pct)+'%)';
 }
+
+function toggleRaw(listId,toggleId){
+ const list=document.getElementById(listId);
+ const arrow=document.getElementById(toggleId).querySelector('.arrow');
+ list.classList.toggle('open');
+ arrow.classList.toggle('open');
+}
+
+function escapeHtml(s){
+ const d=document.createElement('div');d.textContent=s;return d.innerHTML;
+}
+function escapeJs(s){return s.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'");}
+
 async function pick(answer){
  if(!qid)return;
  await fetch('/api/review',{method:'POST',headers:{'Content-Type':'application/json'},
  body:JSON.stringify({question_id:qid,selected_answer:answer})});load();}
+
 document.addEventListener('keydown',e=>{
- const k=parseInt(e.key);
- if(k===0)pick(null);
- else if(k>=1&&k<=answerValues.length)pick(answerValues[k-1]);
+ if(singleMode){
+  if(e.key==='y'||e.key==='Y')pick(answerValues[0]);
+  else if(e.key==='n'||e.key==='N')pick(null);
+ } else {
+  const k=parseInt(e.key);
+  if(k===0)pick(null);
+  else if(k>=1&&k<=answerValues.length)pick(answerValues[k-1]);
+ }
 });
 load();
 </script>
@@ -138,7 +231,7 @@ async function refresh(){
  const entries=Object.entries(r).reverse().slice(0,20);
  for(const[k,v]of entries){
   const tr=document.createElement('tr');
-  tr.innerHTML='<td>'+k+'</td><td>'+(v.answer||'(none)')+'</td><td>'+(v.rank||'∞')+'</td>';
+  tr.innerHTML='<td>'+k+'</td><td>'+(v.answer||'(none)')+'</td><td>'+(v.rank||'&#8734;')+'</td>';
   tbl.appendChild(tr);
  }
 }
@@ -150,6 +243,7 @@ refresh();setInterval(refresh,3000);
 def create_app(
     questions: list[Question],
     profiles: dict[str, list[tuple[str, float]]],
+    raw_by_canonical: dict[str, dict[str, list[str]]] | None = None,
     output_file: str = "calibration_labels.json",
     seed: int = 42,
 ) -> Flask:
@@ -158,6 +252,11 @@ def create_app(
     Answers are shown to the reviewer in **randomized order** with no
     frequency or rank information, preventing anchoring bias.  The system
     resolves the rank internally after the reviewer selects an answer.
+
+    When *raw_by_canonical* is provided, the UI shows raw model responses
+    as expandable context under each canonical answer.  For questions where
+    all samples agree (single canonical answer), the UI switches to a
+    simpler "Is this correct? Yes/No" layout.
 
     Labels are saved as ``{qid: canonical_answer}`` — directly compatible
     with ``trustgate certify --ground-truth``.
@@ -206,6 +305,22 @@ def create_app(
         export = {qid: ans for qid, ans in labels.items() if ans is not None}
         output_path.write_text(json.dumps(export, indent=2), encoding="utf-8")
 
+    def _truncate_raw(text: str, max_len: int = 300) -> str:
+        """Truncate long raw responses for display."""
+        if len(text) <= max_len:
+            return text
+        return text[:max_len] + "..."
+
+    def _deduplicate_raw(raw_list: list[str]) -> list[str]:
+        """Remove duplicate raw responses, preserving order."""
+        seen: set[str] = set()
+        result: list[str] = []
+        for r in raw_list:
+            if r not in seen:
+                seen.add(r)
+                result.append(r)
+        return result
+
     @app.route("/")
     def index() -> str:
         return _REVIEWER_HTML
@@ -220,18 +335,40 @@ def create_app(
         while pending_idx < len(pending):
             qid = pending[pending_idx]
             if qid not in labels:
-                # Serve answers in shuffled order, no frequencies, no ranks
                 q_text = question_map[qid].text
                 answers = [
                     {"answer": ans, "display": _enrich_mcq_answer(ans, q_text)}
                     for ans in shuffled_answers.get(qid, [])
                 ]
-                return jsonify({
+
+                response_data: dict = {
                     "question_id": qid,
                     "question": question_map[qid].text,
                     "answers": answers,
                     "done": False,
-                })
+                }
+
+                # Include raw variants if available
+                if raw_by_canonical and qid in raw_by_canonical:
+                    qid_raw = raw_by_canonical[qid]
+                    if len(answers) == 1:
+                        # Single answer: flat list of all raw variants
+                        canon_key = answers[0]["answer"]
+                        raw_list = qid_raw.get(canon_key, [])
+                        response_data["raw_variants"] = [
+                            _truncate_raw(r) for r in _deduplicate_raw(raw_list)
+                        ]
+                    else:
+                        # Multiple answers: raw variants keyed by canonical answer
+                        raw_by_answer = {}
+                        for a in answers:
+                            raw_list = qid_raw.get(a["answer"], [])
+                            raw_by_answer[a["answer"]] = [
+                                _truncate_raw(r) for r in _deduplicate_raw(raw_list)
+                            ]
+                        response_data["raw_by_answer"] = raw_by_answer
+
+                return jsonify(response_data)
             pending_idx += 1
         return jsonify({"done": True})
 
@@ -274,6 +411,7 @@ def create_app(
 def serve_calibration(
     questions: list[Question],
     profiles: dict[str, list[tuple[str, float]]],
+    raw_by_canonical: dict[str, dict[str, list[str]]] | None = None,
     port: int = 8080,
     output_file: str = "calibration_labels.json",
 ) -> None:
@@ -283,7 +421,7 @@ def serve_calibration(
     """
     import webbrowser
 
-    app = create_app(questions, profiles, output_file)
+    app = create_app(questions, profiles, raw_by_canonical, output_file)
 
     def _shutdown(signum: int, frame: object) -> None:
         print(f"\nLabels saved to {output_file}")

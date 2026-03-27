@@ -165,9 +165,13 @@ class TestCalibrateCLI:
             "q1": [("B", 1.0)],
             "q2": [("B", 0.67), ("A", 0.33)],
         }
+        mock_raw = {
+            "q1": {"B": ["B"]},
+            "q2": {"B": ["B", "B"], "A": ["A"]},
+        }
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
-        with patch("theaios.trustgate.cli.sample_and_profile", return_value=mock_profiles):
+        with patch("theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)):
             result = runner.invoke(main, [
                 "calibrate",
                 "--config", str(cfg),
@@ -191,9 +195,10 @@ class TestCalibrateCLI:
         cfg, _ = self._make_config_and_questions(tmp_path)
         monkeypatch.chdir(tmp_path)
         mock_profiles = {"q1": [("B", 1.0)], "q2": [("B", 0.67)]}
+        mock_raw = {"q1": {"B": ["B"]}, "q2": {"B": ["B"]}}
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
-        with patch("theaios.trustgate.cli.sample_and_profile", return_value=mock_profiles):
+        with patch("theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)):
             result = runner.invoke(main, [
                 "calibrate",
                 "--config", str(cfg),
@@ -206,10 +211,11 @@ class TestCalibrateCLI:
     def test_serve_flag_launches_ui(self, tmp_path: Path) -> None:
         cfg, q = self._make_config_and_questions(tmp_path)
         mock_profiles = {"q1": [("B", 1.0)], "q2": [("B", 0.67)]}
+        mock_raw = {"q1": {"B": ["B"]}, "q2": {"B": ["B"]}}
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
         with (
-            patch("theaios.trustgate.cli.sample_and_profile", return_value=mock_profiles),
+            patch("theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)),
             patch("theaios.trustgate.serve.serve_calibration") as mock_serve,
         ):
             result = runner.invoke(main, [

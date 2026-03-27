@@ -424,7 +424,8 @@ def calibrate(
             "[dim](sequential sampling minimizes API costs — this takes a few minutes)[/dim]",
             console=console,
         ):
-            profiles = sample_and_profile(config, questions)
+            result = sample_and_profile(config, questions, include_raw=True)
+            profiles, raw_by_canonical = result  # type: ignore[misc]
     except ConfigError as exc:
         click.echo(f"Configuration error: {exc}", err=True)
         sys.exit(1)
@@ -452,6 +453,7 @@ def calibrate(
     cal_set = set(cal_ids)
     cal_questions = [q for q in questions if q.id in cal_set]
     cal_profiles = {qid: profiles[qid] for qid in cal_ids if qid in profiles}
+    cal_raw = {qid: raw_by_canonical[qid] for qid in cal_ids if qid in raw_by_canonical}
 
     click.echo(
         f"Selected {len(cal_questions)} questions for human calibration "
@@ -515,6 +517,7 @@ def calibrate(
     serve_calibration(
         questions=cal_questions,
         profiles=cal_profiles,
+        raw_by_canonical=cal_raw,
         port=port,
         output_file=output,
     )
