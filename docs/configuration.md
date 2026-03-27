@@ -109,6 +109,33 @@ endpoint:
 
 When `headers` is set, the default `Authorization: Bearer` header is replaced by your custom headers. No `api_key_env` needed.
 
+#### Complex endpoints (OAuth, custom SDKs, multi-step auth)
+
+If your endpoint requires auth that can't be expressed as static headers (OAuth token refresh, AWS Signature V4, custom SDKs), create a simple local proxy and point TrustGate at it:
+
+```python
+# proxy.py
+from fastapi import FastAPI
+import my_complex_client  # your SDK, auth, etc.
+
+app = FastAPI()
+
+@app.post("/ask")
+async def ask(request: dict):
+    answer = my_complex_client.query(request["query"])
+    return {"answer": answer}
+
+# Run: uvicorn proxy:app --port 8000
+```
+
+```yaml
+endpoint:
+  url: "http://localhost:8000/ask"
+  request_template:
+    query: "{{question}}"
+  response_path: "answer"
+```
+
 ---
 
 ### `sampling`
