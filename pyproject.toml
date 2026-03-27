@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "theaios-trustgate"
-version = "0.3.7"
+version = "0.3.8"
 description = "Black-box AI reliability certification via self-consistency sampling and conformal calibration"
 readme = "README.md"
 license = "Apache-2.0"
