@@ -14,43 +14,71 @@ This is a realistic pattern — most production agents combine knowledge retriev
 
 ## Setup
 
-```bash
-# Install TrustGate + FastAPI
-pip install theaios-trustgate fastapi uvicorn
+### macOS / Linux
 
-# Set your LLM API key (for the canonicalization judge)
+```bash
+pip install theaios-trustgate fastapi uvicorn
 export LLM_API_KEY="sk-your-key-here"
+```
+
+### Windows (PowerShell)
+
+```powershell
+pip install theaios-trustgate fastapi uvicorn
+$env:LLM_API_KEY="sk-your-key-here"
 ```
 
 ## Run the agent
 
-In one terminal:
+Start the agent in one terminal:
+
+### macOS / Linux
 
 ```bash
 cd advanced-examples/rag-agent
 uvicorn agent:app --port 8000
 ```
 
+### Windows (PowerShell)
+
+```powershell
+cd advanced-examples\rag-agent
+uvicorn agent:app --port 8000
+```
+
 Verify it works:
+
+### macOS / Linux
 
 ```bash
 curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
   -d '{"query": "What is the capital of France?"}'
-# → {"answer": "From france data:\n# France\n..."}
-
-curl -X POST http://localhost:8000/ask \
-  -H "Content-Type: application/json" \
-  -d '{"query": "What is the population density of Japan?"}'
-# → {"answer": "Based on the data: population 123,300,000 / area 377,975 km² = 326.22 people per km²"}
 ```
+
+### Windows (PowerShell)
+
+```powershell
+curl.exe -X POST http://localhost:8000/ask -H "Content-Type: application/json" -d "{\"query\": \"What is the capital of France?\"}"
+```
+
+Expected: `{"answer": "From france data:\n# France\n..."}`
 
 ## Certify
 
 In another terminal:
 
+### macOS / Linux
+
 ```bash
 cd advanced-examples/rag-agent
+trustgate certify
+```
+
+### Windows (PowerShell)
+
+```powershell
+cd advanced-examples\rag-agent
 trustgate certify
 ```
 
