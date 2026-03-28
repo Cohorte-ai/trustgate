@@ -168,7 +168,7 @@ function toggleRaw(listId,toggleId){
 function escapeHtml(s){
  const d=document.createElement('div');d.textContent=s;return d.innerHTML;
 }
-function escapeJs(s){return s.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'");}
+function escapeJs(s){return s.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'").replace(/\\n/g,'\\\\n').replace(/\\r/g,'\\\\r').replace(/<\\//g,'<\\\\/');}
 
 async function pick(answer){
  if(!qid)return;
@@ -217,6 +217,7 @@ a.btn{display:inline-block;padding:10px 20px;background:#2196F3;color:white;text
 <div class="card"><a class="btn" href="/api/export">Download Labels JSON</a></div>
 <div class="card"><h3>Recent Judgments</h3><table id="tbl"><tr><th>ID</th><th>Selected Answer</th><th>Rank</th></tr></table></div>
 <script>
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 async function refresh(){
  const p=await(await fetch('/api/progress')).json();
  const r=await(await fetch('/api/results')).json();
@@ -236,7 +237,7 @@ async function refresh(){
  const entries=Object.entries(r).reverse().slice(0,20);
  for(const[k,v]of entries){
   const tr=document.createElement('tr');
-  tr.innerHTML='<td>'+k+'</td><td>'+(v.answer||'(none)')+'</td><td>'+(v.rank||'&#8734;')+'</td>';
+  tr.innerHTML='<td>'+esc(k)+'</td><td>'+esc(v.answer||'(none)')+'</td><td>'+(v.rank||'&#8734;')+'</td>';
   tbl.appendChild(tr);
  }
 }

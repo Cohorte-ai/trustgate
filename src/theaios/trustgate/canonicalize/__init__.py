@@ -99,6 +99,13 @@ def register_canonicalizer(name: str) -> Any:  # noqa: ANN401
 
 def get_canonicalizer(name: str, **kwargs: Any) -> Canonicalizer:  # noqa: ANN401
     """Instantiate a registered canonicalizer by name."""
+    if name == "code_exec":
+        raise KeyError(
+            "The code_exec canonicalizer has been removed from the core "
+            "package for security reasons (it executes untrusted code). "
+            "See https://cohorte-ai.github.io/trustgate/canonicalization/ "
+            "for alternatives."
+        )
     if name not in _REGISTRY:
         available = sorted(_REGISTRY.keys())
         raise KeyError(
@@ -115,7 +122,6 @@ def list_canonicalizers() -> list[str]:
 # ---------------------------------------------------------------------------
 # Eagerly import built-in canonicalizer modules so decorators run.
 # ---------------------------------------------------------------------------
-import theaios.trustgate.canonicalize.code_exec as _code_exec  # noqa: E402, F401
 import theaios.trustgate.canonicalize.embedding as _embedding  # noqa: E402, F401
 import theaios.trustgate.canonicalize.llm_judge as _llm_judge  # noqa: E402, F401
 import theaios.trustgate.canonicalize.llm_semantic as _llm_semantic  # noqa: E402, F401

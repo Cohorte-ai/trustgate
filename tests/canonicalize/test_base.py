@@ -76,14 +76,16 @@ class TestRegistry:
         # Import modules to trigger registration
         import theaios.trustgate.canonicalize.numeric  # noqa: F401
         import theaios.trustgate.canonicalize.mcq  # noqa: F401
-        import theaios.trustgate.canonicalize.code_exec  # noqa: F401
         import theaios.trustgate.canonicalize.llm_judge  # noqa: F401
 
         names = list_canonicalizers()
         assert "numeric" in names
         assert "mcq" in names
-        assert "code_exec" in names
         assert "llm_judge" in names
+
+    def test_code_exec_removed_with_clear_error(self) -> None:
+        with pytest.raises(KeyError, match="removed from the core package"):
+            get_canonicalizer("code_exec")
 
     def test_get_canonicalizer_numeric(self) -> None:
         import theaios.trustgate.canonicalize.numeric  # noqa: F401

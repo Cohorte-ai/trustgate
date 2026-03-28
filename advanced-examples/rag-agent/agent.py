@@ -15,7 +15,6 @@ Test: curl -X POST http://localhost:8000/ask -H "Content-Type: application/json"
 
 from __future__ import annotations
 
-import math
 import os
 import re
 from pathlib import Path
@@ -74,18 +73,39 @@ def retrieve(query: str, top_k: int = 3) -> list[dict[str, str]]:
 # Tool 2: Calculator — evaluates math expressions
 # ---------------------------------------------------------------------------
 
-_SAFE_NAMES = {"abs": abs, "round": round, "min": min, "max": max, "sqrt": math.sqrt}
-
-
 def calculate(expression: str) -> str:
-    """Evaluate a math expression safely."""
-    # Clean the expression
+    """Evaluate a math expression safely using ast.literal_eval-based parsing."""
+    import ast
+    import operator
+
     expr = expression.strip()
-    # Allow only digits, operators, parentheses, dots, spaces
-    if not re.match(r'^[\d\s\+\-\*/\.\(\)%eE]+$', expr):
-        return f"Error: invalid expression '{expr}'"
+
+    # Supported operators
+    ops = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Mod: operator.mod,
+        ast.USub: operator.neg,
+    }
+
+    def _eval_node(node: ast.AST) -> float:
+        if isinstance(node, ast.Expression):
+            return _eval_node(node.body)
+        if isinstance(node, (ast.Constant,)):
+            if isinstance(node.value, (int, float)):
+                return float(node.value)
+            raise ValueError(f"Unsupported constant: {node.value}")
+        if isinstance(node, ast.BinOp) and type(node.op) in ops:
+            return ops[type(node.op)](_eval_node(node.left), _eval_node(node.right))
+        if isinstance(node, ast.UnaryOp) and type(node.op) in ops:
+            return ops[type(node.op)](_eval_node(node.operand))
+        raise ValueError(f"Unsupported expression: {ast.dump(node)}")
+
     try:
-        result = eval(expr, {"__builtins__": {}}, _SAFE_NAMES)  # noqa: S307
+        tree = ast.parse(expr, mode="eval")
+        result = _eval_node(tree)
         # Format nicely
         if isinstance(result, float):
             if result == int(result):

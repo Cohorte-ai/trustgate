@@ -38,7 +38,7 @@ class SamplingConfig:
     retries: int = 10
 
 
-VALID_CANON_TYPES = {"numeric", "mcq", "code_exec", "llm_judge", "llm", "embedding", "custom"}
+VALID_CANON_TYPES = {"numeric", "mcq", "llm_judge", "llm", "embedding", "custom"}
 
 
 @dataclass

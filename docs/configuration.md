@@ -183,7 +183,7 @@ for comparison with ground truth.
 
 | Field            | Type   | Default | Description |
 |------------------|--------|---------|-------------|
-| `type`           | string | `"mcq"` | Canonicalization strategy. Must be one of: `"numeric"`, `"mcq"`, `"code_exec"`, `"llm_judge"`, `"llm"`, `"embedding"`, `"custom"`. |
+| `type`           | string | `"mcq"` | Canonicalization strategy. Must be one of: `"numeric"`, `"mcq"`, `"llm_judge"`, `"llm"`, `"embedding"`, `"custom"`. |
 | `judge_endpoint` | object | `null`  | An `endpoint` block (same schema as the top-level `endpoint`) for the LLM. **Required** when `type` is `"llm_judge"` or `"llm"`. Also used by `--auto-judge` for automated calibration. |
 | `custom_class`   | string | `null`  | Fully-qualified Python class path (e.g., `"mypackage.canon.MyCanon"`). **Required** when `type` is `"custom"`. |
 
@@ -193,10 +193,11 @@ for comparison with ground truth.
 |---------------|----------|-------|
 | `mcq`         | Multiple-choice questions | Extracts A/B/C/D letter answers from free-text responses. |
 | `numeric`     | Math and numerical answers | Parses numeric values, tolerates minor formatting differences. |
-| `code_exec`   | Code generation tasks | Executes generated code in a sandbox and compares outputs. |
 | `llm_judge`   | Open-ended / subjective tasks | Uses a separate LLM to judge equivalence. Requires `judge_endpoint`. |
 | `embedding`   | Semantic similarity | Uses embedding distance to determine answer equivalence. |
 | `custom`      | Anything else | Load your own canonicalizer class. Requires `custom_class`. |
+
+> **Security note:** The `code_exec` canonicalizer was removed from the core package because it executed untrusted code from LLM responses. If you need code execution canonicalization, implement it as a [custom canonicalizer](canonicalization.md#plugin-system) with your own sandboxing and security controls.
 
 #### Example -- LLM judge (standard auth)
 
@@ -400,6 +401,6 @@ The config loader runs the following checks after parsing. If any fail, a
 - `sampling.k_fixed` (when set) must be <= `sampling.k_max`.
 - `calibration.n_cal` must be >= 1.
 - `calibration.n_test` must be >= 1.
-- `canonicalization.type` must be one of: `code_exec`, `custom`, `embedding`, `llm`, `llm_judge`, `mcq`, `numeric`.
+- `canonicalization.type` must be one of: `custom`, `embedding`, `llm`, `llm_judge`, `mcq`, `numeric`.
 - `canonicalization.custom_class` is required when type is `"custom"`.
 - `canonicalization.judge_endpoint` is required when type is `"llm_judge"` or `"llm"`.

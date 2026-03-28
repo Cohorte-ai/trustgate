@@ -306,7 +306,7 @@ class CanonConfig:
 
 | Field | Description |
 |---|---|
-| `type` | Canonicalization strategy. One of: `"numeric"`, `"mcq"`, `"code_exec"`, `"llm_judge"`, `"llm"`, `"embedding"`, `"custom"`. |
+| `type` | Canonicalization strategy. One of: `"numeric"`, `"mcq"`, `"llm_judge"`, `"llm"`, `"embedding"`, `"custom"`. |
 | `judge_endpoint` | Required when `type` is `"llm_judge"` or `"llm"`. Configures the LLM used as the judge. |
 | `custom_class` | Required when `type` is `"custom"`. Dot-path to a `Canonicalizer` subclass (e.g., `"mypackage.MyCanonicalizer"`). |
 
@@ -418,7 +418,6 @@ canonicalization logic.
 |---|---|
 | `"numeric"` | Math problems -- extracts and normalizes numeric answers. |
 | `"mcq"` | Multiple-choice -- extracts letter answers (A, B, C, D). |
-| `"code_exec"` | Code generation -- executes code and compares output. |
 | `"llm_judge"` | Open-ended -- uses another LLM to judge equivalence. |
 | `"embedding"` | Semantic similarity -- clusters answers by embedding distance. |
 

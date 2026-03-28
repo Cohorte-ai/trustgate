@@ -56,7 +56,7 @@ def version() -> None:
 @click.option("--model", help="Model name (overrides config)")
 @click.option(
     "--task-type",
-    type=click.Choice(["numeric", "mcq", "code_exec", "llm_judge", "llm", "embedding", "custom"]),
+    type=click.Choice(["numeric", "mcq", "llm_judge", "llm", "embedding", "custom"]),
     help="Canonicalization type (overrides config)",
 )
 @click.option("--auto-judge", is_flag=True, help="Use LLM-as-judge for automated calibration (no human needed)")
@@ -274,7 +274,7 @@ def certify_cmd(
 @click.option(
     "--task-type",
     required=True,
-    type=click.Choice(["numeric", "mcq", "code_exec", "llm_judge", "llm", "embedding", "custom"]),
+    type=click.Choice(["numeric", "mcq", "llm_judge", "llm", "embedding", "custom"]),
 )
 @click.option("--questions", "-q", "questions_path", required=True)
 @click.option("--ground-truth", "-g", "ground_truth_path")

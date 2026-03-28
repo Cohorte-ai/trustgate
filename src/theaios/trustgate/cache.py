@@ -20,7 +20,7 @@ class DiskCache:
 
     def __init__(self, cache_dir: str = ".trustgate_cache") -> None:
         self._dir = Path(cache_dir)
-        self._dir.mkdir(parents=True, exist_ok=True)
+        self._dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     @property
     def cache_dir(self) -> Path:

@@ -324,7 +324,10 @@ def generate_questionnaire(
 
         items.append(item)
 
-    items_json = json.dumps(items, ensure_ascii=False)
+    # Escape </script> to prevent XSS when embedding JSON in <script> blocks.
+    # LLM responses could contain "</script>" which would break out of the
+    # script context and allow arbitrary HTML/JS injection.
+    items_json = json.dumps(items, ensure_ascii=False).replace("</", "<\\/")
     html = _QUESTIONNAIRE_HTML.replace("__ITEMS_JSON__", items_json)
 
     path = Path(output_path)

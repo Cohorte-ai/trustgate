@@ -412,8 +412,10 @@ class Sampler:
 
                 # 4xx (non-retryable) except 429
                 if 400 <= status < 500 and status != 429:
+                    # Don't include response body — some APIs echo auth
+                    # headers in error responses, which would leak secrets.
                     raise SamplerError(
-                        f"Non-retryable HTTP {status}: {exc.response.text[:200]}"
+                        f"Non-retryable HTTP {status} from endpoint"
                     ) from exc
 
                 # 429 rate limit — respect Retry-After
