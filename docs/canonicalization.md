@@ -9,7 +9,7 @@ measure self-consistency across repeated samples.
 
 ## Built-in Canonicalizers
 
-TrustGate ships with four built-in canonicalizers. Select one with
+TrustGate ships with five built-in canonicalizers. Select one with
 `canonicalization.type` in your `trustgate.yaml` or via `--task-type` on the CLI.
 
 ### `mcq` --- Multiple-Choice

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Self-consistency sampling with configurable K
 - Sequential stopping via Hoeffding bounds (saves ~50% API costs)
 - Conformal prediction calibration with formal coverage guarantees
-- Five built-in canonicalizers: MCQ, numeric, code execution, LLM-as-judge, embedding clustering
+- Five built-in canonicalizers: MCQ, numeric, LLM semantic, LLM-as-judge, embedding clustering
 - Custom canonicalizer plugin system with `@register_canonicalizer` decorator
 - Multi-model comparison with pairwise reliability deltas
 - Built-in dataset loaders: GSM8K, MMLU, TruthfulQA

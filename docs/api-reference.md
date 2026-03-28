@@ -236,6 +236,7 @@ class TrustGateConfig:
     canonicalization: CanonConfig      # default: CanonConfig()
     calibration: CalibrationConfig    # default: CalibrationConfig()
     questions: QuestionsConfig        # default: QuestionsConfig()
+    thresholds: ThresholdsConfig      # default: ThresholdsConfig()
 ```
 
 Top-level configuration dataclass. Maps 1:1 to the sections in `trustgate.yaml`.
@@ -249,10 +250,14 @@ Top-level configuration dataclass. Maps 1:1 to the sections in `trustgate.yaml`.
 class EndpointConfig:
     url: str
     model: str = ""
-    temperature: float = 0.7
+    temperature: float | None = 0.7
     api_key_env: str = ""
     max_tokens: int = 4096
-    provider: str = ""  # "openai", "anthropic", "together", "generic" (auto-detected if empty)
+    provider: str = ""  # "openai", "anthropic", "together", "generic_http", "generic" (auto-detected if empty)
+    headers: dict[str, str] = {}
+    request_template: dict | None = None
+    response_path: str = ""
+    cost_per_request: float | None = None
 ```
 
 Configuration for an AI API endpoint. The `provider` field is auto-detected from
@@ -277,7 +282,7 @@ class SamplingConfig:
     k_fixed: int | None = 10
     sequential_stopping: bool = True
     delta: float = 0.05
-    max_concurrent: int = 50
+    max_concurrent: int = 10
     timeout: float = 120.0
     retries: int = 10
 ```
@@ -366,6 +371,7 @@ class CertificationResult:
     coverage: float
     conditional_coverage: float
     capability_gap: float
+    target_alpha: float = 0.05
     n_cal: int
     n_test: int
     k_used: int
@@ -418,6 +424,7 @@ canonicalization logic.
 |---|---|
 | `"numeric"` | Math problems -- extracts and normalizes numeric answers. |
 | `"mcq"` | Multiple-choice -- extracts letter answers (A, B, C, D). |
+| `"llm"` | LLM Semantic -- extracts core factual answers via LLM prompt. Source: `theaios.trustgate.canonicalize.llm_semantic`. |
 | `"llm_judge"` | Open-ended -- uses another LLM to judge equivalence. |
 | `"embedding"` | Semantic similarity -- clusters answers by embedding distance. |
 
