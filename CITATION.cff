@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use TrustGate in your research, please cite the accompanying paper."
+title: "TrustGate"
+type: software
+authors:
+  - family-names: "Mouzouni"
+    given-names: "Charafeddine"
+    email: "charafeddine@cohorte.co"
+repository-code: "https://github.com/Cohorte-ai/trustgate"
+license: Apache-2.0
+preferred-citation:
+  type: article
+  title: "Black-Box Reliability Certification for AI Agents via Self-Consistency Sampling and Conformal Calibration"
+  authors:
+    - family-names: "Mouzouni"
+      given-names: "Charafeddine"
+  year: 2026
+  journal: "arXiv preprint"
+  url: "https://arxiv.org/abs/2602.21368"
+  identifiers:
+    - type: other
+      value: "arXiv:2602.21368"
+      description: "arXiv preprint"
