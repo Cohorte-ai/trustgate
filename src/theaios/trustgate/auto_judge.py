@@ -81,9 +81,7 @@ async def auto_judge_labels_async(
             if not profile or not question:
                 continue
 
-            candidates = "\n".join(
-                f"{i + 1}. {ans}" for i, (ans, _freq) in enumerate(profile)
-            )
+            candidates = "\n".join(f"{i + 1}. {ans}" for i, (ans, _freq) in enumerate(profile))
 
             if ground_truth and qid in ground_truth:
                 prompt = _JUDGE_PROMPT_WITH_GT.format(
@@ -129,7 +127,10 @@ async def _call_judge(
             delay = _backoff(attempt)
             logger.warning(
                 "Judge call failed (attempt %d/%d): %s. Retrying in %.1fs",
-                attempt + 1, retries, exc, delay,
+                attempt + 1,
+                retries,
+                exc,
+                delay,
             )
             await asyncio.sleep(delay)
 
@@ -167,6 +168,11 @@ def auto_judge_labels(
     """Synchronous wrapper for :func:`auto_judge_labels_async`."""
     return asyncio.run(
         auto_judge_labels_async(
-            questions_text, profiles, judge_config, ground_truth, retries, timeout,
+            questions_text,
+            profiles,
+            judge_config,
+            ground_truth,
+            retries,
+            timeout,
         )
     )

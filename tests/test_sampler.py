@@ -149,9 +149,7 @@ class TestOpenAIAdapter:
     @respx.mock
     @pytest.mark.asyncio
     async def test_send(self) -> None:
-        route = respx.post(OPENAI_URL).respond(
-            json=_openai_response("The answer is B")
-        )
+        route = respx.post(OPENAI_URL).respond(json=_openai_response("The answer is B"))
         adapter = OpenAIAdapter(_endpoint(OPENAI_URL, "openai"))
         async with httpx.AsyncClient() as client:
             result = await adapter.send(client, "What is 2+2?", 0.7)
@@ -161,9 +159,7 @@ class TestOpenAIAdapter:
     @respx.mock
     @pytest.mark.asyncio
     async def test_sends_correct_body(self) -> None:
-        route = respx.post(OPENAI_URL).respond(
-            json=_openai_response("B")
-        )
+        route = respx.post(OPENAI_URL).respond(json=_openai_response("B"))
         adapter = OpenAIAdapter(_endpoint(OPENAI_URL, "openai"))
         async with httpx.AsyncClient() as client:
             await adapter.send(client, "question?", 0.5)
@@ -175,9 +171,7 @@ class TestOpenAIAdapter:
     @respx.mock
     @pytest.mark.asyncio
     async def test_sends_auth_header(self) -> None:
-        route = respx.post(OPENAI_URL).respond(
-            json=_openai_response("B")
-        )
+        route = respx.post(OPENAI_URL).respond(json=_openai_response("B"))
         adapter = OpenAIAdapter(_endpoint(OPENAI_URL, "openai"))
         async with httpx.AsyncClient() as client:
             await adapter.send(client, "q", 0.7)
@@ -189,9 +183,7 @@ class TestAnthropicAdapter:
     @respx.mock
     @pytest.mark.asyncio
     async def test_send(self) -> None:
-        respx.post(ANTHROPIC_URL).respond(
-            json=_anthropic_response("Paris")
-        )
+        respx.post(ANTHROPIC_URL).respond(json=_anthropic_response("Paris"))
         adapter = AnthropicAdapter(_endpoint(ANTHROPIC_URL, "anthropic"))
         async with httpx.AsyncClient() as client:
             result = await adapter.send(client, "Capital of France?", 0.7)
@@ -200,9 +192,7 @@ class TestAnthropicAdapter:
     @respx.mock
     @pytest.mark.asyncio
     async def test_sends_anthropic_headers(self) -> None:
-        route = respx.post(ANTHROPIC_URL).respond(
-            json=_anthropic_response("B")
-        )
+        route = respx.post(ANTHROPIC_URL).respond(json=_anthropic_response("B"))
         adapter = AnthropicAdapter(_endpoint(ANTHROPIC_URL, "anthropic"))
         async with httpx.AsyncClient() as client:
             await adapter.send(client, "q", 0.7)
@@ -215,9 +205,7 @@ class TestGenericOpenAIAdapter:
     @respx.mock
     @pytest.mark.asyncio
     async def test_send(self) -> None:
-        respx.post(GENERIC_URL).respond(
-            json=_openai_response("42")
-        )
+        respx.post(GENERIC_URL).respond(json=_openai_response("42"))
         adapter = GenericOpenAIAdapter(_endpoint(GENERIC_URL, "generic"))
         async with httpx.AsyncClient() as client:
             result = await adapter.send(client, "What is 6*7?", 0.7)
@@ -334,9 +322,7 @@ class TestSamplerConcurrency:
             return httpx.Response(200, json=_openai_response("ok"))
 
         respx.post(OPENAI_URL).mock(side_effect=_slow_handler)
-        sampler = Sampler(
-            _config(k_fixed=6, max_concurrent=max_concurrent), cache=cache
-        )
+        sampler = Sampler(_config(k_fixed=6, max_concurrent=max_concurrent), cache=cache)
         q = Question(id="q1", text="What?")
         await sampler.sample_question(q, k=6)
         assert peak_concurrent <= max_concurrent
@@ -458,9 +444,7 @@ class TestSamplerIntegration:
             body = json.loads(request.content)
             prompt = body["messages"][0]["content"]
             # Return a response that includes the question for verification
-            return httpx.Response(
-                200, json=_openai_response(f"Answer to: {prompt[:20]}")
-            )
+            return httpx.Response(200, json=_openai_response(f"Answer to: {prompt[:20]}"))
 
         respx.post(OPENAI_URL).mock(side_effect=_responder)
 

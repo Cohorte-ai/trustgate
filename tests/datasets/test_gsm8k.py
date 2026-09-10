@@ -26,10 +26,7 @@ class TestExtractAnswer:
 class TestLoadGsm8k:
     def _mock_data(self, tmp_path: Path) -> Path:
         """Create a mock JSONL file."""
-        rows = [
-            {"question": f"Q{i}", "answer": f"Step 1\n#### {i * 10}"}
-            for i in range(20)
-        ]
+        rows = [{"question": f"Q{i}", "answer": f"Step 1\n#### {i * 10}"} for i in range(20)]
         path = tmp_path / "gsm8k_test.jsonl"
         path.write_text("\n".join(json.dumps(r) for r in rows))
         return path

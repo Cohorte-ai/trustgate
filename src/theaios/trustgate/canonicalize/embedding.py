@@ -71,9 +71,7 @@ class EmbeddingCanonicalizer(Canonicalizer):
         return result
 
 
-def _greedy_cluster(
-    embeddings: object, threshold: float = 0.8
-) -> list[int]:
+def _greedy_cluster(embeddings: object, threshold: float = 0.8) -> list[int]:
     """Simple greedy cosine-similarity clustering (no hdbscan dependency)."""
     import numpy as np
 

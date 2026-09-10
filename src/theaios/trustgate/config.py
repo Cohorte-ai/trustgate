@@ -152,9 +152,9 @@ def _parse_config(raw: dict[str, object]) -> TrustGateConfig:
     if not isinstance(cal_raw, dict):
         cal_raw = {}
     calibration = CalibrationConfig(
-        alpha_values=[float(v) for v in cal_raw.get(
-            "alpha_values", [0.01, 0.05, 0.10, 0.15, 0.20]
-        )],
+        alpha_values=[
+            float(v) for v in cal_raw.get("alpha_values", [0.01, 0.05, 0.10, 0.15, 0.20])
+        ],
         n_cal=int(cal_raw.get("n_cal", 500)),
         n_test=int(cal_raw.get("n_test", 500)),
         bootstrap_splits=int(cal_raw.get("bootstrap_splits", 100)),
@@ -228,10 +228,11 @@ def validate_config(config: TrustGateConfig) -> list[str]:
             f"got '{config.canonicalization.type}'"
         )
     if config.canonicalization.type == "custom" and not config.canonicalization.custom_class:
-        errors.append(
-            "canonicalization.custom_class is required when type is 'custom'"
-        )
-    if config.canonicalization.type in ("llm_judge", "llm") and not config.canonicalization.judge_endpoint:
+        errors.append("canonicalization.custom_class is required when type is 'custom'")
+    if (
+        config.canonicalization.type in ("llm_judge", "llm")
+        and not config.canonicalization.judge_endpoint
+    ):
         errors.append(
             f"canonicalization.judge_endpoint is required when type is '{config.canonicalization.type}'"
         )
@@ -254,9 +255,7 @@ def resolve_api_key(config: EndpointConfig) -> str:
 
     value = os.environ.get(config.api_key_env)
     if value is None:
-        raise ConfigError(
-            [f"Environment variable '{config.api_key_env}' is not set"]
-        )
+        raise ConfigError([f"Environment variable '{config.api_key_env}' is not set"])
     return value
 
 
@@ -313,9 +312,7 @@ def _parse_questions_json(text: str) -> list[Question]:
         if not isinstance(item, dict):
             raise ConfigError([f"Question at index {i} must be an object"])
         if "id" not in item or "question" not in item:
-            raise ConfigError(
-                [f"Question at index {i} must have 'id' and 'question' fields"]
-            )
+            raise ConfigError([f"Question at index {i} must have 'id' and 'question' fields"])
 
         acceptable = item.get("acceptable_answers")
         if isinstance(acceptable, str):
@@ -345,9 +342,7 @@ def _parse_questions_csv(text: str) -> list[Question]:
     # Require at least 'id' and 'question' columns
     fields = set(reader.fieldnames)
     if "id" not in fields or "question" not in fields:
-        raise ConfigError(
-            [f"CSV must have 'id' and 'question' columns, got: {sorted(fields)}"]
-        )
+        raise ConfigError([f"CSV must have 'id' and 'question' columns, got: {sorted(fields)}"])
 
     questions: list[Question] = []
     for i, row in enumerate(reader):
@@ -360,9 +355,7 @@ def _parse_questions_csv(text: str) -> list[Question]:
         acceptable = [a.strip() for a in acceptable_raw.split("|") if a.strip()] or None
 
         metadata = {
-            k: v
-            for k, v in row.items()
-            if k not in ("id", "question", "acceptable_answers") and v
+            k: v for k, v in row.items() if k not in ("id", "question", "acceptable_answers") and v
         }
 
         questions.append(

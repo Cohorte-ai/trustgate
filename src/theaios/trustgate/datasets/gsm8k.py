@@ -8,9 +8,7 @@ import re
 from theaios.trustgate.datasets import _download_jsonl, subsample
 from theaios.trustgate.types import Question
 
-_GSM8K_URL = (
-    "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl"
-)
+_GSM8K_URL = "https://raw.githubusercontent.com/openai/grade-school-math/master/grade_school_math/data/test.jsonl"
 
 _ANSWER_RE = re.compile(r"####\s*(.+)$", re.MULTILINE)
 

@@ -147,8 +147,7 @@ class LLMSemanticCanonicalizer(Canonicalizer):
                         last_error = exc
                         delay = _backoff(attempt)
                         logger.warning(
-                            "LLM canonicalization failed (attempt %d/%d): %s. "
-                            "Retrying in %.1fs",
+                            "LLM canonicalization failed (attempt %d/%d): %s. Retrying in %.1fs",
                             attempt + 1,
                             self.retries,
                             exc,
@@ -157,8 +156,7 @@ class LLMSemanticCanonicalizer(Canonicalizer):
                         await asyncio.sleep(delay)
 
         logger.error(
-            "LLM canonicalization exhausted %d retries, "
-            "defaulting to 'unknown': %s",
+            "LLM canonicalization exhausted %d retries, defaulting to 'unknown': %s",
             self.retries,
             last_error,
         )
@@ -171,5 +169,5 @@ class LLMSemanticCanonicalizer(Canonicalizer):
         text = text.strip("\"'`.,;:!?")
         for prefix in ("the ", "a ", "an "):
             if text.startswith(prefix):
-                text = text[len(prefix):]
+                text = text[len(prefix) :]
         return text.strip() or "unknown"

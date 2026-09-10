@@ -224,9 +224,7 @@ class TestGenericHTTPAdapter:
     @respx.mock
     @pytest.mark.asyncio
     async def test_nested_response_path(self) -> None:
-        respx.post(_AGENT_URL).respond(
-            json={"data": {"response": {"text": "42"}}}
-        )
+        respx.post(_AGENT_URL).respond(json={"data": {"response": {"text": "42"}}})
         cfg = EndpointConfig(
             url=_AGENT_URL,
             request_template={"q": "{{question}}"},
@@ -670,9 +668,15 @@ class TestCLINewFlags:
 
     def test_yes_flag_skips_confirmation(self, tmp_path: Path) -> None:
         mock_result = CertificationResult(
-            reliability_level=0.90, m_star=1, coverage=0.95,
-            conditional_coverage=0.98, capability_gap=0.02,
-            n_cal=50, n_test=50, k_used=10, api_cost_estimate=5.0,
+            reliability_level=0.90,
+            m_star=1,
+            coverage=0.95,
+            conditional_coverage=0.98,
+            capability_gap=0.02,
+            n_cal=50,
+            n_test=50,
+            k_used=10,
+            api_cost_estimate=5.0,
             alpha_coverage={0.10: 0.95},
         )
         cfg = tmp_path / "config.yaml"
@@ -684,35 +688,58 @@ class TestCLINewFlags:
         )
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
         with patch("theaios.trustgate.cli.certify", return_value=mock_result):
-            result = runner.invoke(main, [
-                "certify", "--config", str(cfg), "--yes",
-                "--output", "json",
-            ])
+            result = runner.invoke(
+                main,
+                [
+                    "certify",
+                    "--config",
+                    str(cfg),
+                    "--yes",
+                    "--output",
+                    "json",
+                ],
+            )
         assert result.exit_code == 0
 
     def test_cost_per_request_flag_applied(self, tmp_path: Path) -> None:
         # Create a minimal config + questions so preflight runs
         cfg = tmp_path / "config.yaml"
-        cfg.write_text(textwrap.dedent("""\
+        cfg.write_text(
+            textwrap.dedent("""\
             endpoint:
               url: https://agent.example.com/ask
             questions:
               file: q.csv
-        """))
+        """)
+        )
         q = tmp_path / "q.csv"
-        q.write_text("id,question,acceptable_answers\nq1,\"What?\",\"A\"\n")
+        q.write_text('id,question,acceptable_answers\nq1,"What?","A"\n')
 
         mock_result = CertificationResult(
-            reliability_level=0.90, m_star=1, coverage=0.95,
-            conditional_coverage=0.98, capability_gap=0.02,
-            n_cal=1, n_test=1, k_used=10, api_cost_estimate=0.5,
+            reliability_level=0.90,
+            m_star=1,
+            coverage=0.95,
+            conditional_coverage=0.98,
+            capability_gap=0.02,
+            n_cal=1,
+            n_test=1,
+            k_used=10,
+            api_cost_estimate=0.5,
             alpha_coverage={0.10: 0.95},
         )
         runner = CliRunner()
         with patch("theaios.trustgate.cli.certify", return_value=mock_result):
-            result = runner.invoke(main, [
-                "certify", "--config", str(cfg),
-                "--cost-per-request", "0.03",
-                "--yes", "--output", "json",
-            ])
+            result = runner.invoke(
+                main,
+                [
+                    "certify",
+                    "--config",
+                    str(cfg),
+                    "--cost-per-request",
+                    "0.03",
+                    "--yes",
+                    "--output",
+                    "json",
+                ],
+            )
         assert result.exit_code == 0

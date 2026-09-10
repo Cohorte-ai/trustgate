@@ -68,8 +68,7 @@ _ANSWER_FORMATS = [
 
 def _questions() -> list[Question]:
     return [
-        Question(id=qid, text=text, acceptable_answers=[answer])
-        for qid, text, answer in _MATH_DATA
+        Question(id=qid, text=text, acceptable_answers=[answer]) for qid, text, answer in _MATH_DATA
     ]
 
 

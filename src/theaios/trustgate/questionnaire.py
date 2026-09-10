@@ -43,6 +43,7 @@ def _enrich_mcq_answer(canonical: str, question: str) -> str:
             return f"{canonical} — {text}"
     return canonical
 
+
 _QUESTIONNAIRE_HTML = """\
 <!DOCTYPE html>
 <html lang="en">

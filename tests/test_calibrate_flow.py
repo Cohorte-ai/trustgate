@@ -136,7 +136,8 @@ class TestSampleAndProfile:
 class TestCalibrateCLI:
     def _make_config_and_questions(self, tmp_path: Path) -> tuple[Path, Path]:
         cfg = tmp_path / "trustgate.yaml"
-        cfg.write_text(textwrap.dedent("""\
+        cfg.write_text(
+            textwrap.dedent("""\
             endpoint:
               url: "https://api.openai.com/v1/chat/completions"
               model: "gpt-4.1-mini"
@@ -148,13 +149,16 @@ class TestCalibrateCLI:
               type: "mcq"
             questions:
               file: "questions.csv"
-        """))
+        """)
+        )
         q = tmp_path / "questions.csv"
-        q.write_text(textwrap.dedent("""\
+        q.write_text(
+            textwrap.dedent("""\
             id,question,acceptable_answers
             q1,"2+2? (A) 3 (B) 4","B"
             q2,"Capital of France? (A) London (B) Paris","B"
-        """))
+        """)
+        )
         return cfg, q
 
     def test_help(self) -> None:
@@ -176,14 +180,22 @@ class TestCalibrateCLI:
         }
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
-        with patch("theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)):
-            result = runner.invoke(main, [
-                "calibrate",
-                "--config", str(cfg),
-                "--questions", str(q),
-                "--output", str(tmp_path / "labels.json"),
-                "--yes",
-            ])
+        with patch(
+            "theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "calibrate",
+                    "--config",
+                    str(cfg),
+                    "--questions",
+                    str(q),
+                    "--output",
+                    str(tmp_path / "labels.json"),
+                    "--yes",
+                ],
+            )
 
         assert result.exit_code == 0
         assert "Profiled 2 questions" in result.output
@@ -195,7 +207,9 @@ class TestCalibrateCLI:
         assert data["q1"]["ranked_answers"][0]["answer"] == "B"
 
     def test_questions_from_config(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         cfg, _ = self._make_config_and_questions(tmp_path)
         monkeypatch.chdir(tmp_path)
@@ -203,13 +217,20 @@ class TestCalibrateCLI:
         mock_raw = {"q1": {"B": ["B"]}, "q2": {"B": ["B"]}}
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
-        with patch("theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)):
-            result = runner.invoke(main, [
-                "calibrate",
-                "--config", str(cfg),
-                "--output", str(tmp_path / "labels.json"),
-                "--yes",
-            ])
+        with patch(
+            "theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)
+        ):
+            result = runner.invoke(
+                main,
+                [
+                    "calibrate",
+                    "--config",
+                    str(cfg),
+                    "--output",
+                    str(tmp_path / "labels.json"),
+                    "--yes",
+                ],
+            )
 
         assert result.exit_code == 0
 
@@ -220,17 +241,27 @@ class TestCalibrateCLI:
 
         runner = CliRunner(env={"TEST_KEY": "sk-test"})
         with (
-            patch("theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)),
+            patch(
+                "theaios.trustgate.cli.sample_and_profile", return_value=(mock_profiles, mock_raw)
+            ),
             patch("theaios.trustgate.serve.serve_calibration") as mock_serve,
         ):
-            result = runner.invoke(main, [
-                "calibrate",
-                "--config", str(cfg),
-                "--questions", str(q),
-                "--serve", "--port", "9999",
-                "--output", str(tmp_path / "labels.json"),
-                "--yes",
-            ])
+            result = runner.invoke(
+                main,
+                [
+                    "calibrate",
+                    "--config",
+                    str(cfg),
+                    "--questions",
+                    str(q),
+                    "--serve",
+                    "--port",
+                    "9999",
+                    "--output",
+                    str(tmp_path / "labels.json"),
+                    "--yes",
+                ],
+            )
 
         assert result.exit_code == 0
         mock_serve.assert_called_once()

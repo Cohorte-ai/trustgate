@@ -34,9 +34,7 @@ class LLMJudgeCanonicalizer(Canonicalizer):
         **kwargs: object,
     ) -> None:
         if judge_config is None:
-            raise ValueError(
-                "LLMJudgeCanonicalizer requires a judge_config (EndpointConfig)"
-            )
+            raise ValueError("LLMJudgeCanonicalizer requires a judge_config (EndpointConfig)")
         self.judge_adapter = EndpointAdapter.from_config(judge_config)
         self.retries = retries
         self.timeout = timeout

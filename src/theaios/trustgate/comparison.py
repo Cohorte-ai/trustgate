@@ -58,14 +58,16 @@ def compute_comparison_summary(
 
     models_info: list[dict[str, object]] = []
     for rank, (name, r) in enumerate(sorted_results, start=1):
-        models_info.append({
-            "name": name,
-            "reliability_level": r.reliability_level,
-            "m_star": r.m_star,
-            "coverage": r.coverage,
-            "capability_gap": r.capability_gap,
-            "rank": rank,
-        })
+        models_info.append(
+            {
+                "name": name,
+                "reliability_level": r.reliability_level,
+                "m_star": r.m_star,
+                "coverage": r.coverage,
+                "capability_gap": r.capability_gap,
+                "rank": rank,
+            }
+        )
 
     deltas: dict[tuple[str, str], dict[str, float]] = {}
     for (name_a, res_a), (name_b, res_b) in combinations(sorted_results, 2):

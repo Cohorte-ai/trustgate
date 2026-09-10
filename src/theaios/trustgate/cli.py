@@ -59,13 +59,24 @@ def version() -> None:
     type=click.Choice(["numeric", "mcq", "llm_judge", "llm", "embedding", "custom"]),
     help="Canonicalization type (overrides config)",
 )
-@click.option("--auto-judge", is_flag=True, help="Use LLM-as-judge for automated calibration (no human needed)")
+@click.option(
+    "--auto-judge",
+    is_flag=True,
+    help="Use LLM-as-judge for automated calibration (no human needed)",
+)
 @click.option("--questions", "-q", "questions_path", help="Questions file (CSV or JSON)")
 @click.option("--ground-truth", "-g", "ground_truth_path", help="Ground truth labels file")
-@click.option("--alpha", "-a", type=float, default=0.05, help="Confidence level for M*: 0.05 = 95%, 0.10 = 90%, 0.01 = 99%")
+@click.option(
+    "--alpha",
+    "-a",
+    type=float,
+    default=0.05,
+    help="Confidence level for M*: 0.05 = 95%, 0.10 = 90%, 0.01 = 99%",
+)
 @click.option("--k", "k_fixed", type=int, help="Samples per question (overrides config)")
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     type=click.Choice(["console", "json", "csv"]),
     default="console",
     help="Output format",
@@ -74,11 +85,18 @@ def version() -> None:
 @click.option("--no-cache", is_flag=True, help="Disable response cache")
 @click.option("--verbose", "-v", is_flag=True, help="Detailed output")
 @click.option(
-    "--cost-per-request", type=float,
+    "--cost-per-request",
+    type=float,
     help="Cost per API request in USD (for generic/agent endpoints)",
 )
-@click.option("--min-reliability", type=float, help="Minimum reliability level (0-100). Exit code 1 if below.")
-@click.option("--concurrency", type=int, help="Max concurrent API requests (default 30). Lower for rate-limited APIs.")
+@click.option(
+    "--min-reliability", type=float, help="Minimum reliability level (0-100). Exit code 1 if below."
+)
+@click.option(
+    "--concurrency",
+    type=int,
+    help="Max concurrent API requests (default 30). Lower for rate-limited APIs.",
+)
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 def certify_cmd(
     config_path: str,
@@ -103,7 +121,13 @@ def certify_cmd(
     """Certify an AI endpoint's reliability."""
     try:
         config = _build_config(
-            config_path, endpoint, api_key_env, model, task_type, k_fixed, alpha,
+            config_path,
+            endpoint,
+            api_key_env,
+            model,
+            task_type,
+            k_fixed,
+            alpha,
         )
     except (FileNotFoundError, ValueError) as exc:
         click.echo(f"Error: {exc}", err=True)
@@ -150,7 +174,10 @@ def certify_cmd(
 
         if measured_latency is None:
             click.echo(
-                click.style("WARNING: Could not reach the API endpoint. Check your connection and credentials.", fg="yellow"),
+                click.style(
+                    "WARNING: Could not reach the API endpoint. Check your connection and credentials.",
+                    fg="yellow",
+                ),
                 err=True,
             )
 
@@ -192,7 +219,9 @@ def certify_cmd(
             profiles, _ = sample_and_profile(config, questions)
             q_texts = {q.id: q.text for q in questions}
             labels = auto_judge_labels(
-                q_texts, profiles, config.canonicalization.judge_endpoint,
+                q_texts,
+                profiles,
+                config.canonicalization.judge_endpoint,
             )
         click.echo(f"Auto-judge labeled {len(labels)} questions.")
 
@@ -246,7 +275,11 @@ def certify_cmd(
         sys.exit(1)
 
     _output_result(
-        result, output, output_file, verbose, had_cache=had_cache,
+        result,
+        output,
+        output_file,
+        verbose,
+        had_cache=had_cache,
         pass_level=config.thresholds.pass_level,
         weak_level=config.thresholds.weak_level,
     )
@@ -256,8 +289,7 @@ def certify_cmd(
         threshold = min_reliability / 100 if min_reliability > 1 else min_reliability
         if result.reliability_level < threshold:
             click.echo(
-                f"FAIL: reliability {result.reliability_level:.1%} "
-                f"< threshold {threshold:.1%}",
+                f"FAIL: reliability {result.reliability_level:.1%} < threshold {threshold:.1%}",
                 err=True,
             )
             sys.exit(1)
@@ -280,7 +312,8 @@ def certify_cmd(
 @click.option("--ground-truth", "-g", "ground_truth_path")
 @click.option("--alpha", "-a", type=float, default=0.05)
 @click.option(
-    "--output", "-o",
+    "--output",
+    "-o",
     type=click.Choice(["console", "json", "csv"]),
     default="console",
 )
@@ -335,8 +368,13 @@ def compare(
         import json
 
         data = [
-            {"model": name, "reliability_level": r.reliability_level, "m_star": r.m_star,
-             "coverage": r.coverage, "capability_gap": r.capability_gap}
+            {
+                "model": name,
+                "reliability_level": r.reliability_level,
+                "m_star": r.m_star,
+                "coverage": r.coverage,
+                "capability_gap": r.capability_gap,
+            }
             for name, r in results
         ]
         click.echo(json.dumps(data, indent=2))
@@ -356,7 +394,8 @@ def compare(
 @click.option("--output", "-o", default="calibration_labels.json", help="Output labels file")
 @click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt")
 @click.option(
-    "--cost-per-request", type=float,
+    "--cost-per-request",
+    type=float,
     help="Cost per API request in USD (for generic/agent endpoints)",
 )
 def calibrate(
@@ -464,7 +503,9 @@ def calibrate(
         from theaios.trustgate.questionnaire import generate_questionnaire
 
         try:
-            out = generate_questionnaire(cal_questions, cal_profiles, cal_raw, output_path=export_path)
+            out = generate_questionnaire(
+                cal_questions, cal_profiles, cal_raw, output_path=export_path
+            )
         except OSError as exc:
             click.echo(f"Error writing questionnaire: {exc}", err=True)
             sys.exit(1)
@@ -484,12 +525,12 @@ def calibrate(
                 data[q.id] = {
                     "question": q.text,
                     "ranked_answers": [
-                        {"answer": ans, "frequency": round(freq, 4)}
-                        for ans, freq in profiles[q.id]
+                        {"answer": ans, "frequency": round(freq, 4)} for ans, freq in profiles[q.id]
                     ],
                 }
         Path(output.replace(".json", "_profiles.json")).write_text(
-            _json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8",
+            _json.dumps(data, indent=2, ensure_ascii=False),
+            encoding="utf-8",
         )
         click.echo(
             f"Profiles saved. Run with --serve to launch the review UI, "
@@ -622,7 +663,8 @@ def _measure_latency(
 
 
 def _estimate_time(
-    config: TrustGateConfig, n_questions: int,
+    config: TrustGateConfig,
+    n_questions: int,
     latency: float | None = None,
 ) -> dict[str, object]:
     """Estimate wall time for the certification pipeline."""
@@ -677,7 +719,9 @@ def _format_time_estimate(est: dict[str, object]) -> str:
     return f"~{est['total_min']} min"
 
 
-def _show_preflight(config: TrustGateConfig, n_questions: int, latency: float | None = None) -> None:
+def _show_preflight(
+    config: TrustGateConfig, n_questions: int, latency: float | None = None
+) -> None:
     """Show pre-flight cost estimate and cost/reliability arbitrage."""
     from rich.console import Console
     from rich.table import Table
@@ -750,6 +794,7 @@ def _show_preflight(config: TrustGateConfig, n_questions: int, latency: float | 
             row_cells.append(f"${row['est_cost']:.2f}" if row["est_cost"] is not None else "?")
         if latency:
             import copy
+
             cfg_k = copy.copy(config)
             cfg_k.sampling = copy.copy(config.sampling)
             cfg_k.sampling.k_fixed = rk
@@ -833,8 +878,11 @@ def _output_result(
 
     else:  # console
         print_certification_result(
-            result, verbose=verbose, had_cache=had_cache,
-            pass_level=pass_level, weak_level=weak_level,
+            result,
+            verbose=verbose,
+            had_cache=had_cache,
+            pass_level=pass_level,
+            weak_level=weak_level,
         )
         if output_file:
             export_json(result, path=output_file)

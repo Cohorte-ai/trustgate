@@ -36,17 +36,19 @@ def export_csv(result: CertificationResult, path: str | None = None) -> str:
 
     # Summary row
     writer.writerow(_SUMMARY_HEADERS)
-    writer.writerow([
-        f"{result.reliability_level:.4f}",
-        result.m_star,
-        f"{result.coverage:.4f}",
-        f"{result.conditional_coverage:.4f}",
-        f"{result.capability_gap:.4f}",
-        result.n_cal,
-        result.n_test,
-        result.k_used,
-        f"{result.api_cost_estimate:.4f}",
-    ])
+    writer.writerow(
+        [
+            f"{result.reliability_level:.4f}",
+            result.m_star,
+            f"{result.coverage:.4f}",
+            f"{result.conditional_coverage:.4f}",
+            f"{result.capability_gap:.4f}",
+            result.n_cal,
+            result.n_test,
+            result.k_used,
+            f"{result.api_cost_estimate:.4f}",
+        ]
+    )
 
     # Per-item rows (if present)
     if result.per_item:

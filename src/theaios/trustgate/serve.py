@@ -382,10 +382,7 @@ def create_app(
 
     @app.route("/api/results")
     def api_results() -> Response:
-        results = {
-            qid: {"answer": ans, "rank": _rank_of(qid, ans)}
-            for qid, ans in labels.items()
-        }
+        results = {qid: {"answer": ans, "rank": _rank_of(qid, ans)} for qid, ans in labels.items()}
         return jsonify(results)
 
     @app.route("/api/export")

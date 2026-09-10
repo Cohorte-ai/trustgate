@@ -328,7 +328,10 @@ class TestCalibrate:
         profiles, labels, qids = _make_synthetic_data(n=200)
         cal_ids, test_ids = random_split(qids, n_cal=100, n_test=100)
         result = calibrate(
-            profiles, labels, cal_ids, test_ids,
+            profiles,
+            labels,
+            cal_ids,
+            test_ids,
             alpha_values=[0.01, 0.05, 0.10, 0.15, 0.20],
         )
         assert 0.0 <= result.reliability_level <= 1.0
@@ -344,7 +347,10 @@ class TestCalibrate:
         profiles, labels, qids = _make_synthetic_data(n=200, accuracy=0.98)
         cal_ids, test_ids = random_split(qids, n_cal=100, n_test=100)
         result = calibrate(
-            profiles, labels, cal_ids, test_ids,
+            profiles,
+            labels,
+            cal_ids,
+            test_ids,
             alpha_values=[0.01, 0.05, 0.10, 0.15, 0.20],
         )
         # High accuracy model should have high reliability
@@ -354,7 +360,10 @@ class TestCalibrate:
         profiles, labels, qids = _make_synthetic_data(n=200, accuracy=0.3)
         cal_ids, test_ids = random_split(qids, n_cal=100, n_test=100)
         result = calibrate(
-            profiles, labels, cal_ids, test_ids,
+            profiles,
+            labels,
+            cal_ids,
+            test_ids,
             alpha_values=[0.01, 0.05, 0.10, 0.15, 0.20],
         )
         # Low accuracy → lower reliability (m_star > 1 or coverage < target)
@@ -365,7 +374,10 @@ class TestCalibrate:
         profiles, labels, qids = _make_synthetic_data(n=400, accuracy=0.85)
         cal_ids, test_ids = random_split(qids, n_cal=200, n_test=200)
         result = calibrate(
-            profiles, labels, cal_ids, test_ids,
+            profiles,
+            labels,
+            cal_ids,
+            test_ids,
             alpha_values=[0.05, 0.10, 0.20],
         )
         # For the reported reliability level, coverage should hold
@@ -390,7 +402,10 @@ class TestCalibrate:
         cal_ids = [f"q{i}" for i in range(50)]
         test_ids = [f"q{i}" for i in range(50, 100)]
         result = calibrate(
-            profiles, labels, cal_ids, test_ids,
+            profiles,
+            labels,
+            cal_ids,
+            test_ids,
             alpha_values=[0.01, 0.05, 0.10, 0.15, 0.20],
         )
         assert result.reliability_level >= 0.95
@@ -415,10 +430,16 @@ class TestMonteCarlo:
 
         for trial in range(n_trials):
             profiles, labels, qids = _make_synthetic_data(
-                n=n_questions, accuracy=0.85, k=k, seed=trial * 137,
+                n=n_questions,
+                accuracy=0.85,
+                k=k,
+                seed=trial * 137,
             )
             cal_ids, test_ids = random_split(
-                qids, n_cal=50, n_test=50, seed=trial * 137 + 1,
+                qids,
+                n_cal=50,
+                n_test=50,
+                seed=trial * 137 + 1,
             )
             # Compute calibration scores
             cal_scores: list[int | float] = []

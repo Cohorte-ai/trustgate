@@ -73,15 +73,13 @@ def print_certification_result(
     console.print()
 
     console.print(
-        "[dim]What do these metrics mean? → "
-        "https://cohorte-ai.github.io/trustgate/concepts/[/dim]"
+        "[dim]What do these metrics mean? → https://cohorte-ai.github.io/trustgate/concepts/[/dim]"
     )
 
     # Cache hint
     if had_cache:
         console.print(
-            "[dim]This run used cached data. "
-            "Clear cache with: trustgate cache clear[/dim]"
+            "[dim]This run used cached data. Clear cache with: trustgate cache clear[/dim]"
         )
 
     # Verbose: per-alpha coverage breakdown

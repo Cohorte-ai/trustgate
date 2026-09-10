@@ -113,10 +113,7 @@ def _per_request_cost(model: str) -> float | None:
     pricing = _PRICING.get(model)
     if pricing is None:
         return None
-    return (
-        _AVG_INPUT_TOKENS * pricing["input"]
-        + _AVG_OUTPUT_TOKENS * pricing["output"]
-    )
+    return _AVG_INPUT_TOKENS * pricing["input"] + _AVG_OUTPUT_TOKENS * pricing["output"]
 
 
 def estimate_preflight_cost(
@@ -187,13 +184,15 @@ def estimate_cost_reliability_arbitrage(
         est_cost = est * cost_per_req if cost_per_req is not None else None
         max_cost = total * cost_per_req if cost_per_req is not None else None
 
-        rows.append({
-            "k": k,
-            "total_requests": total,
-            "est_requests": est,
-            "est_cost": est_cost,
-            "max_cost": max_cost,
-        })
+        rows.append(
+            {
+                "k": k,
+                "total_requests": total,
+                "est_requests": est,
+                "est_cost": est_cost,
+                "max_cost": max_cost,
+            }
+        )
     return rows
 
 
@@ -215,18 +214,12 @@ def estimate_cost(
         return 0.0
 
     total_output_chars = sum(
-        len(r.raw_response)
-        for resps in responses.values()
-        for r in resps
-        if not r.cached
+        len(r.raw_response) for resps in responses.values() for r in resps if not r.cached
     )
     total_output_tokens = total_output_chars / _CHARS_PER_TOKEN
     total_input_tokens = n_calls * _AVG_INPUT_TOKENS
 
-    return (
-        total_input_tokens * pricing["input"]
-        + total_output_tokens * pricing["output"]
-    )
+    return total_input_tokens * pricing["input"] + total_output_tokens * pricing["output"]
 
 
 # ---------------------------------------------------------------------------
@@ -459,7 +452,10 @@ async def certify_async(
 
         q_texts = {q.id: q.text for q in questions}
         labels = await auto_judge_labels_async(
-            q_texts, profiles, judge_ep, ground_truth=labels,
+            q_texts,
+            profiles,
+            judge_ep,
+            ground_truth=labels,
         )
         logger.info(
             "LLM judge matched %d ground truth labels to canonical answers",

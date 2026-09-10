@@ -26,7 +26,8 @@ def _profiles() -> dict[str, list[tuple[str, float]]]:
 class TestGenerateQuestionnaire:
     def test_creates_html_file(self, tmp_path: Path) -> None:
         out = generate_questionnaire(
-            _questions(), _profiles(),
+            _questions(),
+            _profiles(),
             output_path=str(tmp_path / "q.html"),
         )
         assert Path(out).exists()
@@ -36,7 +37,8 @@ class TestGenerateQuestionnaire:
 
     def test_embeds_all_questions(self, tmp_path: Path) -> None:
         out = generate_questionnaire(
-            _questions(), _profiles(),
+            _questions(),
+            _profiles(),
             output_path=str(tmp_path / "q.html"),
         )
         html = Path(out).read_text()
@@ -45,7 +47,8 @@ class TestGenerateQuestionnaire:
 
     def test_embeds_all_answers(self, tmp_path: Path) -> None:
         out = generate_questionnaire(
-            _questions(), _profiles(),
+            _questions(),
+            _profiles(),
             output_path=str(tmp_path / "q.html"),
         )
         html = Path(out).read_text()
@@ -54,7 +57,8 @@ class TestGenerateQuestionnaire:
 
     def test_no_frequencies_in_output(self, tmp_path: Path) -> None:
         out = generate_questionnaire(
-            _questions(), _profiles(),
+            _questions(),
+            _profiles(),
             output_path=str(tmp_path / "q.html"),
         )
         html = Path(out).read_text()
@@ -64,7 +68,8 @@ class TestGenerateQuestionnaire:
 
     def test_answers_are_shuffled(self, tmp_path: Path) -> None:
         out = generate_questionnaire(
-            _questions(), _profiles(),
+            _questions(),
+            _profiles(),
             output_path=str(tmp_path / "q.html"),
         )
         html = Path(out).read_text()
@@ -78,23 +83,31 @@ class TestGenerateQuestionnaire:
 
     def test_deterministic_with_same_seed(self, tmp_path: Path) -> None:
         out1 = generate_questionnaire(
-            _questions(), _profiles(),
-            output_path=str(tmp_path / "q1.html"), seed=42,
+            _questions(),
+            _profiles(),
+            output_path=str(tmp_path / "q1.html"),
+            seed=42,
         )
         out2 = generate_questionnaire(
-            _questions(), _profiles(),
-            output_path=str(tmp_path / "q2.html"), seed=42,
+            _questions(),
+            _profiles(),
+            output_path=str(tmp_path / "q2.html"),
+            seed=42,
         )
         assert Path(out1).read_text() == Path(out2).read_text()
 
     def test_different_seed_shuffles_differently(self, tmp_path: Path) -> None:
         out1 = generate_questionnaire(
-            _questions(), _profiles(),
-            output_path=str(tmp_path / "q1.html"), seed=1,
+            _questions(),
+            _profiles(),
+            output_path=str(tmp_path / "q1.html"),
+            seed=1,
         )
         out2 = generate_questionnaire(
-            _questions(), _profiles(),
-            output_path=str(tmp_path / "q2.html"), seed=99,
+            _questions(),
+            _profiles(),
+            output_path=str(tmp_path / "q2.html"),
+            seed=99,
         )
         # Different seeds should produce different order (with high probability)
         # We just check the files differ
@@ -103,7 +116,8 @@ class TestGenerateQuestionnaire:
     def test_skips_questions_without_profile(self, tmp_path: Path) -> None:
         questions = _questions() + [Question(id="q3", text="No profile")]
         out = generate_questionnaire(
-            questions, _profiles(),
+            questions,
+            _profiles(),
             output_path=str(tmp_path / "q.html"),
         )
         html = Path(out).read_text()
@@ -112,7 +126,8 @@ class TestGenerateQuestionnaire:
     def test_download_produces_valid_labels_format(self, tmp_path: Path) -> None:
         """The JS download produces {qid: answer} — same format as certify --ground-truth."""
         out = generate_questionnaire(
-            _questions(), _profiles(),
+            _questions(),
+            _profiles(),
             output_path=str(tmp_path / "q.html"),
         )
         html = Path(out).read_text()
@@ -121,4 +136,4 @@ class TestGenerateQuestionnaire:
         # Verify the JS logic is correct by checking it exists
         assert "labels[item.question_id] = answer" in html
         assert "JSON.stringify(labels, null, 2)" in html
-        assert 'a.download = \'labels.json\'' in html
+        assert "a.download = 'labels.json'" in html

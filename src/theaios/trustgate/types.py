@@ -54,9 +54,7 @@ class CanonConfig:
 class CalibrationConfig:
     """Parameters for conformal calibration."""
 
-    alpha_values: list[float] = field(
-        default_factory=lambda: [0.01, 0.05, 0.10, 0.15, 0.20]
-    )
+    alpha_values: list[float] = field(default_factory=lambda: [0.01, 0.05, 0.10, 0.15, 0.20])
     n_cal: int = 500
     n_test: int = 500
     bootstrap_splits: int = 100

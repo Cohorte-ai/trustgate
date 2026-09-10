@@ -16,9 +16,7 @@ class TestLoadCustomCanonicalizer:
         assert canon.canonicalize("", "The answer is 42") == "42"
 
     def test_loads_mcq_by_path(self) -> None:
-        canon = load_custom_canonicalizer(
-            "theaios.trustgate.canonicalize.mcq.MCQCanonicalizer"
-        )
+        canon = load_custom_canonicalizer("theaios.trustgate.canonicalize.mcq.MCQCanonicalizer")
         assert canon.canonicalize("", "The answer is B") == "B"
 
     def test_raises_on_invalid_path(self) -> None:
@@ -31,9 +29,7 @@ class TestLoadCustomCanonicalizer:
 
     def test_raises_on_missing_class(self) -> None:
         with pytest.raises(AttributeError):
-            load_custom_canonicalizer(
-                "theaios.trustgate.canonicalize.numeric.NonexistentClass"
-            )
+            load_custom_canonicalizer("theaios.trustgate.canonicalize.numeric.NonexistentClass")
 
     def test_raises_on_non_canonicalizer(self) -> None:
         # DiskCache is not a Canonicalizer

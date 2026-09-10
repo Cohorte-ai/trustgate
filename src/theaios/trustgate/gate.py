@@ -152,7 +152,8 @@ class TrustGate:
                 ):
                     kwargs["judge_config"] = config.canonicalization.judge_endpoint
                 self._canonicalizer = get_canonicalizer(
-                    config.canonicalization.type, **kwargs,
+                    config.canonicalization.type,
+                    **kwargs,
                 )
 
     @property
@@ -187,7 +188,9 @@ class TrustGate:
             timeout=self.config.sampling.timeout,
         ) as client:
             answer = await self._adapter.send(
-                client, question, self.config.endpoint.temperature,
+                client,
+                question,
+                self.config.endpoint.temperature,
             )
 
         return GateResponse(

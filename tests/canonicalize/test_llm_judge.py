@@ -49,25 +49,19 @@ class TestLLMJudge:
 
     @respx.mock
     def test_verbose_correct(self) -> None:
-        respx.post(JUDGE_URL).respond(
-            json=_judge_response("The answer is correct.")
-        )
+        respx.post(JUDGE_URL).respond(json=_judge_response("The answer is correct."))
         canon = LLMJudgeCanonicalizer(judge_config=_judge_config(), retries=0)
         assert canon.canonicalize("Q?", "A") == "correct"
 
     @respx.mock
     def test_verbose_incorrect(self) -> None:
-        respx.post(JUDGE_URL).respond(
-            json=_judge_response("This is incorrect because...")
-        )
+        respx.post(JUDGE_URL).respond(json=_judge_response("This is incorrect because..."))
         canon = LLMJudgeCanonicalizer(judge_config=_judge_config(), retries=0)
         assert canon.canonicalize("Q?", "A") == "incorrect"
 
     @respx.mock
     def test_ambiguous_defaults_incorrect(self) -> None:
-        respx.post(JUDGE_URL).respond(
-            json=_judge_response("I'm not sure about this one")
-        )
+        respx.post(JUDGE_URL).respond(json=_judge_response("I'm not sure about this one"))
         canon = LLMJudgeCanonicalizer(judge_config=_judge_config(), retries=0)
         assert canon.canonicalize("Q?", "A") == "incorrect"
 

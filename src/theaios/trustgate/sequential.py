@@ -88,7 +88,10 @@ class SequentialSampler:
             min_batch = min(3, k_max)
             first_tasks = [
                 self.sampler._sample_one(
-                    client=client, question=question, index=i, semaphore=semaphore,
+                    client=client,
+                    question=question,
+                    index=i,
+                    semaphore=semaphore,
                 )
                 for i in range(min_batch)
             ]
@@ -100,7 +103,9 @@ class SequentialSampler:
                 # Continue one at a time with stopping checks
                 for i in range(min_batch, k_max):
                     resp = await self.sampler._sample_one(
-                        client=client, question=question, index=i,
+                        client=client,
+                        question=question,
+                        index=i,
                         semaphore=semaphore,
                     )
                     responses.append(resp)
@@ -133,7 +138,10 @@ class SequentialSampler:
             # Run questions concurrently
             tasks = [
                 self.sample_question(
-                    q, k_max, client=client, semaphore=semaphore,
+                    q,
+                    k_max,
+                    client=client,
+                    semaphore=semaphore,
                 )
                 for q in questions
             ]

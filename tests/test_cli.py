@@ -89,15 +89,18 @@ class TestCertifyErrors:
         import pathlib
 
         cfg = pathlib.Path(str(tmp_path)) / "config.yaml"
-        cfg.write_text(
-            "endpoint:\n  url: https://api.openai.com/v1/chat/completions\n"
-        )
+        cfg.write_text("endpoint:\n  url: https://api.openai.com/v1/chat/completions\n")
         runner = CliRunner()
-        result = runner.invoke(main, [
-            "certify",
-            "--config", str(cfg),
-            "--questions", "/nonexistent_questions.csv",
-        ])
+        result = runner.invoke(
+            main,
+            [
+                "certify",
+                "--config",
+                str(cfg),
+                "--questions",
+                "/nonexistent_questions.csv",
+            ],
+        )
         assert result.exit_code != 0
         assert "Error" in result.output
 
@@ -106,7 +109,10 @@ class TestCertifyOutput:
     """Test that certify works end-to-end with mock data using output formats."""
 
     def _run_certify(
-        self, tmp_path: object, output_format: str, output_file: str | None = None,
+        self,
+        tmp_path: object,
+        output_format: str,
+        output_file: str | None = None,
     ) -> object:
         """Run certify with a fully mocked pipeline via patching."""
         import pathlib

@@ -64,8 +64,7 @@ def _extract_json_path(data: Any, path: str) -> str:
 def _expand_headers(headers: dict[str, str]) -> dict[str, str]:
     """Expand ``${VAR_NAME}`` in header values using environment variables."""
     return {
-        k: _ENV_VAR_RE.sub(lambda m: os.environ.get(m.group(1), ""), v)
-        for k, v in headers.items()
+        k: _ENV_VAR_RE.sub(lambda m: os.environ.get(m.group(1), ""), v) for k, v in headers.items()
     }
 
 
@@ -327,8 +326,7 @@ class Sampler:
 
         async with httpx.AsyncClient(timeout=self.sampling_config.timeout) as client:
             tasks = [
-                self.sample_question(q, k, client=client, semaphore=semaphore)
-                for q in questions
+                self.sample_question(q, k, client=client, semaphore=semaphore) for q in questions
             ]
             results = await asyncio.gather(*tasks)
 
@@ -414,9 +412,7 @@ class Sampler:
                 if 400 <= status < 500 and status != 429:
                     # Don't include response body — some APIs echo auth
                     # headers in error responses, which would leak secrets.
-                    raise SamplerError(
-                        f"Non-retryable HTTP {status} from endpoint"
-                    ) from exc
+                    raise SamplerError(f"Non-retryable HTTP {status} from endpoint") from exc
 
                 # 429 rate limit — respect Retry-After
                 if status == 429:

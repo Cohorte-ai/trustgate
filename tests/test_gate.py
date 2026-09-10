@@ -182,30 +182,50 @@ class TestTrustGateCommon:
 class TestGateResponse:
     def test_is_singleton_true(self) -> None:
         r = GateResponse(
-            answer="B", prediction_set=["B"], consensus=1.0, margin=1.0,
-            profile=[("B", 1.0)], m_star=1, reliability_level=0.9, mode="sampled",
+            answer="B",
+            prediction_set=["B"],
+            consensus=1.0,
+            margin=1.0,
+            profile=[("B", 1.0)],
+            m_star=1,
+            reliability_level=0.9,
+            mode="sampled",
         )
         assert r.is_singleton is True
 
     def test_is_singleton_false(self) -> None:
         r = GateResponse(
-            answer="B", prediction_set=["B", "A"], consensus=0.6, margin=0.2,
-            profile=[("B", 0.6), ("A", 0.4)], m_star=2, reliability_level=0.9,
+            answer="B",
+            prediction_set=["B", "A"],
+            consensus=0.6,
+            margin=0.2,
+            profile=[("B", 0.6), ("A", 0.4)],
+            m_star=2,
+            reliability_level=0.9,
             mode="sampled",
         )
         assert r.is_singleton is False
 
     def test_n_samples_passthrough(self) -> None:
         r = GateResponse(
-            answer="B", m_star=1, reliability_level=0.9, mode="passthrough",
+            answer="B",
+            m_star=1,
+            reliability_level=0.9,
+            mode="passthrough",
             raw_responses=["B"],
         )
         assert r.n_samples == 1
 
     def test_n_samples_sampled(self) -> None:
         r = GateResponse(
-            answer="B", prediction_set=["B"], consensus=1.0, margin=1.0,
-            profile=[("B", 1.0)], m_star=1, reliability_level=0.9,
-            mode="sampled", raw_responses=["B"] * 7,
+            answer="B",
+            prediction_set=["B"],
+            consensus=1.0,
+            margin=1.0,
+            profile=[("B", 1.0)],
+            m_star=1,
+            reliability_level=0.9,
+            mode="sampled",
+            raw_responses=["B"] * 7,
         )
         assert r.n_samples == 7

@@ -23,9 +23,7 @@ def load_custom_canonicalizer(dotted_path: str) -> Canonicalizer:
         TypeError: If the class is not a Canonicalizer subclass.
     """
     if "." not in dotted_path:
-        raise ImportError(
-            f"Invalid dotted path '{dotted_path}': expected 'module.ClassName'"
-        )
+        raise ImportError(f"Invalid dotted path '{dotted_path}': expected 'module.ClassName'")
 
     module_path, class_name = dotted_path.rsplit(".", 1)
 
@@ -34,8 +32,7 @@ def load_custom_canonicalizer(dotted_path: str) -> Canonicalizer:
 
     if not isinstance(cls, type) or not issubclass(cls, Canonicalizer):
         raise TypeError(
-            f"'{dotted_path}' is not a Canonicalizer subclass "
-            f"(got {type(cls).__name__}: {cls})"
+            f"'{dotted_path}' is not a Canonicalizer subclass (got {type(cls).__name__}: {cls})"
         )
 
     return cls()

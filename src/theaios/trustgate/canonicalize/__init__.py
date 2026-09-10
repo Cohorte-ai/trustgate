@@ -108,9 +108,7 @@ def get_canonicalizer(name: str, **kwargs: Any) -> Canonicalizer:  # noqa: ANN40
         )
     if name not in _REGISTRY:
         available = sorted(_REGISTRY.keys())
-        raise KeyError(
-            f"Unknown canonicalizer '{name}'. Available: {available}"
-        )
+        raise KeyError(f"Unknown canonicalizer '{name}'. Available: {available}")
     return _REGISTRY[name](**kwargs)
 
 

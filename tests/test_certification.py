@@ -111,7 +111,10 @@ class TestEstimateCost:
         responses = {
             "q1": [
                 SampleResponse(
-                    question_id="q1", sample_index=0, raw_response="A" * 400, cached=True,
+                    question_id="q1",
+                    sample_index=0,
+                    raw_response="A" * 400,
+                    cached=True,
                 ),
             ],
         }
@@ -198,15 +201,14 @@ class TestCertifyErrors:
             ),
         )
         # Questions with NO acceptable_answers → should raise LabelsRequired
-        questions = [
-            Question(id=f"q{i}", text=f"Question {i}")
-            for i in range(20)
-        ]
+        questions = [Question(id=f"q{i}", text=f"Question {i}") for i in range(20)]
 
         mock_responses = {
             f"q{i}": [
                 SampleResponse(
-                    question_id=f"q{i}", sample_index=j, raw_response="B",
+                    question_id=f"q{i}",
+                    sample_index=j,
+                    raw_response="B",
                 )
                 for j in range(5)
             ]
@@ -214,7 +216,10 @@ class TestCertifyErrors:
         }
 
         with patch.object(
-            Sampler, "sample_all", new_callable=AsyncMock, return_value=mock_responses,
+            Sampler,
+            "sample_all",
+            new_callable=AsyncMock,
+            return_value=mock_responses,
         ):
             with pytest.raises(LabelsRequired):
                 certify(config=config, questions=questions)

@@ -64,17 +64,20 @@ class TestPrintComparisonResult:
     def test_renders_table(self) -> None:
         results = [
             ("gpt-4.1", _sample_result()),
-            ("gpt-4.1-mini", CertificationResult(
-                reliability_level=0.85,
-                m_star=2,
-                coverage=0.923,
-                conditional_coverage=0.960,
-                capability_gap=0.038,
-                n_cal=100,
-                n_test=100,
-                k_used=10,
-                api_cost_estimate=5.00,
-            )),
+            (
+                "gpt-4.1-mini",
+                CertificationResult(
+                    reliability_level=0.85,
+                    m_star=2,
+                    coverage=0.923,
+                    conditional_coverage=0.960,
+                    capability_gap=0.038,
+                    n_cal=100,
+                    n_test=100,
+                    k_used=10,
+                    api_cost_estimate=5.00,
+                ),
+            ),
         ]
         buf = StringIO()
         console = Console(file=buf, force_terminal=True, width=120)

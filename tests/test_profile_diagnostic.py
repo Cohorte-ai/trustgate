@@ -36,10 +36,30 @@ class TestDiagnoseProfiles:
     def test_all_unique_answers(self) -> None:
         """Every sample produces a unique canonical answer — canonicalization failure."""
         profiles = {
-            "q1": [("a", 0.1), ("b", 0.1), ("c", 0.1), ("d", 0.1), ("e", 0.1),
-                   ("f", 0.1), ("g", 0.1), ("h", 0.1), ("i", 0.1), ("j", 0.1)],
-            "q2": [("x", 0.1), ("y", 0.1), ("z", 0.1), ("w", 0.1), ("v", 0.1),
-                   ("u", 0.1), ("t", 0.1), ("s", 0.1), ("r", 0.1), ("q", 0.1)],
+            "q1": [
+                ("a", 0.1),
+                ("b", 0.1),
+                ("c", 0.1),
+                ("d", 0.1),
+                ("e", 0.1),
+                ("f", 0.1),
+                ("g", 0.1),
+                ("h", 0.1),
+                ("i", 0.1),
+                ("j", 0.1),
+            ],
+            "q2": [
+                ("x", 0.1),
+                ("y", 0.1),
+                ("z", 0.1),
+                ("w", 0.1),
+                ("v", 0.1),
+                ("u", 0.1),
+                ("t", 0.1),
+                ("s", 0.1),
+                ("r", 0.1),
+                ("q", 0.1),
+            ],
         }
         diag = diagnose_profiles(profiles)
         assert diag.status == "poor"
@@ -75,15 +95,15 @@ class TestDiagnoseProfiles:
 
     def test_partial_unique_warns(self) -> None:
         """30% all-unique should trigger a weak warning."""
-        good = {
-            f"q{i}": [("A", 0.8), ("B", 0.2)]
-            for i in range(7)
-        }
+        good = {f"q{i}": [("A", 0.8), ("B", 0.2)] for i in range(7)}
         # Each answer has equal frequency (1/5 = 0.2) → all-unique
         bad = {
-            f"q{i+7}": [
-                (f"x{i}a", 0.2), (f"x{i}b", 0.2), (f"x{i}c", 0.2),
-                (f"x{i}d", 0.2), (f"x{i}e", 0.2),
+            f"q{i + 7}": [
+                (f"x{i}a", 0.2),
+                (f"x{i}b", 0.2),
+                (f"x{i}c", 0.2),
+                (f"x{i}d", 0.2),
+                (f"x{i}e", 0.2),
             ]
             for i in range(3)
         }

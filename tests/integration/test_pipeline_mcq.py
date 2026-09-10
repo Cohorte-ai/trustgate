@@ -57,8 +57,7 @@ _MCQ_DATA = [
 
 def _questions() -> list[Question]:
     return [
-        Question(id=qid, text=text, acceptable_answers=[answer])
-        for qid, text, answer in _MCQ_DATA
+        Question(id=qid, text=text, acceptable_answers=[answer]) for qid, text, answer in _MCQ_DATA
     ]
 
 

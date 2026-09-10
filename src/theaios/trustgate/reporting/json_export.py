@@ -29,9 +29,7 @@ def export_json(result: CertificationResult, path: str | None = None) -> str:
         "n_test": result.n_test,
         "k_used": result.k_used,
         "api_cost_estimate": result.api_cost_estimate,
-        "alpha_coverage": {
-            str(k): v for k, v in result.alpha_coverage.items()
-        },
+        "alpha_coverage": {str(k): v for k, v in result.alpha_coverage.items()},
         "per_item": result.per_item,
     }
 
