@@ -46,7 +46,7 @@ trustgate certify [OPTIONS]
 | `--questions` | `-q` | PATH | *(from config)* | Path to a questions file (CSV or JSON). |
 | `--ground-truth` | `-g` | PATH | *(none)* | Path to a ground-truth labels file. Required for some task types. |
 | `--k` | | INT | *(from config)* | Fixed number of samples per question. Overrides `sampling.k_fixed`. |
-| `--alpha` | `-a` | FLOAT | `0.05` | Confidence level for M\*. Controls the prediction set size: `0.05` = 95% confidence, `0.10` = 90%, `0.01` = 99%. Lower α → stricter guarantee → potentially larger M\*. |
+| `--alpha` | `-a` | FLOAT | `0.05` | Confidence level for M\*. Controls the prediction set size: `0.05` = 95% confidence, `0.10` = 90%, `0.01` = 99%. Lower α → higher coverage target → potentially larger M\*. |
 | `--output` | `-o` | CHOICE | `console` | Output format: `console`, `json`, or `csv`. |
 | `--output-file` | | PATH | *(none)* | Write output to a file instead of stdout. When used with `--output console`, the result is printed to the terminal and also saved as JSON to the specified file. |
 | `--no-cache` | | FLAG | `false` | Disable the disk-based response cache for this run. |

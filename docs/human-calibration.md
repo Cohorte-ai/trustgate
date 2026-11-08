@@ -39,7 +39,7 @@ answer in the AI's original self-consistency profile:
 
 These scores feed into conformal calibration: they are sorted, and the
 quantile at confidence level 1-α gives M\* (how many top answers you need to
-include to guarantee coverage). If most scores are 1, then M\*=1 and the
+include to reach the coverage target). If most scores are 1, then M\*=1 and the
 reliability level is high. See [Concepts](concepts.md#worked-example-from-human-clicks-to-reliability-level) for a worked example.
 
 The reviewer doesn't need to understand any of this — they just pick the

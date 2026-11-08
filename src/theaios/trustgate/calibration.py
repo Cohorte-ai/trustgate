@@ -355,4 +355,5 @@ def calibrate(
         k_used=0,  # filled by the pipeline
         api_cost_estimate=0.0,  # filled by the pipeline
         alpha_coverage=alpha_coverage,
+        guarantee_applies=not math.isinf(q_hat),
     )

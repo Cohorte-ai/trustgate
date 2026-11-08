@@ -461,3 +461,22 @@ class TestMonteCarlo:
 
         # Conformal guarantee should hold in the vast majority of trials
         assert holds / n_trials >= 0.85
+
+
+class TestGuaranteeApplies:
+    def test_true_when_quantile_finite(self) -> None:
+        profiles, labels, qids = _make_synthetic_data(n=200)
+        cal_ids, test_ids = random_split(qids, n_cal=100, n_test=100)
+        result = calibrate(profiles, labels, cal_ids, test_ids, alpha_values=[0.05])
+        assert result.guarantee_applies is True
+
+    def test_false_when_correct_answer_mostly_unsampled(self) -> None:
+        # 80% of items: the acceptable answer never appears in the profile (score = inf),
+        # so no finite prediction set can reach 95% coverage.
+        qids = [f"q{i}" for i in range(100)]
+        profiles = {q: [("a", 1.0)] for q in qids}
+        labels = {q: ("a" if i < 20 else "b") for i, q in enumerate(qids)}
+        result = calibrate(
+            profiles, labels, qids[:50], qids[50:], alpha_values=[0.05], target_alpha=0.05
+        )
+        assert result.guarantee_applies is False

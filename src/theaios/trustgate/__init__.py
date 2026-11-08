@@ -1,6 +1,6 @@
 """TrustGate — Black-box AI reliability certification."""
 
-__version__ = "0.3.10"
+__version__ = "0.3.11"
 
 from theaios.trustgate.calibration import calibrate, compute_profile, diagnose_profiles
 from theaios.trustgate.canonicalize import Canonicalizer, get_canonicalizer, register_canonicalizer

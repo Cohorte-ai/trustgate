@@ -22,6 +22,7 @@ def export_json(result: CertificationResult, path: str | None = None) -> str:
         "reliability_level": result.reliability_level,
         "m_star": result.m_star,
         "target_alpha": result.target_alpha,
+        "guarantee_applies": result.guarantee_applies,
         "coverage": result.coverage,
         "conditional_coverage": result.conditional_coverage,
         "capability_gap": result.capability_gap,

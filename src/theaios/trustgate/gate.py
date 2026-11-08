@@ -26,7 +26,7 @@ Usage::
     # Sampled (K API calls per query — per-query confidence)
     gate = TrustGate(config=config, certification=result, mode="sampled")
     response = gate.query("What is the treatment for X?")
-    response.prediction_set      # top-M* answers with conformal guarantee
+    response.prediction_set      # top-M* answers (conformal coverage at the certified alpha)
     response.consensus           # per-query consensus strength
 """
 

@@ -136,3 +136,4 @@ class CertificationResult:
     target_alpha: float = 0.05
     alpha_coverage: dict[float, float] = field(default_factory=dict)
     per_item: list[dict[str, object]] = field(default_factory=list)
+    guarantee_applies: bool = True  # False when no finite set reaches the target alpha

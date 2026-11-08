@@ -6,15 +6,18 @@ Common questions and troubleshooting for TrustGate.
 
 ## 1. What does "reliability level" mean?
 
-The reliability level is the largest `1 - alpha` for which the conformal
-coverage guarantee holds on the held-out test set. It answers the question:
-"With what confidence can I trust this model's top answer?"
+The reliability level is the share of calibration items where the model's most
+consistent answer is acceptable, with the conformal n+1 correction:
+`|{items where the mode is acceptable}| / (n + 1)`. It answers the question:
+"How often is this model's top answer the right one, on questions like these?"
 
-For example, a reliability level of **0.90** (90%) means that the model's
-prediction set of size M\* contains the correct answer at least 90% of the time,
-validated on unseen test data using conformal prediction theory.
+It is a diagnostic: not a guarantee by itself, and not a lower bound on future
+accuracy. TrustGate's guarantee is on the prediction set: at a confidence level
+you fix with `--alpha`, the top-M\* answers contain an acceptable answer with
+probability at least 1 - alpha. See
+[what the guarantee covers](concepts.md#what-the-guarantee-covers).
 
-Higher is better. A reliability level of 0.95 is a stronger guarantee than 0.90.
+Higher is better, but compare levels only across runs on the same questions and labels.
 
 ---
 

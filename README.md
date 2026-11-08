@@ -9,7 +9,7 @@
 </div>
 
 <div align="center">
-  <h3>Know if your AI is ready to ship — one number, one guarantee.</h3>
+  <h3>Know if your AI is ready to ship: a measured reliability level and a scoped statistical guarantee.</h3>
 </div>
 
 <div align="center">
@@ -22,12 +22,12 @@
 
 <br>
 
-TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pipelines, or any system you can ask a question to. It uses self-consistency sampling and conformal prediction to produce a single **reliability level** (e.g., 94.6%) backed by a formal statistical guarantee. Not a vibe, not a leaderboard score — a mathematical proof.
+TrustGate measures the reliability of any AI endpoint you can ask a question to: LLMs, agents, RAG pipelines, custom APIs. It combines self-consistency sampling with conformal calibration and reports two things: a **reliability level** (e.g., 94.6%), a single-number diagnostic of how often the system's most consistent answer is the acceptable one, and a **prediction set** (the top M\* answers) that contains an acceptable answer with probability at least 1 − α, for a confidence level you fix in advance. That coverage guarantee is finite-sample and distribution-free; [what it covers and what it doesn't](#what-the-guarantee-covers) is stated below.
 
 **What's included:**
 
 - **Self-consistency sampling** — ask the same question K times, measure agreement
-- **Conformal calibration** — formal coverage guarantee, distribution-free
+- **Conformal calibration** — finite-sample, distribution-free coverage guarantee at a fixed α
 - **LLM semantic canonicalization** — groups equivalent answers via a lightweight LLM
 - **Human calibration** — shareable HTML questionnaire for domain experts (no server needed)
 - **Automated LLM judge** — calibration without human reviewers (`--auto-judge`)
@@ -164,10 +164,10 @@ Then the result:
 │ Status                   │ PASS  │
 └──────────────────────────┴───────┘
 
-Reliability Level: your AI's top answer is correct for 98.0% of
-questions — the highest confidence with a formal guarantee.
+Reliability Level: the top answer was acceptable on 98.0% of calibration
+items (n+1 corrected). A diagnostic, not a lower bound on future accuracy.
 
-M* = 1: at 95% confidence, the top answer alone is sufficient.
+M* = 1: at 95% confidence, the top answer alone meets the coverage target.
 ```
 
 Use `--alpha` to change the confidence level for M\*:
@@ -307,7 +307,7 @@ trustgate certify --cost-per-request 0.03
 
 ## Certify Each Component, Not Just the Final Output
 
-Complex AI systems are pipelines — retriever, reranker, reasoning, generation. Don't certify the whole pipeline as a black box. **Certify each component independently** to find exactly where reliability breaks down.
+Complex AI systems are pipelines — retriever, reranker, reasoning, generation. Don't certify the whole pipeline as a black box. **Certify each component independently** to find exactly where reliability breaks down. Component levels locate the weak stage; they do not multiply into a guarantee for the whole pipeline, so certify the end-to-end system as well.
 
 ```
 Query → [Retriever] → [Reranker] → [Generator] → Answer
@@ -368,9 +368,21 @@ trustgate certify --concurrency 3
 
 ---
 
+## What the guarantee covers
+
+TrustGate's statistics are precise, so its claims are too.
+
+- **What is guaranteed.** For a confidence level 1 − α that you fix before looking at results, the top-M\* answers contain an acceptable answer with probability at least 1 − α. The guarantee is *marginal*: it holds on average over questions drawn like your calibration questions (exchangeability), not for each individual question. It is conservative: realized coverage can exceed the target.
+- **When it applies.** You need at least 1/α − 1 calibration items (19 at 95%, 99 at 99%). If too many questions have no acceptable answer among the sampled ones, no finite prediction set reaches the target. TrustGate then falls back to the full set, warns you in the console, sets `guarantee_applies: false` in the JSON report, and no guarantee holds at that α.
+- **What the reliability level is.** A diagnostic: the share of calibration items where the most consistent answer was acceptable, with the conformal n+1 correction. It is not a lower confidence bound on future accuracy, and choosing α after seeing results does not carry the guarantee.
+- **Labels set the reference.** With ground truth or expert labels, coverage is relative to those labels. With `--auto-judge`, it is relative to the judge model's labels, unless you validate the judge against human labels.
+- **Scope.** Single-turn questions on a fixed question distribution. Recalibrate when the model, prompt, system or question mix changes. No claim is made under adversarial inputs. Multi-turn agent evaluation is on the roadmap.
+
+The method is described in [arXiv:2602.21368](https://arxiv.org/abs/2602.21368) (under review at TMLR).
+
 ## Why TrustGate?
 
-- **Formal guarantee** — conformal coverage bound, not a heuristic score
+- **Scoped guarantee** — conformal coverage at a fixed α with its conditions stated, not a heuristic score
 - **Black-box** — no model internals, no logprobs, just API access
 - **Any endpoint** — LLMs, agents, RAG, custom APIs
 - **Human-in-the-loop** — shareable questionnaire, no server needed

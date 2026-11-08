@@ -56,19 +56,24 @@ def print_certification_result(
     # Plain-English explanation
     console.print()
     console.print(
-        f"[bold]Reliability Level[/bold]: your AI's top answer is correct for "
-        f"{result.reliability_level:.1%} of questions — the highest confidence "
-        f"with a formal guarantee."
+        f"[bold]Reliability Level[/bold]: the top answer was acceptable on "
+        f"{result.reliability_level:.1%} of calibration items (n+1 corrected). "
+        f"A diagnostic, not a lower bound on future accuracy."
     )
-    if result.m_star == 1:
+    if not result.guarantee_applies:
+        console.print(
+            f"[yellow]No finite prediction set reached the {confidence_pct} target: "
+            f"the coverage guarantee does not apply at this level.[/yellow]"
+        )
+    elif result.m_star == 1:
         console.print(
             f"[bold]M* = 1[/bold]: at {confidence_pct} confidence, the top "
-            f"answer alone is sufficient."
+            f"answer alone meets the coverage target."
         )
     else:
         console.print(
             f"[bold]M* = {result.m_star}[/bold]: at {confidence_pct} confidence, "
-            f"you need the top {result.m_star} answers to guarantee coverage."
+            f"you need the top {result.m_star} answers to meet the coverage target."
         )
     console.print()
 

@@ -26,17 +26,17 @@ Before counting, raw LLM outputs are passed through a **canonicalizer** that nor
 
 ## 2. Conformal Prediction
 
-**The idea:** A statistical method that converts raw consistency patterns into a guaranteed reliability number. Unlike heuristic confidence scores, conformal prediction provides mathematically provable coverage guarantees.
+**The idea:** A statistical method that turns raw consistency patterns into a prediction set with a coverage guarantee. Unlike heuristic confidence scores, conformal prediction gives a provable, finite-sample coverage guarantee, under the conditions stated in [what the guarantee covers](#what-the-guarantee-covers).
 
 Here is how it works at a high level:
 
 1. **Calibration set:** Take a set of questions where you know the correct answers. For each question, look at the self-consistency profile and find the position of the correct answer. If the correct answer is the most frequent response, its position is 1. If it is the second most frequent, its position is 2. This position is the **nonconformity score** -- it measures how "surprising" the correct answer's placement is.
 
-2. **Quantile threshold:** Sort all the calibration nonconformity scores and pick a threshold (called M\*) at a chosen confidence level. This threshold tells you: "If you include the top M\* answers, you will cover the correct answer for at least (1 - alpha) of questions."
+2. **Quantile threshold:** Sort all the calibration nonconformity scores and pick a threshold (called M\*) at a chosen confidence level. This threshold tells you: "If you include the top M\* answers, the set will contain the correct answer with probability at least 1 - alpha, on average over questions like your calibration set."
 
 3. **Test set:** Apply this threshold to a held-out test set and verify that coverage actually holds.
 
-The key property of conformal prediction is that the coverage guarantee is **distribution-free** -- it holds regardless of the underlying data distribution, with no assumptions about how the model generates answers. If TrustGate reports a reliability level of 98.0%, that means the model's top answer is correct for at least 98.0% of questions, with a formal guarantee.
+The key property of conformal prediction is that the coverage guarantee is **distribution-free** -- it needs no assumption about how the model generates answers, only that future questions are exchangeable with the calibration questions. It is a guarantee about the prediction set at a fixed alpha. The reliability level is a separate, diagnostic summary (see section 3).
 
 ### Where do the correct answers come from?
 
@@ -82,17 +82,17 @@ For example, if 49 out of 50 calibration items have the correct answer as the mo
 reliability = 49 / (49 + 1) = 98.0%
 ```
 
-This means: "the model's top answer is correct for 98.0% of questions, with a formal guarantee." The `n+1` denominator (instead of `n`) is the conformal correction that ensures the guarantee is conservative.
+This means: the model's top answer was acceptable on 49 of 50 calibration items, and the `n+1` denominator (instead of `n`) is the conformal correction. Treat it as a diagnostic: it is not a lower confidence bound on future accuracy and carries no guarantee by itself.
 
-**Understanding alpha (for M\*):** The `--alpha` parameter controls the confidence level for the prediction set size M\*. Alpha = 0.05 means "at 95% confidence, how many top answers do I need?" A smaller alpha demands stricter guarantees, so M\* may be larger.
+**Understanding alpha (for M\*):** The `--alpha` parameter controls the confidence level for the prediction set size M\*. Alpha = 0.05 means "at 95% confidence, how many top answers do I need?" A smaller alpha sets a higher coverage target, so M\* may be larger. Fix alpha before you look at results: choosing it afterwards does not carry the guarantee.
 
 ---
 
 ## 4. M* (Prediction Set Size)
 
-**The idea:** M\* is how many top answers you need to include in your prediction set to guarantee the correct answer is in there. M\*=1 is ideal -- it means the single most popular answer is enough.
+**The idea:** M\* is how many top answers you need to include in your prediction set to reach the coverage target at your alpha. M\*=1 is ideal -- it means the single most popular answer is enough.
 
-Think of it like a multiple-choice guarantee. If M\*=1, TrustGate is saying: "The model's top answer is correct often enough to meet the coverage target." If M\*=2, it is saying: "You need to consider the model's top two answers to get that same guarantee."
+Think of it like a multiple-choice guarantee. If M\*=1, TrustGate is saying: "The model's top answer is correct often enough to meet the coverage target." If M\*=2, it is saying: "You need to consider the model's top two answers to reach that same target."
 
 In practice:
 
@@ -172,8 +172,22 @@ Sequential stopping works as follows:
    - `delta` is a user-configurable confidence parameter (default: 0.05)
 4. If the bound confirms the mode is dominant, stop sampling for this question.
 
-The Hoeffding bound guarantees that stopping early does not compromise the statistical validity of the results. The bound is conservative -- it only stops when there is strong evidence that additional samples would not change the mode.
+Sequential stopping only decides how many samples to draw: it stops once the Hoeffding bound shows the most frequent answer has stabilized. A stable wrong answer is still wrong; calibration is what catches it. The same stopping rule applies to calibration and test questions, so they stay comparable.
 
-**Cost savings:** In practice, "easy" questions (where the model is highly consistent) stop after 3-5 samples, while "hard" questions (where answers vary) use all K. Across a typical benchmark, this saves 40-60% of API calls compared to fixed-K sampling, without affecting the reliability guarantee.
+**Cost savings:** In practice, "easy" questions (where the model is highly consistent) stop after 3-5 samples, while "hard" questions (where answers vary) use all K. Across a typical benchmark, this saves 40-60% of API calls compared to fixed-K sampling.
 
 The `delta` parameter controls how aggressive the stopping is. Smaller delta (e.g., 0.01) means more conservative stopping (fewer early stops, higher certainty). Larger delta (e.g., 0.10) means more aggressive stopping (more early stops, slightly lower certainty). The default of 0.05 provides a good balance.
+
+---
+
+## What the guarantee covers
+
+TrustGate's statistics are precise, so its claims are too.
+
+- **What is guaranteed.** For a confidence level 1 − α that you fix before looking at results, the top-M\* answers contain an acceptable answer with probability at least 1 − α. The guarantee is *marginal*: it holds on average over questions drawn like your calibration questions (exchangeability), not for each individual question. It is conservative: realized coverage can exceed the target.
+- **When it applies.** You need at least 1/α − 1 calibration items (19 at 95%, 99 at 99%). If too many questions have no acceptable answer among the sampled ones, no finite prediction set reaches the target. TrustGate then falls back to the full set, warns you in the console, sets `guarantee_applies: false` in the JSON report, and no guarantee holds at that α.
+- **What the reliability level is.** A diagnostic: the share of calibration items where the most consistent answer was acceptable, with the conformal n+1 correction. It is not a lower confidence bound on future accuracy, and choosing α after seeing results does not carry the guarantee.
+- **Labels set the reference.** With ground truth or expert labels, coverage is relative to those labels. With `--auto-judge`, it is relative to the judge model's labels, unless you validate the judge against human labels.
+- **Scope.** Single-turn questions on a fixed question distribution. Recalibrate when the model, prompt, system or question mix changes. No claim is made under adversarial inputs. Multi-turn agent evaluation is on the roadmap.
+
+The method is described in [arXiv:2602.21368](https://arxiv.org/abs/2602.21368) (under review at TMLR).

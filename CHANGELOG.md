@@ -5,6 +5,15 @@ All notable changes to TrustGate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.11] - 2026-11-08
+
+### Changed
+
+- Claims in the README, docs and console report now state the guarantee as it is proven: a finite-sample, distribution-free *marginal* coverage guarantee for the top-M\* prediction set at a confidence level fixed in advance. The reliability level is presented as a diagnostic, not as a lower bound on future accuracy. New "What the guarantee covers" section (conditions, label reference, scope)
+- FAQ definition of the reliability level aligned with the code (`|{mode acceptable}| / (n + 1)` on calibration items)
+- New `guarantee_applies` field on `CertificationResult` (and in the JSON report): `false` when no finite prediction set reaches the target. The console report then warns instead of describing the fallback set as meeting the target
+- Codebase formatted with `ruff format` (no behavior change)
+
 ## [0.3.10] - 2026-09-10
 
 ### Added

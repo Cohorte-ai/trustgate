@@ -806,7 +806,7 @@ def _show_preflight(
     console.print(arb_table)
     console.print(
         "[dim]Higher K → more samples per question → finer self-consistency signal → "
-        "tighter reliability guarantee.[/dim]"
+        "finer reliability estimate.[/dim]"
     )
     console.print()
 

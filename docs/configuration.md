@@ -240,7 +240,7 @@ Parameters for the conformal calibration procedure.
 
 | Field              | Type         | Default                          | Description |
 |--------------------|--------------|----------------------------------|-------------|
-| `alpha_values`     | list[float]  | `[0.01, 0.05, 0.10, 0.15, 0.20]` | Significance levels to evaluate. Each alpha produces a coverage guarantee of `1 - alpha`. For example, `0.05` targets 95% coverage. |
+| `alpha_values`     | list[float]  | `[0.01, 0.05, 0.10, 0.15, 0.20]` | Significance levels to evaluate. Each alpha's coverage is reported on the test set; the guarantee applies to an alpha fixed before seeing results. For example, `0.05` targets 95% coverage. |
 | `n_cal`            | integer      | `500`                            | Number of calibration questions. Must be >= 1. |
 | `n_test`           | integer      | `500`                            | Number of test questions held out for coverage evaluation. Must be >= 1. |
 | `bootstrap_splits` | integer      | `100`                            | Number of bootstrap re-splits for computing confidence intervals on coverage estimates. |

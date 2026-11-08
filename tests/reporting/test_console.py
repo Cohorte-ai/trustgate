@@ -26,6 +26,26 @@ def _sample_result() -> CertificationResult:
 
 
 class TestPrintCertificationResult:
+    def test_guarantee_not_applicable_warns_instead_of_m_star(self) -> None:
+        buf = StringIO()
+        console = Console(file=buf, width=200)
+        result = _sample_result()
+        result.guarantee_applies = False
+        print_certification_result(result, console=console)
+        output = buf.getvalue()
+        assert "coverage guarantee does not apply" in output
+        assert "meets the coverage target" not in output
+        assert "to meet the coverage target" not in output
+
+    def test_reliability_level_described_as_diagnostic(self) -> None:
+        buf = StringIO()
+        console = Console(file=buf, width=200)
+        print_certification_result(_sample_result(), console=console)
+        output = buf.getvalue()
+        assert "A diagnostic, not a lower bound on future accuracy" in output
+        assert "meets the coverage target" in output
+        assert "does not apply" not in output
+
     def test_produces_output(self) -> None:
         buf = StringIO()
         console = Console(file=buf, force_terminal=True, width=100)

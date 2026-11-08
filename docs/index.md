@@ -1,8 +1,8 @@
 # TrustGate
 
-**Know if your AI is ready to ship — one number, one guarantee.**
+**Know if your AI is ready to ship: a measured reliability level and a scoped statistical guarantee.**
 
-TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pipelines, or any system you can ask a question to. It uses self-consistency sampling and conformal prediction to produce a single **reliability level** (e.g., 94.6%) backed by a formal statistical guarantee.
+TrustGate certifies the reliability of any AI endpoint — LLMs, agents, RAG pipelines, or any system you can ask a question to. It combines self-consistency sampling with conformal calibration to report a **reliability level** (e.g., 94.6%), a single-number diagnostic, and a prediction set with a finite-sample, distribution-free coverage guarantee at a confidence level you fix in advance. See [what the guarantee covers](concepts.md#what-the-guarantee-covers).
 
 Black-box. No model internals required. Works with any provider.
 
@@ -80,7 +80,7 @@ trustgate certify
 └──────────────────────┴──────────┘
 ```
 
-**Reliability level** (94.6%) is the number that matters: the model's top answer is correct for at least 94.6% of questions, backed by a conformal coverage guarantee.
+**Reliability level** (94.6%) is the headline diagnostic: the share of calibration questions where the model's most consistent answer was acceptable, with the conformal n+1 correction. The guarantee itself is on the prediction set: at the confidence you fix with `--alpha`, the top-M\* answers contain an acceptable answer with probability at least 1 − α. See [what the guarantee covers](concepts.md#what-the-guarantee-covers).
 
 ---
 
@@ -90,10 +90,10 @@ trustgate certify
 1. SAMPLE        Ask the AI the same question K times
 2. CANONICALIZE  Normalize raw responses into comparable forms
 3. CALIBRATE     Human or ground truth labels → nonconformity scores
-4. CERTIFY       Conformal prediction → reliability level with guarantee
+4. CERTIFY       Conformal prediction → reliability level + prediction set with coverage guarantee
 ```
 
-For each calibration question, the system finds where the correct answer ranks in the AI's self-consistency profile. If the AI's top answer is correct → score = 1. If the correct answer is second → score = 2. These scores are sorted, and the conformal quantile gives M* — the prediction set size that guarantees coverage.
+For each calibration question, the system finds where the correct answer ranks in the AI's self-consistency profile. If the AI's top answer is correct → score = 1. If the correct answer is second → score = 2. These scores are sorted, and the conformal quantile gives M* — the prediction set size that reaches the coverage target at your chosen α.
 
 The human reviewer (or ground truth dataset) provides the correct answers. The math is the same either way.
 
@@ -134,8 +134,8 @@ Don't certify the whole pipeline — certify each component independently to fin
 
 | Metric | What it means |
 |--------|--------------|
-| **Reliability Level** | Highest confidence level where the coverage guarantee holds |
-| **M\*** | How many top answers needed to guarantee the correct one is included |
+| **Reliability Level** | Share of calibration items whose most consistent answer is acceptable, n+1 corrected (a diagnostic) |
+| **M\*** | How many top answers are needed to reach the coverage target at your α |
 | **Empirical Coverage** | Fraction of test questions where top-M* answers contain the correct one |
 | **Conditional Coverage** | Same, but only on questions the model can solve |
 | **Capability Gap** | Fraction of questions where the correct answer never appeared in K samples |
