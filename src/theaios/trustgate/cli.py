@@ -1145,14 +1145,23 @@ def plan(config_path: str, k: int | None, budget: float | None, probe: int) -> N
         safety_max_failure_share=cfg.safety_max_failure_share,
         uses_judge=any(s.expect.judge for s in scenarios),
     )
-    click.echo(
-        f"Probe: {p.probe_runs} run(s), {p.seconds_per_run:.1f}s per run, "
-        + (f"${p.cost_per_run:.5f} per run" if p.cost_per_run is not None else "cost not reported")
-    )
-    click.echo(
-        f"Full run: {p.total_runs} runs (K={k}), about {p.estimated_minutes:.1f} min"
-        + (f", about ${p.estimated_cost:.2f}" if p.estimated_cost is not None else "")
-    )
+    probe_failed = p.probe_failures == p.probe_runs
+    if probe_failed:
+        click.echo(f"Probe: all {p.probe_runs} run(s) failed; no time or cost estimate")
+        click.echo(f"Full run: {p.total_runs} runs (K={k})")
+    else:
+        click.echo(
+            f"Probe: {p.probe_runs} run(s), {p.seconds_per_run:.1f}s per run, "
+            + (
+                f"${p.cost_per_run:.5f} per run"
+                if p.cost_per_run is not None
+                else "cost not reported"
+            )
+        )
+        click.echo(
+            f"Full run: {p.total_runs} runs (K={k}), about {p.estimated_minutes:.1f} min"
+            + (f", about ${p.estimated_cost:.2f}" if p.estimated_cost is not None else "")
+        )
     if p.max_k_within_budget is not None:
         click.echo(f"Budget ${budget:.2f} allows K up to {p.max_k_within_budget}")
     for suite, n in p.scenarios_per_suite.items():

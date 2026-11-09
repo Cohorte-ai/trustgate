@@ -54,7 +54,9 @@ def _inconclusive(scenario: dict[str, Any]) -> bool:
 
 
 def _cost_per_run(report: dict[str, Any]) -> float | None:
-    ran = [r for r in report["runs"] if r["status"] != "skipped"]
+    if report.get("cost_reported") is False:
+        return None
+    ran = [r for r in report["runs"] if r["status"] not in ("skipped", "not_run")]
     return report["cost_usd"] / len(ran) if ran else None
 
 

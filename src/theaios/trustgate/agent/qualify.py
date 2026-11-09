@@ -454,6 +454,7 @@ def qualify(
 @dataclass
 class Plan:
     probe_runs: int
+    probe_failures: int
     cost_per_run: float | None
     seconds_per_run: float
     total_runs: int
@@ -539,6 +540,7 @@ def plan(
     est_cost = None if cost_per_run is None else cost_per_run * total
     return Plan(
         probe_runs=len(sample),
+        probe_failures=len(errors),
         cost_per_run=cost_per_run,
         seconds_per_run=seconds,
         total_runs=total,

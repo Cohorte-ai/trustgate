@@ -246,3 +246,34 @@ def test_traces_report_merges_and_drop_non_text_parts(tmp_path: Path) -> None:
     items = candidates_from_traces(f, stats=stats)
     assert [i["turns"] for i in items] == [["What is this?"]]
     assert stats == {"lines": 3, "duplicates": 1, "no_user_turns": 1}
+
+
+def test_config_budget_is_validated(project: Path) -> None:
+    for bad in ('"$5"', "-1", "true"):
+        (project / "b.yaml").write_text(
+            f'target: {{type: python, function: "agent:f"}}\nscenarios: ["s.yaml"]\n'
+            f"budget_usd: {bad}\n"
+        )
+        res = CliRunner().invoke(main, ["qualify", "-c", str(project / "b.yaml")])
+        assert res.exit_code == 1 and "budget_usd must be a number >= 0" in res.output
+        assert "Traceback" not in res.output
+
+
+def test_diff_does_not_show_zero_for_unreported_cost() -> None:
+    from theaios.trustgate.agent.compare import _cost_per_run
+
+    assert (
+        _cost_per_run({"cost_reported": False, "cost_usd": 0.0, "runs": [{"status": "passed"}]})
+        is None
+    )
+
+
+def test_plan_gives_no_estimate_when_every_probe_failed(project: Path) -> None:
+    (project / "down.py").write_text(
+        "def f(turns, role, run):\n    raise ConnectionError('down')\n"
+    )
+    (project / "d.yaml").write_text(
+        'target: {type: python, function: "down:f"}\nscenarios: ["s.yaml"]\n'
+    )
+    res = CliRunner().invoke(main, ["plan", "-c", str(project / "d.yaml")])
+    assert "no time or cost estimate" in res.output and "0.0s per run" not in res.output

@@ -94,6 +94,10 @@ def load_qualify_config(path: str | Path) -> QualifyConfig:
     if not isinstance(k, int) or k < 1:
         raise ScenarioError(f"{p}: k must be a positive integer")
     budget = raw.get("budget_usd")
+    if budget is not None and (
+        isinstance(budget, bool) or not isinstance(budget, (int, float)) or budget < 0
+    ):
+        raise ScenarioError(f"{p}: budget_usd must be a number >= 0 (USD, no currency sign)")
     judge_raw = raw.get("judge")
     judge = None
     if judge_raw is not None:
