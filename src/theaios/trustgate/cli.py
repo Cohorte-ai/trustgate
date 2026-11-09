@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import sys
+from typing import TYPE_CHECKING, Any
 from pathlib import Path
 
 import click
+
+if TYPE_CHECKING:
+    from theaios.trustgate.agent import QualifyConfig, Scenario, Target
 
 from theaios import trustgate
 from theaios.trustgate.cache import DiskCache
@@ -887,3 +891,150 @@ def _output_result(
         if output_file:
             export_json(result, path=output_file)
             click.echo(f"\nResults also written to {output_file}")
+
+
+# ---------------------------------------------------------------------------
+# Agent qualification: qualify, plan, status
+# ---------------------------------------------------------------------------
+
+
+def _load_agent_setup(
+    config_path: str,
+) -> tuple[QualifyConfig, list[Scenario], Target, dict[str, Any]]:
+    from theaios.trustgate.agent import (
+        ScenarioError,
+        envelope_components,
+        load_qualify_config,
+        load_scenarios,
+        target_from_config,
+    )
+
+    try:
+        cfg = load_qualify_config(config_path)
+        files = cfg.scenario_files()
+        if not files:
+            raise ScenarioError(f"no scenario files match {cfg.scenario_globs}")
+        scenarios = load_scenarios(list(files))
+    except (ScenarioError, OSError) as exc:
+        raise click.ClickException(str(exc)) from None
+    if str(cfg.base_dir) not in sys.path:
+        sys.path.insert(0, str(cfg.base_dir))  # python targets resolve next to the config
+    try:
+        target = target_from_config(cfg.target)
+    except (ValueError, ImportError, AttributeError, KeyError) as exc:
+        raise click.ClickException(f"target: {exc}") from None
+    envelope = envelope_components(
+        cfg.base_dir,
+        model=cfg.model,
+        file_globs=cfg.envelope_files,
+        extra=cfg.envelope_extra,
+        scenario_files=files,
+        target=cfg.target,
+    )
+    return cfg, scenarios, target, envelope
+
+
+@main.command()
+@click.option("-c", "--config", "config_path", default="qualify.yaml", show_default=True)
+@click.option("-k", type=int, default=None, help="Runs per scenario (overrides the config).")
+@click.option("--budget", type=float, default=None, help="Hard spending cap in USD.")
+def qualify(config_path: str, k: int | None, budget: float | None) -> None:
+    """Qualify an agent: run every scenario K times, decide, write a report and a card."""
+    from theaios.trustgate.agent import build_report, fingerprint, render_card, save_report
+    from theaios.trustgate.agent import qualify as run_qualification
+
+    cfg, scenarios, target, envelope = _load_agent_setup(config_path)
+    k = k or cfg.k
+    budget = budget if budget is not None else cfg.budget_usd
+    total = len(scenarios) * k
+    done = 0
+
+    def progress(_record: object) -> None:
+        nonlocal done
+        done += 1
+        click.echo(f"\r  {done}/{total} runs", nl=False)
+
+    click.echo(f"Qualifying {cfg.name}: {len(scenarios)} scenarios x {k} runs")
+    q = run_qualification(
+        target,
+        scenarios,
+        k=k,
+        thresholds=cfg.thresholds,
+        budget_usd=budget,
+        concurrency=cfg.concurrency,
+        on_run=progress,
+    )
+    click.echo("")
+    report = build_report(q, envelope, fingerprint(envelope), {"name": cfg.name})
+    save_report(report, cfg.report_path)
+    cfg.card_path.write_text(render_card(report), encoding="utf-8")
+    for name, s in q.suites.items():
+        click.echo(
+            f"  {name:<11} {s.scenarios:>3} scenarios  pass^{k} {s.pass_k:>4.0%}  "
+            f"lower bound {s.pass_k_lower:>4.0%}  -> {s.decision}"
+        )
+    click.echo(f"Decision: {q.decision}")
+    for r in q.reasons:
+        click.echo(f"  - {r}")
+    click.echo(f"Cost ${q.cost_usd:.4f}" + ("  (stopped by budget)" if q.stopped_by_budget else ""))
+    click.echo(f"Report: {cfg.report_path}\nCard:   {cfg.card_path}")
+
+
+@main.command()
+@click.option("-c", "--config", "config_path", default="qualify.yaml", show_default=True)
+@click.option("-k", type=int, default=None, help="Runs per scenario (overrides the config).")
+@click.option("--budget", type=float, default=None, help="Budget in USD to size against.")
+@click.option(
+    "--probe",
+    type=int,
+    default=3,
+    show_default=True,
+    help="Scenarios to run once to measure cost and time.",
+)
+def plan(config_path: str, k: int | None, budget: float | None, probe: int) -> None:
+    """Measure cost per run on a few scenarios, then size the full qualification."""
+    from theaios.trustgate.agent import plan as make_plan
+
+    cfg, scenarios, target, _ = _load_agent_setup(config_path)
+    k = k or cfg.k
+    budget = budget if budget is not None else cfg.budget_usd
+    p = make_plan(target, scenarios, k, cfg.thresholds, budget, probe, cfg.concurrency)
+    click.echo(
+        f"Probe: {p.probe_runs} run(s), {p.seconds_per_run:.1f}s per run, "
+        + (f"${p.cost_per_run:.5f} per run" if p.cost_per_run is not None else "cost not reported")
+    )
+    click.echo(
+        f"Full run: {p.total_runs} runs (K={k}), about {p.estimated_minutes:.1f} min"
+        + (f", about ${p.estimated_cost:.2f}" if p.estimated_cost is not None else "")
+    )
+    if p.max_k_within_budget is not None:
+        click.echo(f"Budget ${budget:.2f} allows K up to {p.max_k_within_budget}")
+    for suite, n in p.scenarios_per_suite.items():
+        need = p.min_scenarios_to_approve.get(suite)
+        click.echo(
+            f"  {suite:<11} {n:>3} scenarios" + (f" (approval needs >= {need})" if need else "")
+        )
+    for w in p.warnings:
+        click.echo(f"Warning: {w}")
+
+
+@main.command()
+@click.option("-c", "--config", "config_path", default="qualify.yaml", show_default=True)
+def status(config_path: str) -> None:
+    """Is the last qualification still valid for the agent as it is now?"""
+    from theaios.trustgate.agent import changed_components, fingerprint, load_report
+
+    cfg, _, _, envelope = _load_agent_setup(config_path)
+    if not cfg.report_path.exists():
+        raise click.ClickException("never qualified: run `trustgate qualify`")
+    try:
+        report = load_report(cfg.report_path)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from None
+    if report["fingerprint"] == fingerprint(envelope):
+        click.echo(f"Current: {report['decision']} (measured {report['created']})")
+        return
+    click.echo(f"Stale: the agent changed since it was qualified on {report['created']}.")
+    for change in changed_components(report["envelope"], envelope):
+        click.echo(f"  - {change}")
+    sys.exit(1)
