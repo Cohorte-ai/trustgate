@@ -36,9 +36,12 @@ def envelope_components(
     """What the result depends on. Target headers are excluded (they may hold secrets)."""
     files: dict[str, str] = {}
     for pattern in file_globs:
-        for p in sorted(base_dir.glob(pattern)):
-            if p.is_file():
-                files[p.relative_to(base_dir).as_posix()] = _sha(p.read_bytes())
+        for match in sorted(base_dir.glob(pattern)):
+            # Before Python 3.13, "dir/**" matches directories only: take their contents.
+            members = sorted(match.rglob("*")) if match.is_dir() else [match]
+            for p in members:
+                if p.is_file():
+                    files[p.relative_to(base_dir).as_posix()] = _sha(p.read_bytes())
     target_public = {k: v for k, v in target.items() if k != "headers"}
     return {
         "trustgate": __version__,
