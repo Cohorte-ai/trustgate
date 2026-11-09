@@ -32,6 +32,7 @@ _EXPECT_KEYS = {
     "artifacts",
     "artifacts_exclude",
     "never_executed_with",
+    "judge",
 }
 _SCENARIO_KEYS = {"id", "suite", "role", "turns", "expect", "tags"}
 
@@ -54,6 +55,7 @@ class Expect:
     artifacts: tuple[str, ...] = ()
     artifacts_exclude: dict[str, tuple[str, ...]] = field(default_factory=dict)
     never_executed_with: tuple[tuple[str, dict[str, object]], ...] = ()
+    judge: tuple[str, ...] = ()  # rubric ids graded by the configured LLM judge
 
 
 @dataclass(frozen=True)
@@ -125,10 +127,15 @@ def parse_scenario(raw: object, where: str) -> Scenario:
         artifacts_exclude={
             str(k): _strs(v, f"{where}.artifacts_exclude") for k, v in excl_raw.items()
         },
+        judge=_strs(exp_raw.get("judge"), f"{where}.judge"),
         never_executed_with=tuple(
             (str(f["tool"]), dict(f.get("arguments") or {})) for f in forbidden_raw
         ),
     )
+    if expect == Expect():
+        raise ScenarioError(
+            f"{where}: no expectation: a scenario that checks nothing always passes"
+        )
     role = raw.get("role", "user")
     return Scenario(
         id=sid,

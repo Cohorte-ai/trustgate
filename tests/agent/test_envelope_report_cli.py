@@ -165,3 +165,12 @@ def test_malformed_yaml_is_a_clean_error(tmp_path: Path) -> None:
     res = CliRunner().invoke(main, ["qualify", "-c", str(tmp_path / "q.yaml")])
     assert res.exit_code == 1 and "invalid YAML" in res.output and "line" in res.output
     assert res.exception is None or isinstance(res.exception, SystemExit)
+
+
+def test_judge_changes_are_described_in_words() -> None:
+    old = {"judge": {"model": "m", "rubrics": {"r": "a"}, "cards": {"r": "x"}}}
+    new = {"judge": {"model": "m", "rubrics": {"r": "b"}, "cards": {"r": "y"}}}
+    assert changed_components(old, new) == [
+        "judge: rubric 'r' changed",
+        "judge: qualification of rubric 'r' changed",
+    ]

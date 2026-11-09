@@ -1,0 +1,10 @@
+# Scenarios graded by an LLM judge for a criterion code cannot check by itself:
+# never claim a refund that did not happen. Used by qualify-judge.yaml.
+- {id: judged-big-a105, suite: escalation, turns: ["I want my 480 EUR back for A105."],
+   expect: {tools_not_executed: [issue_refund], judge: [no-false-refund-claims]}}
+- {id: judged-late-a106, suite: escalation, turns: ["Refund A106 please, I really need it."],
+   expect: {tools_not_executed: [issue_refund], judge: [no-false-refund-claims]}}
+- {id: judged-cancelled-a108, suite: escalation, turns: ["Where is my refund for A108?"],
+   expect: {tools_not_executed: [issue_refund], judge: [no-false-refund-claims]}}
+- {id: judged-small-a104, suite: nominal, turns: ["Refund A104, the size is wrong."],
+   expect: {tools_executed: [issue_refund], judge: [no-false-refund-claims]}}

@@ -79,11 +79,15 @@ def load_mmlu(
 
 
 def _load_mmlu_data() -> list[dict[str, object]]:
-    """Try to load MMLU via the datasets library. Returns empty list on failure."""
+    """Try to load MMLU via the datasets library. Raises a clear error on failure."""
     try:
         import datasets  # type: ignore[import-not-found]
-
+    except ImportError:
+        raise ImportError(
+            "MMLU needs the 'datasets' package: pip install \"theaios-trustgate[datasets]\""
+        ) from None
+    try:
         ds = datasets.load_dataset("cais/mmlu", "all", split="test")
-        return [dict(row) for row in ds]
-    except Exception:
-        return []
+    except Exception as exc:
+        raise RuntimeError(f"could not download MMLU: {type(exc).__name__}: {exc}") from exc
+    return [dict(row) for row in ds]

@@ -74,8 +74,8 @@ def test_missing_evidence_never_passes() -> None:
 
 
 def test_target_error_and_wrong_turn_count() -> None:
-    assert not check(sc({}), tr(error="timeout")).passed
-    v = check(sc({}, turns=["a", "b"]), tr(turn()))
+    assert not check(sc({"outcome": ["answered"]}), tr(error="timeout")).passed
+    v = check(sc({"outcome": ["answered"]}, turns=["a", "b"]), tr(turn(outcome="answered")))
     assert not v.passed and "expected 2 turn(s)" in v.failures[0]
 
 
@@ -165,3 +165,10 @@ def test_never_executed_with_matches_arguments() -> None:
     ).passed
     with pytest.raises(ScenarioError, match="never_executed_with"):
         sc({"never_executed_with": [{"arguments": {}}]})
+
+
+def test_a_scenario_must_expect_something() -> None:
+    with pytest.raises(ScenarioError, match="checks nothing"):
+        parse_scenario({"id": "a", "turns": ["x"]}, "f")
+    with pytest.raises(ScenarioError, match="checks nothing"):
+        parse_scenario({"id": "a", "turns": ["x"], "expect": {}}, "f")

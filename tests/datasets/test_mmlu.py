@@ -62,3 +62,20 @@ class TestLoadMmlu:
     def test_question_text_includes_subject(self) -> None:
         questions = load_mmlu(data=_mock_data())
         assert "[math]" in questions[0].text
+
+
+def test_missing_datasets_package_is_a_clear_error(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    import builtins
+
+    import pytest
+
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):  # type: ignore[no-untyped-def]
+        if name == "datasets":
+            raise ImportError("no module")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    with pytest.raises(ImportError, match=r"theaios-trustgate\[datasets\]"):
+        load_mmlu()

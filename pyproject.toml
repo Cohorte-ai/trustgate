@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "theaios-trustgate"
-version = "0.4.0"
+version = "0.5.0"
 description = "Black-box AI reliability certification via self-consistency sampling and conformal calibration"
 readme = "README.md"
 license = "Apache-2.0"
@@ -31,6 +31,7 @@ dependencies = [
 
 [project.optional-dependencies]
 embedding = ["sentence-transformers>=3.0", "hdbscan>=0.8"]
+datasets = ["datasets>=2.0"]
 dev = ["pytest>=8.0,<10", "ruff>=0.15,<0.16", "mypy>=1.19,<1.20", "types-pyyaml>=6.0", "pytest-asyncio>=1.0,<2", "respx>=0.22", "numpy<2.5"]
 
 [project.scripts]

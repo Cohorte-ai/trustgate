@@ -49,11 +49,15 @@ def load_truthfulqa(
 
 
 def _load_truthfulqa_data() -> list[dict[str, object]]:
-    """Try to load TruthfulQA via the datasets library. Returns empty list on failure."""
+    """Try to load TruthfulQA via the datasets library. Raises a clear error on failure."""
     try:
         import datasets  # type: ignore[import-not-found]
-
+    except ImportError:
+        raise ImportError(
+            "TruthfulQA needs the 'datasets' package: pip install \"theaios-trustgate[datasets]\""
+        ) from None
+    try:
         ds = datasets.load_dataset("truthfulqa/truthful_qa", "generation", split="validation")
-        return [dict(row) for row in ds]
-    except Exception:
-        return []
+    except Exception as exc:
+        raise RuntimeError(f"could not download TruthfulQA: {type(exc).__name__}: {exc}") from exc
+    return [dict(row) for row in ds]
