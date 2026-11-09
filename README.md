@@ -397,7 +397,7 @@ TrustGate's statistics are precise, so its claims are too.
 - **When it applies.** You need at least 1/α − 1 calibration items (19 at 95%, 99 at 99%). If too many questions have no acceptable answer among the sampled ones, no finite prediction set reaches the target. TrustGate then falls back to the full set, warns you in the console, sets `guarantee_applies: false` in the JSON report, and no guarantee holds at that α.
 - **What the reliability level is.** A diagnostic: the share of calibration items where the most consistent answer was acceptable, with the conformal n+1 correction. It is not a lower confidence bound on future accuracy, and choosing α after seeing results does not carry the guarantee.
 - **Labels set the reference.** With ground truth or expert labels, coverage is relative to those labels. With `--auto-judge`, it is relative to the judge model's labels, unless you validate the judge against human labels.
-- **Scope.** Single-turn questions on a fixed question distribution. Recalibrate when the model, prompt, system or question mix changes. No claim is made under adversarial inputs. Multi-turn agent evaluation is on the roadmap.
+- **Scope.** This guarantee is for `certify`: single-turn questions on a fixed question distribution. Recalibrate when the model, prompt, system or question mix changes. No claim is made under adversarial inputs. Multi-turn agents are qualified with `trustgate qualify`, which makes a different kind of claim (see [Agent Qualification](docs/agent-qualification.md)).
 
 The method is described in [arXiv:2602.21368](https://arxiv.org/abs/2602.21368) (under review at TMLR).
 

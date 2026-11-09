@@ -31,6 +31,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MMLU and TruthfulQA loaders raise a clear error when `datasets` is missing or the download
   fails, instead of silently returning no questions.
 
+### Fixed (found by a usability test with three simulated users before release)
+
+- Safety checks (`tools_not_executed`, `tools_not_called`, `never_executed_with`) could pass
+  when the agent did not report its tool calls. Missing evidence now makes the run
+  `incomplete`; a forbidden call seen in what was reported is still a failure.
+- A required tool or citation that was simply not reported counted as an agent failure; it
+  is now `incomplete` (unknown), not `below_threshold`.
+- HTTP target: a mapped field absent from the reply is unknown, not empty (agents that call
+  no tool send `[]`); an invalid reply (e.g. an unknown tool status) is a failed run, not a
+  crash; errors name the HTTP status and URL.
+- `diff` treated target errors as regressions, including a false safety veto; only measured
+  failures count now, and inconclusive runs make the verdict `unresolved`.
+- `-k 0` was silently ignored and `-k -1` crashed; both are refused. `--budget` must be >= 0.
+- The runner stops early when the first runs all fail in the target (wrong URL, bad token).
+- `plan` probes 6 scenarios spread across suites (its estimate was 2.4x low), no longer blames
+  cost reporting when the probe failed, and says judge calls are not included.
+- `qualify` warns when a budget is set but the target reports no cost; the card says "not
+  reported" instead of $0.0000. Unset environment variables in target headers are refused
+  before running. A syntax error in the agent module is one line, not a traceback.
+- GitHub Action: inputs are passed as environment variables (a `$` or a quote in an input no
+  longer changes the command); the log is written outside the repository; when the
+  qualification cannot run, the job summary shows the error.
+- Clearer messages: "did you mean" for misspelled keys, a specific message for unfinished
+  trace candidates, the agent's answer in `text_includes` failures, the first target error in
+  the console, readable progress in CI logs, a "How to read this card" section, and the
+  safety row shown as "no failure observed (failure share under X%)".
+- Docs: tool-call status values, unknown-vs-empty fields, defaults, path resolution, keeping
+  reports for `diff`, HTTP envelopes, scenario diversity, and a complete CI example.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added

@@ -96,7 +96,12 @@ def test_grounded_numbers() -> None:
     assert not bad.passed and "45000" in bad.failures[0]
     listed = check(s, tr(turn("1. Budget: 42,000\n2. Length: 3 months", tool_calls=src)))
     assert listed.passed
-    assert check(s, tr(turn("It is 42,000.", tool_calls=()))).evidence == "incomplete"
+    # zero tool calls reported, yet a number nobody gave it: a proven failure
+    no_calls = check(s, tr(turn("It is 42,000.", tool_calls=())))
+    assert no_calls.outcome == "fail" and no_calls.evidence == "complete"
+    # tool calls not reported at all: unknown, never a failure, never a pass
+    unknown = check(s, tr(turn("It is 42,000.", tool_calls=None)))
+    assert unknown.outcome == "pass" and unknown.evidence == "incomplete" and not unknown.passed
 
 
 def test_extract_numbers_conventions() -> None:

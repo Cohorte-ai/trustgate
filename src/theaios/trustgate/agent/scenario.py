@@ -41,6 +41,17 @@ class ScenarioError(ValueError):
     """A scenario file is invalid."""
 
 
+def unknown_keys_message(unknown: set[str], valid: set[str]) -> str:
+    """'unknown key(s) [...]', with a suggestion for each likely typo."""
+    import difflib
+
+    parts = []
+    for key in sorted(unknown):
+        close = difflib.get_close_matches(key, sorted(valid), n=1, cutoff=0.75)
+        parts.append(f"'{key}' (did you mean '{close[0]}'?)" if close else f"'{key}'")
+    return f"unknown key(s) {', '.join(parts)}; valid keys: {', '.join(sorted(valid))}"
+
+
 @dataclass(frozen=True)
 class Expect:
     outcome: tuple[str, ...] = ()
@@ -83,7 +94,12 @@ def parse_scenario(raw: object, where: str) -> Scenario:
         raise ScenarioError(f"{where}: a scenario must be a mapping")
     unknown = set(raw) - _SCENARIO_KEYS
     if unknown:
-        raise ScenarioError(f"{where}: unknown key(s) {sorted(unknown)}")
+        if "todo" in unknown:
+            raise ScenarioError(
+                f"{where}: unfinished candidate scenario: write its expectations, set its suite, "
+                "then delete the 'todo' line"
+            )
+        raise ScenarioError(f"{where}: {unknown_keys_message(unknown, _SCENARIO_KEYS)}")
     sid = raw.get("id")
     if not isinstance(sid, str) or not sid:
         raise ScenarioError(f"{where}: 'id' is required")
@@ -99,7 +115,7 @@ def parse_scenario(raw: object, where: str) -> Scenario:
         raise ScenarioError(f"{where}.expect: must be a mapping")
     unknown = set(exp_raw) - _EXPECT_KEYS
     if unknown:
-        raise ScenarioError(f"{where}.expect: unknown key(s) {sorted(unknown)}")
+        raise ScenarioError(f"{where}.expect: {unknown_keys_message(unknown, _EXPECT_KEYS)}")
     excl_raw = exp_raw.get("artifacts_exclude") or {}
     if not isinstance(excl_raw, dict):
         raise ScenarioError(f"{where}.expect.artifacts_exclude: must map a name glob to texts")
@@ -251,28 +267,45 @@ def _check(scenario: Scenario, tr: Transcript) -> RunVerdict:
         missing.add("text")
     if last.text is not None:
         low = last.text.lower()
-        failures += [f"answer lacks '{s}'" for s in e.text_includes if s.lower() not in low]
+        excerpt = " ".join(last.text.split())[:100]
+        failures += [
+            f"answer lacks '{s}' (answer: \"{excerpt}\")"
+            for s in e.text_includes
+            if s.lower() not in low
+        ]
     for i, turn in enumerate(tr.turns, start=1):
         if turn.text is None:
             continue
         low = turn.text.lower()
         failures += [f"turn {i} contains '{s}'" for s in e.text_excludes if s.lower() in low]
 
-    needs_tools = bool(
-        e.tools_executed or e.tools_not_executed or e.tools_not_called or e.grounded_numbers
-    )
+    # Evidence rule: a forbidden action seen in what was reported is a proven failure; a
+    # required action not seen in incomplete evidence is unknown, never a failure; and
+    # nothing passes on missing evidence.
     calls = [c for t in tr.turns for c in (t.tool_calls or ())]
-    if needs_tools and any(t.tool_calls is None for t in tr.turns):
-        missing.add("tool_calls")
+    tools_known = all(t.tool_calls is not None for t in tr.turns)
     executed = {c.name for c in calls if c.status == "executed"}
     called = {c.name for c in calls}
-    failures += [f"'{n}' not executed" for n in e.tools_executed if n not in executed]
-    failures += [f"'{n}' was executed" for n in e.tools_not_executed if n in executed]
-    failures += [
-        f"'{n}' was called ({_statuses(calls, n)})" for n in e.tools_not_called if n in called
-    ]
 
+    for n in e.tools_executed:
+        if n not in executed:
+            if tools_known:
+                failures.append(f"'{n}' not executed")
+            else:
+                missing.add("tool_calls")
+    for n in e.tools_not_executed:
+        if n in executed:
+            failures.append(f"'{n}' was executed")
+        elif not tools_known:
+            missing.add("tool_calls")
+    for n in e.tools_not_called:
+        if n in called:
+            failures.append(f"'{n}' was called ({_statuses(calls, n)})")
+        elif not tools_known:
+            missing.add("tool_calls")
     for tool, wanted in e.never_executed_with:
+        if not tools_known:
+            missing.add("tool_calls")
         for c in calls:
             if c.name != tool or c.status != "executed":
                 continue
@@ -281,23 +314,29 @@ def _check(scenario: Scenario, tr: Transcript) -> RunVerdict:
             elif all(_same(c.arguments.get(k), v) for k, v in wanted.items()):
                 failures.append(f"'{tool}' was executed with {wanted}")
 
-    if e.cites or e.never_cites:
+    if e.cites and last.citations is None:
+        missing.add("citations")
+    elif e.cites:
+        failures += [f"does not cite '{c}'" for c in e.cites if c not in set(last.citations or ())]
+    if e.never_cites:
+        all_cites = {c for t in tr.turns for c in (t.citations or ())}
+        failures += [f"cites '{c}'" for c in e.never_cites if c in all_cites]
         if any(t.citations is None for t in tr.turns):
             missing.add("citations")
-        last_cites = set(last.citations or ())
-        all_cites = {c for t in tr.turns for c in (t.citations or ())}
-        failures += [f"does not cite '{c}'" for c in e.cites if c not in last_cites]
-        failures += [f"cites '{c}'" for c in e.never_cites if c in all_cites]
 
     if e.grounded_numbers and last.text is not None:
         sources = [c.output for c in calls if c.output is not None] + list(scenario.turns)
-        if not any(c.output is not None for c in calls) and extract_numbers(last.text):
-            missing.add("tool outputs")
         known: set[float] = set()
-        for s in sources:
-            known |= extract_numbers(s)
+        for src in sources:
+            known |= extract_numbers(src)
         ungrounded = sorted(extract_numbers(last.text) - known)
-        failures += [f"number {_fmt(n)} is not in any tool output or user turn" for n in ungrounded]
+        outputs_complete = tools_known and all(c.output is not None for c in calls)
+        if ungrounded and not outputs_complete:
+            missing.add("tool outputs")  # the number may be in an output we were not shown
+        elif ungrounded:
+            failures += [
+                f"number {_fmt(n)} is not in any tool output or user turn" for n in ungrounded
+            ]
 
     if e.artifacts or e.artifacts_exclude:
         if tr.artifacts is None:

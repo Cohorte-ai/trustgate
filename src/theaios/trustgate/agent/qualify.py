@@ -30,7 +30,7 @@ ALPHA = 0.05
 class RunRecord:
     scenario: str
     index: int
-    status: str  # passed | failed | incomplete | evaluator_error | target_error | skipped
+    status: str  # passed failed incomplete evaluator_error target_error skipped not_run
     failures: list[str] = field(default_factory=list)
     missing: list[str] = field(default_factory=list)
     cost_usd: float = 0.0
@@ -39,6 +39,7 @@ class RunRecord:
     calls: list[str] = field(default_factory=list)  # "turn 1: tool(status) {args}"
     judge: list[dict[str, object]] = field(default_factory=list)
     judge_cost_usd: float = 0.0
+    cost_reported: bool = False
 
 
 def _describe_calls(transcript: Transcript) -> list[str]:
@@ -92,6 +93,7 @@ class Qualification:
     budget_usd: float | None
     stopped_by_budget: bool
     duration_s: float
+    cost_reported: bool = True  # False when no run that executed reported its cost
 
 
 def _status(verdict: RunVerdict, transcript: Transcript) -> str:
@@ -124,12 +126,17 @@ def run_scenarios(
     finished = 0
     in_flight = 0
     stopped = False
+    target_failures = 0
     lock = Lock()
 
     def work(job: tuple[Scenario, int]) -> RunRecord:
-        nonlocal spent, finished, in_flight, stopped
+        nonlocal spent, finished, in_flight, stopped, target_failures
         scenario, index = job
         with lock:
+            # Circuit breaker: if every one of the first runs failed in the target itself
+            # (wrong URL, bad token, server down), the rest would fail the same way.
+            if finished >= FAIL_FAST_AFTER and target_failures == finished:
+                return RunRecord(scenario.id, index, "not_run")
             # Reserve the average cost of runs already in flight, so concurrent runs do not
             # all start just under the cap. Before the first run finishes there is no
             # average yet, so at most `concurrency` runs can start on an unknown cost.
@@ -154,6 +161,7 @@ def run_scenarios(
             latency_ms=transcript.latency_ms,
             trace_id=transcript.trace_id,
             calls=_describe_calls(transcript),
+            cost_reported=any(t.cost_usd is not None for t in transcript.turns),
         )
         if judge is not None and scenario.expect.judge and transcript.error is None:
             _apply_judge(judge, judge_qualified or {}, scenario, transcript, record)
@@ -162,6 +170,7 @@ def run_scenarios(
         with lock:
             spent += record.cost_usd + record.judge_cost_usd
             finished += 1
+            target_failures += record.status == "target_error"
         if on_run is not None:
             on_run(record)
         return record
@@ -200,8 +209,11 @@ def _apply_judge(
                 record.status = "incomplete"
 
 
+FAIL_FAST_AFTER = 5
+
 _INCONCLUSIVE_LABELS = {
     "skipped": "skipped by the budget cap",
+    "not_run": "not run because the target failed on every run before them",
     "incomplete": "with incomplete evidence",
     "target_error": "where the target failed",
     "evaluator_error": "where the evaluator failed",
@@ -216,6 +228,9 @@ def _inconclusive(items: list[ScenarioSummary], k: int) -> str:
             if status in _INCONCLUSIVE_LABELS:
                 counts[status] = counts.get(status, 0) + n
     parts = [f"{n} run(s) {_INCONCLUSIVE_LABELS[st]}" for st, n in counts.items()]
+    example = next((f for x in items for f in x.failures if "target error:" in f), None)
+    if example is not None:
+        parts.append(f"first target error: {example.split('target error: ', 1)[1][:160]}")
     missing = sum(k - x.runs for x in items)
     if missing:
         parts.append(f"{missing} run(s) missing")
@@ -295,7 +310,7 @@ def summarize(
             c
             for x in items
             for st, c in x.statuses.items()
-            if st in ("incomplete", "evaluator_error", "target_error", "skipped")
+            if st in ("incomplete", "evaluator_error", "target_error", "skipped", "not_run")
         )
         not_conclusive += sum(k - x.runs for x in items)
         any_failed = any(x.statuses.get("failed", 0) for x in items)
@@ -430,6 +445,8 @@ def qualify(
         cost_usd=round(spent, 6),
         budget_usd=budget_usd,
         stopped_by_budget=stopped,
+        cost_reported=any(r.cost_reported for r in runs)
+        or not any(r.status not in ("skipped", "not_run") for r in runs),
         duration_s=round(time.time() - start, 2),
     )
 
@@ -448,20 +465,41 @@ class Plan:
     warnings: list[str]
 
 
+def _probe_sample(scenarios: list[Scenario], n: int) -> list[Scenario]:
+    """Spread the probe across suites, evenly spaced within each suite (the first scenarios
+    of a file are often the shortest, which would underestimate cost)."""
+    n = min(n, len(scenarios))
+    groups = [g for g in ([x for x in scenarios if x.suite == s] for s in SUITES) if g]
+    quotas = [0] * len(groups)
+    i = 0
+    while sum(quotas) < n:
+        if quotas[i] < len(groups[i]):
+            quotas[i] += 1
+        i = (i + 1) % len(groups)
+    picked: list[Scenario] = []
+    for items, q in zip(groups, quotas):
+        if q == 1:
+            picked.append(items[len(items) // 2])
+        elif q > 1:
+            picked += [items[round(j * (len(items) - 1) / (q - 1))] for j in range(q)]
+    return picked
+
+
 def plan(
     target: Target,
     scenarios: list[Scenario],
     k: int,
     thresholds: dict[str, float] | None = None,
     budget_usd: float | None = None,
-    probe: int = 3,
+    probe: int = 6,
     concurrency: int = 1,
     alpha: float = ALPHA,
     safety_max_failure_share: float | None = None,
+    uses_judge: bool = False,
 ) -> Plan:
     """Run a few scenarios once to measure cost and time, then size the full run."""
     thresholds = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
-    sample = scenarios[: max(1, min(probe, len(scenarios)))]
+    sample = _probe_sample(scenarios, max(1, probe))
     t0 = time.time()
     transcripts = [target.run(s.turns, s.role, 0) for s in sample]
     seconds = (time.time() - t0) / len(sample)
@@ -487,11 +525,13 @@ def plan(
                 f"safety: {per_suite.get('safety', 0)} scenario(s); a failure bound under "
                 f"{safety_max_failure_share:.0%} needs at least {need}, even with no failure"
             )
-    if cost_per_run is None:
-        warnings.append("the target does not report cost; the budget cap cannot be enforced")
     errors = [t.error for t in transcripts if t.error]
     if errors:
-        warnings.append(f"{len(errors)} probe run(s) failed: {errors[0]}")
+        warnings.append(f"{len(errors)} of {len(sample)} probe run(s) failed: {errors[0]}")
+    if cost_per_run is None and len(errors) < len(sample):
+        warnings.append("the target does not report cost_usd; the budget cap cannot be enforced")
+    if uses_judge:
+        warnings.append("judge calls are not included in the estimate; they add their own cost")
     max_k = None
     if budget_usd is not None and cost_per_run:
         # small epsilon: 1.0 / (0.01 * 10) is 9.999... in floating point

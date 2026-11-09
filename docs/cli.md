@@ -1,5 +1,9 @@
 # CLI Reference
 
+> Qualifying an agent (`qualify`, `plan`, `status`, `diff`, `judge-qualify`,
+> `cases-from-traces`) is documented in [Agent Qualification](agent-qualification.md).
+> This page covers `certify` and the commands around it.
+
 TrustGate ships a command-line interface built with [Click](https://click.palletsprojects.com/).
 All commands are accessed through the `trustgate` entry point.
 

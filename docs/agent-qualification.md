@@ -48,6 +48,32 @@ A scenario is a conversation, the user's role, a suite, and what must or must ne
 Suites: `nominal` (does the job), `escalation` (stops or hands over when it should),
 `safety` (must never happen).
 
+### What your agent reports
+
+Whether it is a Python target or an HTTP reply, each turn reports: `text`, `outcome`,
+`tool_calls`, `citations`, `cost_usd`. A tool call is `{name, status, arguments, output}`,
+and `status` is one of:
+
+| Status | Meaning |
+|---|---|
+| `executed` (default when omitted) | the tool ran |
+| `proposed` | sent to a person for approval; not executed |
+| `refused` | blocked by a guard or a policy |
+| `failed` | attempted and errored |
+
+Any other value makes the run fail with an `invalid reply` error. **A field you do not report
+is unknown, not empty**: an agent that called no tool must send `tool_calls: []`. If the field
+is absent, checks that need it cannot pass, and checks that need it cannot blame the agent
+either: the run is `incomplete`.
+
+Scenario defaults: `suite: nominal`, `role: user` (the `role` key is passed to your agent as
+the user's role), and thresholds of 0.8 for nominal and escalation.
+
+**Writing scenarios that count.** Each scenario is one unit of evidence, so seven rewordings
+of one request are closer to one scenario than to seven: the bound assumes scenarios are
+different situations. Vary the situations, not the phrasing. For a deterministic agent
+(temperature 0, no sampling), K above 1 adds nothing; K matters when answers vary.
+
 ## How a run is judged
 
 Each run gets three statuses: the agent's outcome, whether the evidence was complete, and
@@ -90,6 +116,11 @@ The report is bound to a fingerprint of the model, the files you list (prompts, 
 code), extra settings, the scenarios, the target and the grading code. `trustgate status`
 says `current` or `stale` and lists what changed.
 
+For an HTTP target, TrustGate only sees local files: it cannot know what is deployed behind
+the URL. List the files that define the deployed agent, or put its deployed version in
+`envelope.extra` (for example `extra: {release: "2026.11.3"}`) so a new deployment makes
+the result stale.
+
 ## Configuration
 
 ```yaml
@@ -122,6 +153,12 @@ flight always finish, so spending can pass the cap by about the cost of the runs
 (at most `concurrency` runs). Skipped runs make the result `insufficient_evidence`; the
 target must report `cost_usd` for the cap to work, and `trustgate plan` warns if it does not.
 
+Paths in `qualify.yaml` (scenario globs, envelope files, `output`) are relative to the
+folder of `qualify.yaml`, and a Python target's module is imported from that folder.
+Results go to `output` (default `.trustgate/qualification/`); each run overwrites the
+previous report there, so to compare versions with `trustgate diff`, copy `report.json`
+first or give each version its own `output`.
+
 A Python target is a function `agent(turns, role, run_index)` returning
 `{"turns": [{"text", "outcome", "tool_calls", "citations", "cost_usd"}], "artifacts": {}}`.
 
@@ -150,7 +187,9 @@ judge:
 expect: {tools_not_executed: [issue_refund], judge: [no-false-refund-claims]}
 ```
 
-A judge is a classifier and is validated like one. Until a rubric's judge is **qualified**,
+A judge is a classifier and is validated like one. Judge calls cost extra and are not in
+`trustgate plan`'s estimate; `qualify` warns when the judge and the agent share a model
+family, because a model tends to rate its own family's answers higher. Until a rubric's judge is **qualified**,
 its verdicts are recorded as advisory and never change a decision.
 
 1. Run `trustgate qualify --save-transcripts` to collect real conversations.
@@ -196,17 +235,36 @@ nothing would always pass, so TrustGate refuses it.
 ## In CI: the GitHub Action
 
 ```yaml
-- uses: Cohorte-ai/trustgate@v0.5.0
-  id: qualify
-  with:
-    config: agent/qualify.yaml
-    budget: "5"
-  env:
-    LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+steps:
+  - uses: actions/checkout@v4
+  - uses: actions/setup-python@v5
+    with: {python-version: "3.12"}
+  - run: pip install -r agent/requirements.txt   # your agent's own dependencies
+  - uses: Cohorte-ai/trustgate@v0.5.0
+    id: qualify
+    with:
+      config: agent/qualify.yaml
+      python-version: "3.12"     # keep the same version as your dependencies
+      budget: "5"
+    env:
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}   # only if your agent or judge needs a key
+  - if: always()                 # keep the evidence even when the gate fails
+    uses: actions/upload-artifact@v4
+    with:
+      name: qualification
+      path: agent/.trustgate/qualification/
 ```
 
-The job fails unless the decision is `approve_as_scoped`; the card is added to the job
-summary, and `steps.qualify.outputs.decision` and `.report` are available to later steps.
+- The job fails unless the decision is `approve_as_scoped`. The card goes to the job summary.
+- Outputs: `steps.qualify.outputs.decision` and `.report`. Because the step fails on any
+  other decision, a later step that reads them (a PR comment, an alert) needs `if: always()`
+  or `if: failure()`.
+- An **empty** `decision` means the qualification could not run (configuration or setup
+  error); the summary then shows the error instead of a card.
+- The Action sets up its own Python (`python-version`, default 3.12). Install your agent's
+  dependencies for the same version, or the target will not import.
+- Use a released tag (`@v0.5.0`) or a full commit SHA; a tag that does not exist yet fails
+  at "Set up job".
 
 ## What a qualification card does not claim
 

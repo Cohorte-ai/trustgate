@@ -36,7 +36,15 @@ class PythonTarget:
         module_name, _, attr = path.partition(":")
         if not module_name or not attr:
             raise ValueError("python target must be 'module:function'")
-        fn = getattr(importlib.import_module(module_name), attr)
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError:
+            raise
+        except Exception as exc:  # a syntax error or a crash at import time in the agent module
+            raise ValueError(
+                f"cannot import '{module_name}': {type(exc).__name__}: {exc}"
+            ) from None
+        fn = getattr(module, attr)
         if not callable(fn):
             raise ValueError(f"{path} is not callable")
         return cls(fn)
@@ -117,12 +125,23 @@ class HttpTarget:
                     reply = client.post(self.url, json=body, headers=headers)
                     reply.raise_for_status()
                     data = reply.json()
+                except httpx.HTTPStatusError as exc:
+                    return Transcript(
+                        turns=tuple(observed),
+                        error=f"turn {i}: HTTP {exc.response.status_code} from {self.url}",
+                    )
                 except Exception as exc:
                     return Transcript(
-                        turns=tuple(observed), error=f"turn {i}: {type(exc).__name__}"
+                        turns=tuple(observed),
+                        error=f"turn {i}: {type(exc).__name__} calling {self.url}: {exc}"[:300],
                     )
                 elapsed = (time.perf_counter() - start) * 1000
-                observed.append(self._observe(data, elapsed))
+                try:
+                    observed.append(self._observe(data, elapsed))
+                except ValueError as exc:  # e.g. an unknown tool-call status in the reply
+                    return Transcript(
+                        turns=tuple(observed), error=f"turn {i}: invalid reply: {exc}"
+                    )
                 tid = self._get(data, "trace_id")
                 trace_id = str(tid) if tid is not None else trace_id
         return Transcript(turns=tuple(observed), trace_id=trace_id)
@@ -137,16 +156,14 @@ class HttpTarget:
         calls_raw = self._get(data, "tool_calls")
         cites_raw = self._get(data, "citations")
         cost = self._get(data, "cost_usd")
-        calls = None
-        if "tool_calls" in self.response:
-            calls = (
-                tuple(tool_call_from_dict(c) for c in calls_raw)
-                if isinstance(calls_raw, list)
-                else ()
-            )
-        cites = None
-        if "citations" in self.response:
-            cites = tuple(str(c) for c in cites_raw) if isinstance(cites_raw, list) else ()
+        # A mapped field that is absent from the reply is unknown, not empty: an agent that
+        # called no tool must send an empty list.
+        calls = (
+            tuple(tool_call_from_dict(c) for c in calls_raw)
+            if isinstance(calls_raw, list)
+            else None
+        )
+        cites = tuple(str(c) for c in cites_raw) if isinstance(cites_raw, list) else None
         return TurnObservation(
             text=None if text is None else str(text),
             outcome=None if outcome is None else str(outcome),

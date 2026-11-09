@@ -9,7 +9,12 @@ from typing import Any
 import yaml
 
 from theaios.trustgate.agent.judge import JudgeConfig
-from theaios.trustgate.agent.scenario import SUITES, ScenarioError, _yaml_position
+from theaios.trustgate.agent.scenario import (
+    SUITES,
+    ScenarioError,
+    _yaml_position,
+    unknown_keys_message,
+)
 
 _KEYS = {
     "name",
@@ -68,7 +73,7 @@ def load_qualify_config(path: str | Path) -> QualifyConfig:
         raise ScenarioError(f"{p}: expected a mapping")
     unknown = set(raw) - _KEYS
     if unknown:
-        raise ScenarioError(f"{p}: unknown key(s) {sorted(unknown)}")
+        raise ScenarioError(f"{p}: {unknown_keys_message(unknown, _KEYS)}")
     target = raw.get("target")
     if not isinstance(target, dict) or target.get("type") not in ("http", "python"):
         raise ScenarioError(f"{p}: target.type must be 'http' or 'python'")

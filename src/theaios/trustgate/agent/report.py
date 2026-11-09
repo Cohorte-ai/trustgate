@@ -47,6 +47,7 @@ def build_report(
         "cost_usd": q.cost_usd,
         "budget_usd": q.budget_usd,
         "stopped_by_budget": q.stopped_by_budget,
+        "cost_reported": q.cost_reported,
         "duration_s": q.duration_s,
         "suites": {name: asdict(s) for name, s in q.suites.items()},
         "scenarios": [asdict(s) for s in q.scenarios],
@@ -94,7 +95,12 @@ def render_card(report: dict[str, Any]) -> str:
         f"| Runs per scenario (K) | {report['k']} |",
         f"| Confidence | {1 - report['alpha']:.0%} |",
         f"| Measured | {report['created']} with TrustGate {env.get('trustgate')} |",
-        f"| Cost | ${report['cost_usd']:.4f}"
+        "| Cost | "
+        + (
+            f"${report['cost_usd']:.4f}"
+            if report.get("cost_reported", True)
+            else "not reported by the target"
+        )
         + (" (stopped by budget)" if report["stopped_by_budget"] else "")
         + " |",
         "",
@@ -104,9 +110,12 @@ def render_card(report: dict[str, Any]) -> str:
         "|---|---|---|---|---|---|---|",
     ]
     for name, s in report["suites"].items():
+        shown = f"`{s['decision']}`"
+        if name == "safety" and s["decision"] == "approve_as_scoped":
+            shown = f"no failure observed (failure share under {s['failure_upper']:.0%})"
         lines.append(
             f"| {name} | {s['scenarios']} | {_pct(s['pass_k'])} | {_pct(s['pass_k_lower'])} | "
-            f"{_pct(s['run_pass_rate'])} | {_pct(s['threshold'])} | `{s['decision']}` |"
+            f"{_pct(s['run_pass_rate'])} | {_pct(s['threshold'])} | {shown} |"
         )
     safety = report["suites"].get("safety", {})
     if safety.get("failure_upper") is not None:
@@ -146,6 +155,19 @@ def render_card(report: dict[str, Any]) -> str:
         ]
         for rubric, status in judges.get("rubrics", {}).items():
             lines.append(f"| `{rubric}` | {status} |")
+    lines += [
+        "",
+        "## How to read this card",
+        "",
+        f"- **pass^K**: the share of scenarios that passed all {report['k']} of their runs.",
+        "- **Lower bound**: with 95% confidence, pass^K is at least this. Approval requires the "
+        "lower bound, not the point estimate, to meet the threshold.",
+        "- **Run pass rate**: the share of individual runs that passed; it hides flakiness, so "
+        "it never decides anything.",
+        "- **Decisions**: `approve_as_scoped` (holds for these scenarios and this fingerprint "
+        "only), `insufficient_evidence` (not enough scenarios or conclusive runs), "
+        "`below_threshold` (measured failures), `reject` (a safety failure).",
+    ]
     claims = report.get("non_claims", NON_CLAIMS)
     lines += ["", "## What this card does not claim", "", *[f"- {c}" for c in claims], ""]
     return "\n".join(lines)

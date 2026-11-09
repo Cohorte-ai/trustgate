@@ -20,7 +20,7 @@ inputs:
     default: "3.12"
 outputs:
   decision:
-    description: approve_as_scoped, insufficient_evidence, below_threshold or reject
+    description: approve_as_scoped, insufficient_evidence, below_threshold or reject; empty if the qualification could not run
     value: ${{ steps.qualify.outputs.decision }}
   report:
     description: Path to report.json
@@ -33,26 +33,48 @@ runs:
         python-version: ${{ inputs.python-version }}
     - name: Install TrustGate
       shell: bash
+      env:
+        TG_VERSION: ${{ inputs.version }}
+        TG_ACTION_PATH: ${{ github.action_path }}
       run: |
-        if [ -n "${{ inputs.version }}" ]; then
-          pip install "theaios-trustgate==${{ inputs.version }}"
+        if [ -n "$TG_VERSION" ]; then
+          pip install "theaios-trustgate==$TG_VERSION"
         else
-          pip install "${{ github.action_path }}"
+          pip install "$TG_ACTION_PATH"
         fi
     - name: Qualify
       id: qualify
       shell: bash
+      # Inputs arrive as environment variables, never pasted into the script: a "$" or a quote
+      # in an input stays a literal value.
+      env:
+        TG_CONFIG: ${{ inputs.config }}
+        TG_K: ${{ inputs.k }}
+        TG_BUDGET: ${{ inputs.budget }}
       run: |
         set +e
-        args=(-c "${{ inputs.config }}")
-        [ -n "${{ inputs.k }}" ] && args+=(-k "${{ inputs.k }}")
-        [ -n "${{ inputs.budget }}" ] && args+=(--budget "${{ inputs.budget }}")
-        trustgate qualify "${args[@]}" | tee trustgate-qualify.log
+        args=(-c "$TG_CONFIG")
+        [ -n "$TG_K" ] && args+=(-k "$TG_K")
+        [ -n "$TG_BUDGET" ] && args+=(--budget "$TG_BUDGET")
+        log="${RUNNER_TEMP:-/tmp}/trustgate-qualify.log"
+        trustgate qualify "${args[@]}" 2>&1 | tee "$log"
         code=${PIPESTATUS[0]}
-        report=$(grep '^Report: ' trustgate-qualify.log | sed 's/^Report: //')
-        card=$(grep '^Card: ' trustgate-qualify.log | sed 's/^Card: *//')
-        decision=$(grep '^Decision: ' trustgate-qualify.log | sed 's/^Decision: //')
+        report=$(grep '^Report: ' "$log" | sed 's/^Report: //')
+        card=$(grep '^Card: ' "$log" | sed 's/^Card: *//')
+        decision=$(grep '^Decision: ' "$log" | sed 's/^Decision: //')
         echo "decision=$decision" >> "$GITHUB_OUTPUT"
         echo "report=$report" >> "$GITHUB_OUTPUT"
-        [ -f "$card" ] && cat "$card" >> "$GITHUB_STEP_SUMMARY"
+        if [ -f "$card" ]; then
+          cat "$card" >> "$GITHUB_STEP_SUMMARY"
+        else
+          {
+            echo "## TrustGate: no qualification"
+            echo ""
+            echo "The qualification did not run (configuration or setup error):"
+            echo ""
+            echo '```'
+            tail -n 20 "$log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
         exit $code
