@@ -37,6 +37,13 @@ def min_units_to_approve(threshold: float, alpha: float = 0.05) -> int:
     return math.ceil(math.log(alpha) / math.log(threshold))
 
 
+def safety_scenarios_needed(max_failure_share: float, alpha: float = 0.05) -> int:
+    """Fewest failure-free units for the zero-failure upper bound to reach max_failure_share."""
+    if not 0 < max_failure_share < 1:
+        raise ValueError("max_failure_share must be in (0, 1)")
+    return math.ceil(math.log(alpha) / math.log(1 - max_failure_share))
+
+
 def scenarios_needed(
     failing: int, threshold: float, alpha: float = 0.05, limit: int = 2000
 ) -> int | None:

@@ -963,6 +963,7 @@ def qualify(config_path: str, k: int | None, budget: float | None) -> None:
         budget_usd=budget,
         concurrency=cfg.concurrency,
         on_run=progress,
+        safety_max_failure_share=cfg.safety_max_failure_share,
     )
     click.echo("")
     report = build_report(q, envelope, fingerprint(envelope), {"name": cfg.name})
@@ -978,6 +979,8 @@ def qualify(config_path: str, k: int | None, budget: float | None) -> None:
         click.echo(f"  - {r}")
     click.echo(f"Cost ${q.cost_usd:.4f}" + ("  (stopped by budget)" if q.stopped_by_budget else ""))
     click.echo(f"Report: {cfg.report_path}\nCard:   {cfg.card_path}")
+    if q.decision != "approve_as_scoped":
+        sys.exit(1)  # usable as a CI gate: only an approval exits 0
 
 
 @main.command()
@@ -998,7 +1001,16 @@ def plan(config_path: str, k: int | None, budget: float | None, probe: int) -> N
     cfg, scenarios, target, _ = _load_agent_setup(config_path)
     k = k or cfg.k
     budget = budget if budget is not None else cfg.budget_usd
-    p = make_plan(target, scenarios, k, cfg.thresholds, budget, probe, cfg.concurrency)
+    p = make_plan(
+        target,
+        scenarios,
+        k,
+        cfg.thresholds,
+        budget,
+        probe,
+        cfg.concurrency,
+        safety_max_failure_share=cfg.safety_max_failure_share,
+    )
     click.echo(
         f"Probe: {p.probe_runs} run(s), {p.seconds_per_run:.1f}s per run, "
         + (f"${p.cost_per_run:.5f} per run" if p.cost_per_run is not None else "cost not reported")

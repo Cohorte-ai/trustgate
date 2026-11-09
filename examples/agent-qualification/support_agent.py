@@ -82,43 +82,54 @@ def agent(turns: tuple[str, ...], role: str, run_index: int) -> dict:  # type: i
     return run_conversation(turns, lambda name, args: (_tool(name, args), "executed"))
 
 
+def new_conversation() -> list[dict]:  # type: ignore[type-arg]
+    return [{"role": "system", "content": SYSTEM}]
+
+
+def chat_turn(
+    client: httpx.Client,
+    messages: list[dict],  # type: ignore[type-arg]
+    text: str,
+    call_tool: Callable[[str, dict], tuple[str, str]],  # type: ignore[type-arg]
+) -> dict:  # type: ignore[type-arg]
+    """Play one user turn; ``messages`` carries the conversation and is updated in place."""
+    base = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1")
+    key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
+    model = os.environ.get("LLM_MODEL", "gpt-4.1-mini")
+    messages.append({"role": "user", "content": text})
+    calls: list[dict] = []  # type: ignore[type-arg]
+    cost = 0.0
+    reply = ""
+    for _ in range(6):
+        r = client.post(f"{base}/chat/completions",
+                        headers={"Authorization": f"Bearer {key}"},
+                        json={"model": model, "messages": messages, "tools": TOOLS,
+                              "temperature": 0.7})
+        r.raise_for_status()
+        data = r.json()
+        usage = data.get("usage", {})
+        cost += (usage.get("prompt_tokens", 0) * PRICE["input"]
+                 + usage.get("completion_tokens", 0) * PRICE["output"])
+        msg = data["choices"][0]["message"]
+        messages.append(msg)
+        if not msg.get("tool_calls"):
+            reply = msg.get("content") or ""
+            break
+        for tc in msg["tool_calls"]:
+            args = json.loads(tc["function"]["arguments"] or "{}")
+            out, status = call_tool(tc["function"]["name"], args)
+            calls.append({"name": tc["function"]["name"], "arguments": args,
+                          "output": out, "status": status})
+            messages.append({"role": "tool", "tool_call_id": tc["id"], "content": out})
+    escalated = any(c["name"] == "escalate" and c["status"] == "executed" for c in calls)
+    return {"text": reply, "outcome": "escalated" if escalated else "answered",
+            "tool_calls": calls, "cost_usd": cost}
+
+
 def run_conversation(
     turns: tuple[str, ...],
     call_tool: Callable[[str, dict], tuple[str, str]],  # type: ignore[type-arg]
 ) -> dict:  # type: ignore[type-arg]
-    base = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1")
-    key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENAI_API_KEY", "")
-    model = os.environ.get("LLM_MODEL", "gpt-4.1-mini")
-    messages: list[dict] = [{"role": "system", "content": SYSTEM}]  # type: ignore[type-arg]
-    observed = []
+    messages = new_conversation()
     with httpx.Client(timeout=60) as client:
-        for text in turns:
-            messages.append({"role": "user", "content": text})
-            calls, cost = [], 0.0
-            reply = ""
-            for _ in range(6):
-                r = client.post(f"{base}/chat/completions",
-                                headers={"Authorization": f"Bearer {key}"},
-                                json={"model": model, "messages": messages, "tools": TOOLS,
-                                      "temperature": 0.7})
-                r.raise_for_status()
-                data = r.json()
-                usage = data.get("usage", {})
-                cost += (usage.get("prompt_tokens", 0) * PRICE["input"]
-                         + usage.get("completion_tokens", 0) * PRICE["output"])
-                msg = data["choices"][0]["message"]
-                messages.append(msg)
-                if not msg.get("tool_calls"):
-                    reply = msg.get("content") or ""
-                    break
-                for tc in msg["tool_calls"]:
-                    args = json.loads(tc["function"]["arguments"] or "{}")
-                    out, status = call_tool(tc["function"]["name"], args)
-                    calls.append({"name": tc["function"]["name"], "arguments": args,
-                                  "output": out, "status": status})
-                    messages.append({"role": "tool", "tool_call_id": tc["id"], "content": out})
-            escalated = any(c["name"] == "escalate" and c["status"] == "executed"
-                            for c in calls)
-            observed.append({"text": reply, "outcome": "escalated" if escalated else "answered",
-                             "tool_calls": calls, "cost_usd": cost})
-    return {"turns": observed}
+        return {"turns": [chat_turn(client, messages, t, call_tool) for t in turns]}

@@ -63,6 +63,7 @@ nav:
   - Reference:
       - Python API: api-reference.md
       - FAQ: faq.md
+      - "Design: agent qualification": design/agent-qualification.md
 
 extra:
   social:

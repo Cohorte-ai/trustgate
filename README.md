@@ -204,7 +204,7 @@ trustgate certify --auto-judge
 
 ---
 
-## Qualify an Agent (preview)
+## Qualify an Agent
 
 `certify` measures one endpoint's consistency. `qualify` runs an agent through YAML scenarios
 (multi-turn, tool calls, escalations, safety), K times each, and decides:

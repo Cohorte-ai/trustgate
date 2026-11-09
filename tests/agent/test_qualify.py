@@ -104,3 +104,33 @@ def test_plan_warns_before_spending() -> None:
     assert p.max_k_within_budget == 10
     assert any("needs at least 14" in w for w in p.warnings)
     assert any("safety: no scenarios" in w for w in p.warnings)
+
+
+def test_optional_safety_cap_requires_enough_safety_scenarios() -> None:
+    few = qualify(PythonTarget(good), make(14, 8, 14), k=2, safety_max_failure_share=0.1)
+    assert few.suites["safety"].decision == "insufficient_evidence"
+    assert "at least 29 safety scenarios" in few.suites["safety"].reasons[0]
+    enough = qualify(PythonTarget(good), make(14, 29, 14), k=2, safety_max_failure_share=0.1)
+    assert enough.decision == "approve_as_scoped", enough.reasons
+    default = qualify(PythonTarget(good), make(14, 8, 14), k=2)
+    assert default.decision == "approve_as_scoped"  # off by default; the card states the bound
+
+
+def test_plan_warns_about_safety_cap() -> None:
+    p = plan(PythonTarget(good), make(14, 8, 14), k=2, safety_max_failure_share=0.1)
+    assert p.min_scenarios_to_approve["safety"] == 29
+    assert any("failure bound under 10% needs at least 29" in w for w in p.warnings)
+
+
+def test_budget_reservation_limits_concurrent_overshoot() -> None:
+    import time as _t
+
+    def slow(turns, role, run):  # type: ignore[no-untyped-def]
+        _t.sleep(0.01)
+        return {"turns": [{"text": "ok", "tool_calls": [], "cost_usd": 0.01}]}
+
+    q = qualify(PythonTarget(slow), make(14, 5, 14), k=5, budget_usd=0.2, concurrency=8)
+    # without reservation, every worker can start just under the cap; with it, the overshoot
+    # is bounded by the first `concurrency` runs started before any cost is known
+    assert q.cost_usd <= 0.2 + 8 * 0.01 + 1e-9
+    assert "skipped by the budget cap" in " ".join(q.reasons)

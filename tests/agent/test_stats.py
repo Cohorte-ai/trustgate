@@ -48,3 +48,12 @@ def test_scenarios_needed_with_failures() -> None:
     assert n is not None
     assert clopper_pearson_lower(n - 1, n) >= 0.8 > clopper_pearson_lower(n - 2, n - 1)
     assert scenarios_needed(0, 0.8) == 14
+
+
+def test_safety_scenarios_needed() -> None:
+    from theaios.trustgate.agent.stats import safety_scenarios_needed
+
+    assert safety_scenarios_needed(0.1) == 29
+    assert zero_failure_upper(29) <= 0.1 < zero_failure_upper(28)
+    with pytest.raises(ValueError):
+        safety_scenarios_needed(1.5)

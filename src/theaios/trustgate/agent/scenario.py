@@ -145,7 +145,10 @@ def load_scenarios(paths: list[str | Path]) -> list[Scenario]:
     scenarios: list[Scenario] = []
     for path in paths:
         p = Path(path)
-        raw = yaml.safe_load(p.read_text(encoding="utf-8")) or []
+        try:
+            raw = yaml.safe_load(p.read_text(encoding="utf-8")) or []
+        except yaml.YAMLError as exc:
+            raise ScenarioError(f"{p}: invalid YAML ({_yaml_position(exc)})") from None
         if not isinstance(raw, list):
             raise ScenarioError(f"{p}: expected a list of scenarios")
         scenarios += [parse_scenario(item, f"{p}[{i}]") for i, item in enumerate(raw)]
@@ -155,6 +158,12 @@ def load_scenarios(paths: list[str | Path]) -> list[Scenario]:
             raise ScenarioError(f"duplicate scenario id '{s.id}'")
         seen.add(s.id)
     return scenarios
+
+
+def _yaml_position(exc: yaml.YAMLError) -> str:
+    mark = getattr(exc, "problem_mark", None)
+    problem = getattr(exc, "problem", None) or "parse error"
+    return f"{problem} at line {mark.line + 1}, column {mark.column + 1}" if mark else problem
 
 
 # --------------------------------------------------------------------------- checks

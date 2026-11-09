@@ -65,7 +65,8 @@ def test_qualify_status_plan_end_to_end(project: Path) -> None:
     runner = CliRunner()
     cfg = str(project / "qualify.yaml")
     res = runner.invoke(main, ["qualify", "-c", cfg])
-    assert res.exit_code == 0, res.output
+    assert res.exit_code == 1, res.output  # insufficient evidence is not an approval
+    assert "Decision: insufficient_evidence" in res.output
     report = load_report(project / ".trustgate/qualification/report.json")
     assert report["suites"]["nominal"]["decision"] == "approve_as_scoped"
     assert report["suites"]["escalation"]["decision"] == "insufficient_evidence"
@@ -154,3 +155,13 @@ def test_http_target_error_becomes_a_failed_run(respx_mock) -> None:  # type: ig
     respx_mock.post("https://agent.test/chat").mock(return_value=httpx.Response(500))
     t = HttpTarget(url="https://agent.test/chat", request={}, response={}).run(("a",), "u", 0)
     assert t.error is not None and "HTTPStatusError" in t.error
+
+
+def test_malformed_yaml_is_a_clean_error(tmp_path: Path) -> None:
+    (tmp_path / "s.yaml").write_text("- {id: x, turns: [hi]\n")
+    (tmp_path / "q.yaml").write_text(
+        'target: {type: python, function: "m:f"}\nscenarios: ["s.yaml"]\n'
+    )
+    res = CliRunner().invoke(main, ["qualify", "-c", str(tmp_path / "q.yaml")])
+    assert res.exit_code == 1 and "invalid YAML" in res.output and "line" in res.output
+    assert res.exception is None or isinstance(res.exception, SystemExit)

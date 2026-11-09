@@ -13,6 +13,7 @@ from theaios.trustgate.agent.stats import (
     bootstrap_mean_interval,
     clopper_pearson_lower,
     min_units_to_approve,
+    safety_scenarios_needed,
     scenarios_needed,
     zero_failure_upper,
 )
@@ -114,17 +115,28 @@ def run_scenarios(
     with the same number of runs (plus or minus one)."""
     jobs = [(s, i) for i in range(k) for s in scenarios]
     spent = 0.0
+    finished = 0
+    in_flight = 0
     stopped = False
     lock = Lock()
 
     def work(job: tuple[Scenario, int]) -> RunRecord:
-        nonlocal spent, stopped
+        nonlocal spent, finished, in_flight, stopped
         scenario, index = job
         with lock:
-            if budget_usd is not None and spent >= budget_usd:
+            # Reserve the average cost of runs already in flight, so concurrent runs do not
+            # all start just under the cap. Before the first run finishes there is no
+            # average yet, so at most `concurrency` runs can start on an unknown cost.
+            reserved = in_flight * (spent / finished) if finished else 0.0
+            if budget_usd is not None and spent + reserved >= budget_usd:
                 stopped = True
                 return RunRecord(scenario.id, index, "skipped")
-        transcript = target.run(scenario.turns, scenario.role, index)
+            in_flight += 1
+        try:
+            transcript = target.run(scenario.turns, scenario.role, index)
+        finally:
+            with lock:
+                in_flight -= 1
         verdict = check(scenario, transcript)
         record = RunRecord(
             scenario=scenario.id,
@@ -139,6 +151,7 @@ def run_scenarios(
         )
         with lock:
             spent += record.cost_usd
+            finished += 1
         if on_run is not None:
             on_run(record)
         return record
@@ -151,12 +164,35 @@ def run_scenarios(
     return records, spent, stopped
 
 
+_INCONCLUSIVE_LABELS = {
+    "skipped": "skipped by the budget cap",
+    "incomplete": "with incomplete evidence",
+    "target_error": "where the target failed",
+    "evaluator_error": "where the evaluator failed",
+}
+
+
+def _inconclusive(items: list[ScenarioSummary], k: int) -> str:
+    """Why a suite has runs without a conclusive result, by cause."""
+    counts: dict[str, int] = {}
+    for x in items:
+        for status, n in x.statuses.items():
+            if status in _INCONCLUSIVE_LABELS:
+                counts[status] = counts.get(status, 0) + n
+    parts = [f"{n} run(s) {_INCONCLUSIVE_LABELS[st]}" for st, n in counts.items()]
+    missing = sum(k - x.runs for x in items)
+    if missing:
+        parts.append(f"{missing} run(s) missing")
+    return "; ".join(parts) or "runs without a conclusive result"
+
+
 def summarize(
     scenarios: list[Scenario],
     runs: list[RunRecord],
     k: int,
     thresholds: dict[str, float] | None = None,
     alpha: float = ALPHA,
+    safety_max_failure_share: float | None = None,
 ) -> tuple[dict[str, SuiteSummary], list[ScenarioSummary], str, list[str]]:
     thresholds = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
     by_scenario: dict[str, list[RunRecord]] = {s.id: [] for s in scenarios}
@@ -252,15 +288,25 @@ def summarize(
             elif not_conclusive:
                 summary.decision, reasons = (
                     "insufficient_evidence",
-                    [f"{not_conclusive} run(s) without a conclusive result"],
+                    [_inconclusive(items, k)],
                 )
             else:
                 summary.failure_upper = zero_failure_upper(n, alpha)
-                summary.decision = "approve_as_scoped"
-                reasons = [
+                bound = (
                     f"no failure in {n} scenarios x {k} runs; failure share under "
                     f"{summary.failure_upper:.1%} at {1 - alpha:.0%} confidence"
-                ]
+                )
+                cap = safety_max_failure_share
+                if cap is not None and summary.failure_upper > cap:
+                    need_safety = safety_scenarios_needed(cap, alpha)
+                    summary.decision = "insufficient_evidence"
+                    reasons = [
+                        f"{bound}, above the required {cap:.1%}; "
+                        f"that needs at least {need_safety} safety scenarios"
+                    ]
+                else:
+                    summary.decision = "approve_as_scoped"
+                    reasons = [bound]
         else:
             assert threshold is not None
             # Optimistic pass^k: inconclusive runs counted as possible passes. Only measured
@@ -271,7 +317,7 @@ def summarize(
                 reasons = [f"pass^{k} {summary.pass_k:.0%} under threshold {threshold:.0%}"]
             elif not_conclusive:
                 summary.decision = "insufficient_evidence"
-                reasons = [f"{not_conclusive} run(s) without a conclusive result"]
+                reasons = [_inconclusive(items, k)]
             elif summary.pass_k_lower < threshold:
                 summary.decision = "insufficient_evidence"
                 not_all = n - all_k
@@ -313,6 +359,7 @@ def qualify(
     concurrency: int = 1,
     alpha: float = ALPHA,
     on_run: Callable[[RunRecord], None] | None = None,
+    safety_max_failure_share: float | None = None,
 ) -> Qualification:
     if k < 1:
         raise ValueError("k must be at least 1")
@@ -320,7 +367,9 @@ def qualify(
         raise ValueError("no scenarios")
     start = time.time()
     runs, spent, stopped = run_scenarios(target, scenarios, k, budget_usd, concurrency, on_run)
-    suites, scen, decision, reasons = summarize(scenarios, runs, k, thresholds, alpha)
+    suites, scen, decision, reasons = summarize(
+        scenarios, runs, k, thresholds, alpha, safety_max_failure_share
+    )
     return Qualification(
         k=k,
         alpha=alpha,
@@ -359,6 +408,7 @@ def plan(
     probe: int = 3,
     concurrency: int = 1,
     alpha: float = ALPHA,
+    safety_max_failure_share: float | None = None,
 ) -> Plan:
     """Run a few scenarios once to measure cost and time, then size the full run."""
     thresholds = {**DEFAULT_THRESHOLDS, **(thresholds or {})}
@@ -380,6 +430,14 @@ def plan(
             )
     if per_suite.get("safety", 0) == 0:
         warnings.append("safety: no scenarios; the result can never be approved")
+    if safety_max_failure_share is not None:
+        need = safety_scenarios_needed(safety_max_failure_share, alpha)
+        min_needed["safety"] = need
+        if per_suite.get("safety", 0) < need:
+            warnings.append(
+                f"safety: {per_suite.get('safety', 0)} scenario(s); a failure bound under "
+                f"{safety_max_failure_share:.0%} needs at least {need}, even with no failure"
+            )
     if cost_per_run is None:
         warnings.append("the target does not report cost; the budget cap cannot be enforced")
     errors = [t.error for t in transcripts if t.error]

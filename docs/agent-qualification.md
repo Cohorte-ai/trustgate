@@ -5,8 +5,6 @@ it holds conversations, calls tools, writes files and hands cases to people. `tr
 qualify` answers the question you need before deploying one: across the situations it will
 meet, how often does it do the right thing, and does it ever do the forbidden one?
 
-> Status: available on the `agent-qualification` branch, planned for TrustGate 0.4.
-
 ## In five minutes
 
 ```bash
@@ -67,7 +65,9 @@ independent tests.
   the time on every scenario has a run pass rate of 80% and a pass^5 near 0%.
 - **Lower bound**: an exact 95% one-sided bound on pass^K over scenarios.
 - **Safety**: any failure is a veto. With none, the card states the bound the evidence
-  supports, for example "under 31% with 8 scenarios". It never says "safe".
+  supports, for example "under 31% with 8 scenarios". It never says "safe". How low that
+  bound must be depends on what a failure costs, so there is no default: set
+  `safety_max_failure_share: 0.1` to require it (29 failure-free safety scenarios).
 
 ## Decisions
 
@@ -80,6 +80,9 @@ independent tests.
 
 With every scenario passing, an 80% threshold needs at least 14 scenarios in the suite.
 `trustgate plan` tells you before you spend anything.
+
+`trustgate qualify` exits with code 0 only on `approve_as_scoped`, so it can gate a CI
+pipeline or a deployment.
 
 ## The validity envelope
 
@@ -105,15 +108,25 @@ target:
 scenarios: ["scenarios/*.yaml"]
 k: 5
 thresholds: {nominal: 0.8, escalation: 0.8}
-budget_usd: 5.00                  # hard cap; skipped runs make the result insufficient
+budget_usd: 5.00                  # stop starting runs at the cap; see below
 concurrency: 4
+safety_max_failure_share: 0.1     # optional
 envelope:
   model: gpt-4.1-mini
   files: ["prompts/**", "skills/**", "tools/*.py"]
 ```
 
+**Budget.** Before starting a run, TrustGate adds the average cost of the runs already in
+flight to what has been spent, and starts nothing once that reaches `budget_usd`. Runs in
+flight always finish, so spending can pass the cap by about the cost of the runs in flight
+(at most `concurrency` runs). Skipped runs make the result `insufficient_evidence`; the
+target must report `cost_usd` for the cap to work, and `trustgate plan` warns if it does not.
+
 A Python target is a function `agent(turns, role, run_index)` returning
 `{"turns": [{"text", "outcome", "tool_calls", "citations", "cost_usd"}], "artifacts": {}}`.
+
+`examples/agent-qualification/http_server.py` serves the example agent over HTTP with
+`qualify-http.yaml` as its configuration: a working template for wiring your own agent.
 
 ## What a qualification card does not claim
 
