@@ -5,6 +5,32 @@ All notable changes to TrustGate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-09
+
+### Added
+
+- LLM judges with a qualification lifecycle: rubrics (one binary criterion each) referenced
+  by scenarios; `trustgate judge-qualify` measures a judge against a human-labeled gold set
+  (kappa > 0.8 and TNR >= 85% by default, at least 30 scored items, blind split preferred,
+  same-family warning). Unqualified or stale judges are advisory and never change a
+  decision; a qualified judge's FAIL fails the run and its UNKNOWN makes evidence incomplete.
+- `trustgate diff old.json new.json --margin m`: paired, conservative comparison of two
+  versions (`improvement`, `non_inferior`, `regression`, `unresolved`); safety regressions
+  veto.
+- `trustgate cases-from-traces`: TrustGate transcripts or OpenAI-style logs to candidate
+  scenarios a person completes.
+- `qualify --save-transcripts` (full transcripts as JSONL).
+- GitHub Action (`uses: Cohorte-ai/trustgate@v0.5.0`): fails the job unless approved, puts
+  the card in the job summary.
+- `[datasets]` install extra.
+
+### Changed
+
+- A scenario must declare at least one expectation: one that checks nothing always passed.
+- The envelope includes the judge (model, rubrics, qualification); `status` names what changed.
+- MMLU and TruthfulQA loaders raise a clear error when `datasets` is missing or the download
+  fails, instead of silently returning no questions.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added

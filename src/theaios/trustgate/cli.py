@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sys
 from typing import TYPE_CHECKING, Any
 from pathlib import Path
@@ -923,6 +924,12 @@ def _load_agent_setup(
         target = target_from_config(cfg.target)
     except (ValueError, ImportError, AttributeError, KeyError) as exc:
         raise click.ClickException(f"target: {exc}") from None
+    used = sorted({r for s in scenarios for r in s.expect.judge})
+    if used and cfg.judge is None:
+        raise click.ClickException(f"scenarios use judge rubrics {used} but no judge is configured")
+    unknown = [r for r in used if cfg.judge is not None and r not in cfg.judge.rubrics]
+    if unknown:
+        raise click.ClickException(f"unknown judge rubric(s): {unknown}")
     envelope = envelope_components(
         cfg.base_dir,
         model=cfg.model,
@@ -930,20 +937,81 @@ def _load_agent_setup(
         extra=cfg.envelope_extra,
         scenario_files=files,
         target=cfg.target,
+        judge=_judge_envelope(cfg),
     )
     return cfg, scenarios, target, envelope
+
+
+def _judge_envelope(cfg: QualifyConfig) -> dict[str, Any] | None:
+    """The judge's model, rubrics and current qualification are part of the grader."""
+    from theaios.trustgate.agent.judge import card_path
+
+    if cfg.judge is None:
+        return None
+    cards = {}
+    for rubric in sorted(cfg.judge.rubrics):
+        p = card_path(cfg.base_dir, rubric)
+        cards[rubric] = hashlib.sha256(p.read_bytes()).hexdigest()[:16] if p.is_file() else None
+    return {
+        "model": cfg.judge.model,
+        "rubrics": {r: cfg.judge.rubric_fingerprint(r) for r in sorted(cfg.judge.rubrics)},
+        "cards": cards,
+    }
 
 
 @main.command()
 @click.option("-c", "--config", "config_path", default="qualify.yaml", show_default=True)
 @click.option("-k", type=int, default=None, help="Runs per scenario (overrides the config).")
 @click.option("--budget", type=float, default=None, help="Hard spending cap in USD.")
-def qualify(config_path: str, k: int | None, budget: float | None) -> None:
+@click.option(
+    "--save-transcripts",
+    is_flag=True,
+    help="Also write every run's full transcript (transcripts.jsonl) for judge gold sets.",
+)
+def qualify(config_path: str, k: int | None, budget: float | None, save_transcripts: bool) -> None:
     """Qualify an agent: run every scenario K times, decide, write a report and a card."""
+    import json
+    import threading
+    from dataclasses import asdict
+
     from theaios.trustgate.agent import build_report, fingerprint, render_card, save_report
     from theaios.trustgate.agent import qualify as run_qualification
+    from theaios.trustgate.agent.judge import Judge, judge_status
 
     cfg, scenarios, target, envelope = _load_agent_setup(config_path)
+    judge = Judge(cfg.judge) if cfg.judge is not None else None
+    judge_meta: dict[str, Any] | None = None
+    qualified: dict[str, bool] = {}
+    if cfg.judge is not None:
+        statuses = {r: judge_status(cfg.judge, r, cfg.base_dir) for r in cfg.judge.rubrics}
+        qualified = {r: ok for r, (ok, _) in statuses.items()}
+        judge_meta = {
+            "model": cfg.judge.model,
+            "rubrics": {r: why for r, (_, why) in statuses.items()},
+        }
+        for r, (_, why) in statuses.items():
+            click.echo(f"Judge rubric '{r}': {why}")
+    transcripts_path = cfg.report_path.parent / "transcripts.jsonl"
+    sink_lock = threading.Lock()
+    if save_transcripts:
+        transcripts_path.parent.mkdir(parents=True, exist_ok=True)
+        transcripts_path.write_text("", encoding="utf-8")
+
+    def sink(scenario: Scenario, index: int, transcript: Any) -> None:
+        line = json.dumps(
+            {
+                "scenario": scenario.id,
+                "suite": scenario.suite,
+                "run": index,
+                "role": scenario.role,
+                "turns": list(scenario.turns),
+                "transcript": asdict(transcript),
+            },
+            default=str,
+        )
+        with sink_lock, open(transcripts_path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
     k = k or cfg.k
     budget = budget if budget is not None else cfg.budget_usd
     total = len(scenarios) * k
@@ -964,9 +1032,15 @@ def qualify(config_path: str, k: int | None, budget: float | None) -> None:
         concurrency=cfg.concurrency,
         on_run=progress,
         safety_max_failure_share=cfg.safety_max_failure_share,
+        judge=judge,
+        judge_qualified=qualified,
+        on_transcript=sink if save_transcripts else None,
     )
     click.echo("")
-    report = build_report(q, envelope, fingerprint(envelope), {"name": cfg.name})
+    meta: dict[str, Any] = {"name": cfg.name}
+    if judge_meta is not None:
+        meta["judge"] = judge_meta
+    report = build_report(q, envelope, fingerprint(envelope), meta)
     save_report(report, cfg.report_path)
     cfg.card_path.write_text(render_card(report), encoding="utf-8")
     for name, s in q.suites.items():
@@ -979,6 +1053,8 @@ def qualify(config_path: str, k: int | None, budget: float | None) -> None:
         click.echo(f"  - {r}")
     click.echo(f"Cost ${q.cost_usd:.4f}" + ("  (stopped by budget)" if q.stopped_by_budget else ""))
     click.echo(f"Report: {cfg.report_path}\nCard:   {cfg.card_path}")
+    if save_transcripts:
+        click.echo(f"Transcripts: {transcripts_path}")
     if q.decision != "approve_as_scoped":
         sys.exit(1)  # usable as a CI gate: only an approval exits 0
 
@@ -1050,3 +1126,135 @@ def status(config_path: str) -> None:
     for change in changed_components(report["envelope"], envelope):
         click.echo(f"  - {change}")
     sys.exit(1)
+
+
+@main.command(name="judge-qualify")
+@click.option("-c", "--config", "config_path", default="qualify.yaml", show_default=True)
+@click.option("--rubric", required=True, help="Rubric id from the judge section of the config.")
+@click.option(
+    "--gold",
+    "gold_path",
+    required=True,
+    type=click.Path(exists=True),
+    help="JSONL gold set labeled by a person (see the docs).",
+)
+@click.option("--min-kappa", type=float, default=0.8, show_default=True)
+@click.option(
+    "--min-tnr",
+    type=float,
+    default=0.85,
+    show_default=True,
+    help="Minimum share of real failures the judge must catch.",
+)
+def judge_qualify(
+    config_path: str, rubric: str, gold_path: str, min_kappa: float, min_tnr: float
+) -> None:
+    """Measure a judge against human labels; only a qualified judge can decide runs."""
+    from theaios.trustgate.agent import ScenarioError, load_qualify_config
+    from theaios.trustgate.agent.judge import (
+        Judge,
+        card_path,
+        load_gold,
+        qualify_judge,
+        save_card,
+    )
+
+    try:
+        cfg = load_qualify_config(config_path)
+        gold = load_gold(Path(gold_path))
+    except (ScenarioError, OSError, ValueError, KeyError) as exc:
+        raise click.ClickException(str(exc)) from None
+    if cfg.judge is None or rubric not in cfg.judge.rubrics:
+        raise click.ClickException(f"rubric '{rubric}' is not in the judge section of the config")
+    gold_hash = hashlib.sha256(Path(gold_path).read_bytes()).hexdigest()[:16]
+    try:
+        card = qualify_judge(
+            Judge(cfg.judge), rubric, gold, gold_hash, min_kappa, min_tnr, target_model=cfg.model
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from None
+    path = card_path(cfg.base_dir, rubric)
+    save_card(card, path)
+    m = card.metrics
+    click.echo(f"Rubric '{rubric}' with {card.model} ({card.gated_on} split)")
+    click.echo(
+        f"  scored {m['scored']} (unknown {m['unknown']}), FAILs in gold {m['fails_in_gold']}"
+    )
+    click.echo(
+        f"  kappa {m['kappa']:.2f}   TNR {m['tnr']:.0%} (lower bound {m['tnr_lower']:.0%})"
+        f"   TPR {m['tpr']:.0%}"
+    )
+    click.echo(
+        f"  passes {m['false_accept_rate']:.0%} of real failures; "
+        f"fails {m['false_reject_rate']:.0%} of real passes"
+    )
+    for w in card.warnings:
+        click.echo(f"Warning: {w}")
+    click.echo(f"{'QUALIFIED' if card.qualified else 'NOT QUALIFIED (advisory only)'}")
+    for r in card.reasons:
+        click.echo(f"  - {r}")
+    click.echo(f"{len(card.disagreements)} disagreement(s) listed in {path}")
+    if not card.qualified:
+        sys.exit(1)
+
+
+@main.command(name="diff")
+@click.argument("old_report", type=click.Path(exists=True))
+@click.argument("new_report", type=click.Path(exists=True))
+@click.option(
+    "--margin",
+    type=float,
+    required=True,
+    help="Largest acceptable share of scenarios broken by the new version, "
+    "fixed before looking at results (e.g. 0.05).",
+)
+def diff_reports(old_report: str, new_report: str, margin: float) -> None:
+    """Is the new version at least as good as the old one? Paired by scenario."""
+    from theaios.trustgate.agent import load_report
+    from theaios.trustgate.agent.compare import compare_reports
+
+    try:
+        c = compare_reports(load_report(Path(old_report)), load_report(Path(new_report)), margin)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from None
+    click.echo(
+        f"{c.paired_scenarios} paired scenarios: {len(c.regressed)} regressed, "
+        f"{len(c.improved)} improved"
+    )
+    for suite, row in c.by_suite.items():
+        click.echo(
+            f"  {suite:<11} {row['paired']:>3} paired  -{row['regressed']}  +{row['improved']}"
+        )
+    if c.cost_per_run_old is not None and c.cost_per_run_new is not None:
+        click.echo(f"Cost per run: ${c.cost_per_run_old:.5f} -> ${c.cost_per_run_new:.5f}")
+    click.echo(f"Verdict: {c.verdict}")
+    for r in c.reasons:
+        click.echo(f"  - {r}")
+    if c.regressed:
+        click.echo(f"Regressed: {', '.join(c.regressed[:20])}")
+    if c.verdict not in ("non_inferior", "improvement"):
+        sys.exit(1)
+
+
+@main.command(name="cases-from-traces")
+@click.argument("traces", type=click.Path(exists=True))
+@click.option("-o", "--output", default="candidates.yaml", show_default=True)
+def cases_from_traces(traces: str, output: str) -> None:
+    """Turn logged conversations into candidate scenarios for a person to complete."""
+    import yaml
+
+    from theaios.trustgate.agent.traces import candidates_from_traces
+
+    try:
+        items = candidates_from_traces(Path(traces))
+    except (ValueError, OSError) as exc:
+        raise click.ClickException(str(exc)) from None
+    header = (
+        "# Candidate scenarios from traces. Each needs a suite and expectations written\n"
+        "# by a person; remove the 'todo' line when done. Files with 'todo' do not load.\n"
+    )
+    Path(output).write_text(
+        header + yaml.safe_dump(items, sort_keys=False, allow_unicode=True, width=100),
+        encoding="utf-8",
+    )
+    click.echo(f"{len(items)} distinct conversation(s) written to {output}")

@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from threading import Lock
 
+from theaios.trustgate.agent.judge import Judge
 from theaios.trustgate.agent.scenario import SUITES, RunVerdict, Scenario, check
 from theaios.trustgate.agent.stats import (
     bootstrap_mean_interval,
@@ -36,6 +37,8 @@ class RunRecord:
     latency_ms: float = 0.0
     trace_id: str | None = None
     calls: list[str] = field(default_factory=list)  # "turn 1: tool(status) {args}"
+    judge: list[dict[str, object]] = field(default_factory=list)
+    judge_cost_usd: float = 0.0
 
 
 def _describe_calls(transcript: Transcript) -> list[str]:
@@ -110,6 +113,9 @@ def run_scenarios(
     budget_usd: float | None = None,
     concurrency: int = 1,
     on_run: Callable[[RunRecord], None] | None = None,
+    judge: Judge | None = None,
+    judge_qualified: dict[str, bool] | None = None,
+    on_transcript: Callable[[Scenario, int, Transcript], None] | None = None,
 ) -> tuple[list[RunRecord], float, bool]:
     """Run every scenario k times, round by round, so a budget stop leaves every scenario
     with the same number of runs (plus or minus one)."""
@@ -149,8 +155,12 @@ def run_scenarios(
             trace_id=transcript.trace_id,
             calls=_describe_calls(transcript),
         )
+        if judge is not None and scenario.expect.judge and transcript.error is None:
+            _apply_judge(judge, judge_qualified or {}, scenario, transcript, record)
+        if on_transcript is not None:
+            on_transcript(scenario, index, transcript)
         with lock:
-            spent += record.cost_usd
+            spent += record.cost_usd + record.judge_cost_usd
             finished += 1
         if on_run is not None:
             on_run(record)
@@ -162,6 +172,32 @@ def run_scenarios(
         with ThreadPoolExecutor(max_workers=concurrency) as pool:
             records = list(pool.map(work, jobs))
     return records, spent, stopped
+
+
+def _apply_judge(
+    judge: Judge,
+    qualified: dict[str, bool],
+    scenario: Scenario,
+    transcript: Transcript,
+    record: RunRecord,
+) -> None:
+    """A qualified judge decides like any other check; an unqualified one is advisory."""
+    for rubric in scenario.expect.judge:
+        v = judge.grade(rubric, scenario.turns, transcript)
+        decisive = qualified.get(rubric, False)
+        record.judge.append(
+            {"rubric": rubric, "verdict": v.verdict, "critique": v.critique, "decisive": decisive}
+        )
+        record.judge_cost_usd += v.cost_usd
+        if not decisive or record.status in ("target_error", "evaluator_error"):
+            continue
+        if v.verdict == "fail":
+            record.failures.append(f"judge '{rubric}': {v.critique}"[:300])
+            record.status = "failed"
+        elif v.verdict == "unknown":
+            record.missing.append(f"judge '{rubric}' verdict")
+            if record.status == "passed":
+                record.status = "incomplete"
 
 
 _INCONCLUSIVE_LABELS = {
@@ -360,13 +396,26 @@ def qualify(
     alpha: float = ALPHA,
     on_run: Callable[[RunRecord], None] | None = None,
     safety_max_failure_share: float | None = None,
+    judge: Judge | None = None,
+    judge_qualified: dict[str, bool] | None = None,
+    on_transcript: Callable[[Scenario, int, Transcript], None] | None = None,
 ) -> Qualification:
     if k < 1:
         raise ValueError("k must be at least 1")
     if not scenarios:
         raise ValueError("no scenarios")
     start = time.time()
-    runs, spent, stopped = run_scenarios(target, scenarios, k, budget_usd, concurrency, on_run)
+    runs, spent, stopped = run_scenarios(
+        target,
+        scenarios,
+        k,
+        budget_usd,
+        concurrency,
+        on_run,
+        judge,
+        judge_qualified,
+        on_transcript,
+    )
     suites, scen, decision, reasons = summarize(
         scenarios, runs, k, thresholds, alpha, safety_max_failure_share
     )

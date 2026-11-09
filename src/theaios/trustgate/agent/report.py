@@ -24,6 +24,13 @@ NON_CLAIMS = [
 ]
 
 
+JUDGE_NON_CLAIMS = [
+    "Criteria graded by an LLM judge hold relative to that judge. A qualified judge still "
+    "passes a measured share of real failures (its false-accept rate, shown above); "
+    "advisory judges did not influence the decision.",
+]
+
+
 def build_report(
     q: Qualification, envelope: dict[str, Any], fingerprint: str, meta: dict[str, Any]
 ) -> dict[str, Any]:
@@ -44,7 +51,7 @@ def build_report(
         "suites": {name: asdict(s) for name, s in q.suites.items()},
         "scenarios": [asdict(s) for s in q.scenarios],
         "runs": [asdict(r) for r in q.runs],
-        "non_claims": NON_CLAIMS,
+        "non_claims": NON_CLAIMS + (JUDGE_NON_CLAIMS if meta.get("judge") else []),
     }
 
 
@@ -126,5 +133,19 @@ def render_card(report: dict[str, Any]) -> str:
             if failed_run is not None:
                 calls = "; ".join(failed_run["calls"][:4])
                 lines.append(f"  - tools in run {failed_run['index'] + 1}: {calls}")
-    lines += ["", "## What this card does not claim", "", *[f"- {c}" for c in NON_CLAIMS], ""]
+    judges = meta.get("judge") or {}
+    if judges:
+        lines += [
+            "",
+            "## Judge",
+            "",
+            f"Model: {judges.get('model')}",
+            "",
+            "| Rubric | Status |",
+            "|---|---|",
+        ]
+        for rubric, status in judges.get("rubrics", {}).items():
+            lines.append(f"| `{rubric}` | {status} |")
+    claims = report.get("non_claims", NON_CLAIMS)
+    lines += ["", "## What this card does not claim", "", *[f"- {c}" for c in claims], ""]
     return "\n".join(lines)

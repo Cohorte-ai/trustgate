@@ -1,0 +1,19 @@
+name: Action smoke test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: tg
+        uses: ./
+        with:
+          config: examples/ci-smoke/qualify.yaml
+      - name: Check the decision output
+        run: test "${{ steps.tg.outputs.decision }}" = "approve_as_scoped"

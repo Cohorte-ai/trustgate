@@ -32,6 +32,7 @@ def envelope_components(
     extra: dict[str, Any],
     scenario_files: list[Path],
     target: dict[str, Any],
+    judge: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """What the result depends on. Target headers are excluded (they may hold secrets)."""
     files: dict[str, str] = {}
@@ -51,6 +52,7 @@ def envelope_components(
         "extra": extra,
         "scenarios": {p.name: _sha(p.read_bytes()) for p in sorted(scenario_files)},
         "target": target_public,
+        "judge": judge,
     }
 
 
@@ -74,6 +76,16 @@ def changed_components(old: dict[str, Any], new: dict[str, Any]) -> list[str]:
                     changes.append(f"{key}: removed {name}")
                 elif a[name] != b[name]:
                     changes.append(f"{key}: changed {name}")
+        elif key == "judge" and isinstance(a, dict) and isinstance(b, dict):
+            if a.get("model") != b.get("model"):
+                changes.append(f"judge: model {a.get('model')} -> {b.get('model')}")
+            for part, label in (("rubrics", "rubric"), ("cards", "qualification of rubric")):
+                old_part, new_part = a.get(part) or {}, b.get(part) or {}
+                for name in sorted(set(old_part) | set(new_part)):
+                    if old_part.get(name) != new_part.get(name):
+                        changes.append(f"judge: {label} '{name}' changed")
+        elif key == "grader":
+            changes.append("grader: TrustGate's grading code changed")
         else:
             changes.append(f"{key}: {a!r} -> {b!r}")
     return changes

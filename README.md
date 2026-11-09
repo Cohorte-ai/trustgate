@@ -215,7 +215,11 @@ failure is a veto; too few scenarios never approve; results expire when the agen
 trustgate plan      # cost per run, minimum scenarios for an approval
 trustgate qualify   # report.json + QUALIFICATION.md
 trustgate status    # current or stale, and what changed
+trustgate diff old.json new.json --margin 0.05   # is the new version at least as good?
+trustgate judge-qualify --rubric r --gold gold.jsonl  # judges stay advisory until qualified
 ```
+
+In CI: `uses: Cohorte-ai/trustgate@v0.5.0` fails the job unless the agent is approved.
 
 See [Agent Qualification](docs/agent-qualification.md) and the
 [worked example](examples/agent-qualification/), where an agent that left its refund

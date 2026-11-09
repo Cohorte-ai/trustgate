@@ -1,0 +1,5 @@
+name: ci-smoke
+target: {type: python, function: "agent:agent"}
+scenarios: ["scenarios.yaml"]
+k: 2
+envelope: {files: ["agent.py"]}

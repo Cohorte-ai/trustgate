@@ -1,0 +1,58 @@
+name: TrustGate qualify
+description: Qualify an AI agent against YAML scenarios; fails the job unless the decision is approve_as_scoped.
+branding:
+  icon: check-circle
+  color: green
+inputs:
+  config:
+    description: Path to qualify.yaml
+    default: qualify.yaml
+  k:
+    description: Runs per scenario (overrides the config)
+    required: false
+  budget:
+    description: Spending cap in USD (overrides the config)
+    required: false
+  version:
+    description: theaios-trustgate version to install (empty = this action's ref)
+    required: false
+  python-version:
+    default: "3.12"
+outputs:
+  decision:
+    description: approve_as_scoped, insufficient_evidence, below_threshold or reject
+    value: ${{ steps.qualify.outputs.decision }}
+  report:
+    description: Path to report.json
+    value: ${{ steps.qualify.outputs.report }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install TrustGate
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          pip install "theaios-trustgate==${{ inputs.version }}"
+        else
+          pip install "${{ github.action_path }}"
+        fi
+    - name: Qualify
+      id: qualify
+      shell: bash
+      run: |
+        set +e
+        args=(-c "${{ inputs.config }}")
+        [ -n "${{ inputs.k }}" ] && args+=(-k "${{ inputs.k }}")
+        [ -n "${{ inputs.budget }}" ] && args+=(--budget "${{ inputs.budget }}")
+        trustgate qualify "${args[@]}" | tee trustgate-qualify.log
+        code=${PIPESTATUS[0]}
+        report=$(grep '^Report: ' trustgate-qualify.log | sed 's/^Report: //')
+        card=$(grep '^Card: ' trustgate-qualify.log | sed 's/^Card: *//')
+        decision=$(grep '^Decision: ' trustgate-qualify.log | sed 's/^Decision: //')
+        echo "decision=$decision" >> "$GITHUB_OUTPUT"
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+        [ -f "$card" ] && cat "$card" >> "$GITHUB_STEP_SUMMARY"
+        exit $code

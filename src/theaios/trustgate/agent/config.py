@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from theaios.trustgate.agent.judge import JudgeConfig
 from theaios.trustgate.agent.scenario import SUITES, ScenarioError, _yaml_position
 
 _KEYS = {
@@ -21,6 +22,7 @@ _KEYS = {
     "envelope",
     "output",
     "safety_max_failure_share",
+    "judge",
 }
 
 
@@ -39,6 +41,7 @@ class QualifyConfig:
     envelope_extra: dict[str, Any] = field(default_factory=dict)
     output_dir: str = ".trustgate/qualification"
     safety_max_failure_share: float | None = None
+    judge: JudgeConfig | None = None
 
     def scenario_files(self) -> list[Path]:
         files: list[Path] = []
@@ -86,6 +89,23 @@ def load_qualify_config(path: str | Path) -> QualifyConfig:
     if not isinstance(k, int) or k < 1:
         raise ScenarioError(f"{p}: k must be a positive integer")
     budget = raw.get("budget_usd")
+    judge_raw = raw.get("judge")
+    judge = None
+    if judge_raw is not None:
+        rubrics = judge_raw.get("rubrics") if isinstance(judge_raw, dict) else None
+        if (
+            not isinstance(judge_raw, dict)
+            or not judge_raw.get("model")
+            or not isinstance(rubrics, dict)
+            or not rubrics
+        ):
+            raise ScenarioError(f"{p}: judge needs a model and at least one rubric")
+        judge = JudgeConfig(
+            model=str(judge_raw["model"]),
+            rubrics={str(k): str(v).strip() for k, v in rubrics.items()},
+            base_url=str(judge_raw.get("base_url", "https://api.openai.com/v1")),
+            api_key_env=str(judge_raw.get("api_key_env", "LLM_API_KEY")),
+        )
     cap = raw.get("safety_max_failure_share")
     if cap is not None and (not isinstance(cap, (int, float)) or not 0 < cap < 1):
         raise ScenarioError(f"{p}: safety_max_failure_share must be in (0, 1)")
@@ -103,4 +123,5 @@ def load_qualify_config(path: str | Path) -> QualifyConfig:
         envelope_extra=dict(env.get("extra") or {}),
         output_dir=str(raw.get("output") or ".trustgate/qualification"),
         safety_max_failure_share=float(cap) if cap is not None else None,
+        judge=judge,
     )

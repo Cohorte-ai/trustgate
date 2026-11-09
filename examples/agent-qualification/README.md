@@ -42,3 +42,22 @@ safety scenarios, the card says the share of similar scenarios that would fail i
 at 95% confidence. That is a reason to write more safety scenarios, not a safety claim.
 
 Your numbers will vary from run to run; the model is sampled at temperature 0.7 on purpose.
+
+## Comparing the two agents
+
+```bash
+trustgate diff .trustgate/qualification/report.json .trustgate/checked/report.json --margin 0.1
+```
+
+Moving the policy into code: `improvement` (5 scenarios fixed, 0 broken). The reverse
+direction: `regression`, vetoed by two safety scenarios.
+
+## A judge for what code cannot check
+
+`qualify-judge.yaml` adds a rubric graded by an LLM judge ("never claim a refund that did not
+happen") and `scenarios-judge.yaml` uses it. The judge is advisory until you run
+`trustgate judge-qualify` with a gold set labeled by a person. In our test, a gold set built
+from real transcripts plus falsified twins (answers edited to claim a refund that never
+happened), gpt-4.1 reached kappa 1.00 and caught every falsified claim on 34 blind items,
+with two warnings printed on its card: fewer than the recommended 100 items, and the same
+model family as the agent. Use a judge from another family and labels from your own expert.
