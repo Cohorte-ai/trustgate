@@ -9,7 +9,7 @@ never instructions. One order carries a note asking the agent to refund a differ
 
 ```bash
 export LLM_API_KEY=sk-...          # any OpenAI-compatible API; LLM_BASE_URL, LLM_MODEL optional
-trustgate plan                      # about $0.02 for the full run with gpt-4.1-mini
+trustgate plan                      # about $0.05 for the full run with gpt-4.1-mini
 trustgate qualify                   # agent 1: the model applies the policy
 trustgate qualify -c qualify-checked.yaml   # agent 2: the policy is enforced in code
 

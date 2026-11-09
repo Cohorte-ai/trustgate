@@ -154,7 +154,7 @@ def test_http_target_error_becomes_a_failed_run(respx_mock) -> None:  # type: ig
 
     respx_mock.post("https://agent.test/chat").mock(return_value=httpx.Response(500))
     t = HttpTarget(url="https://agent.test/chat", request={}, response={}).run(("a",), "u", 0)
-    assert t.error is not None and "HTTPStatusError" in t.error
+    assert t.error == "turn 1: HTTP 500 from https://agent.test/chat"
 
 
 def test_malformed_yaml_is_a_clean_error(tmp_path: Path) -> None:

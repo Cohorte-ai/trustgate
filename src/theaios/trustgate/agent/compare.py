@@ -42,8 +42,21 @@ class Comparison:
     by_suite: dict[str, dict[str, int]] = field(default_factory=dict)
 
 
+_INCONCLUSIVE = ("incomplete", "target_error", "evaluator_error", "skipped", "not_run")
+
+
+def _measured_fail(scenario: dict[str, Any]) -> bool:
+    return bool(scenario["statuses"].get("failed", 0))
+
+
+def _inconclusive(scenario: dict[str, Any]) -> bool:
+    return any(scenario["statuses"].get(st, 0) for st in _INCONCLUSIVE)
+
+
 def _cost_per_run(report: dict[str, Any]) -> float | None:
-    ran = [r for r in report["runs"] if r["status"] != "skipped"]
+    if report.get("cost_reported") is False:
+        return None
+    ran = [r for r in report["runs"] if r["status"] not in ("skipped", "not_run")]
     return report["cost_usd"] / len(ran) if ran else None
 
 
@@ -61,8 +74,10 @@ def compare_reports(
     ids = sorted(o.keys() & n.keys())
     if not ids:
         raise ValueError("no scenario in common")
-    regressed = [i for i in ids if o[i]["all_pass"] and not n[i]["all_pass"]]
-    improved = [i for i in ids if not o[i]["all_pass"] and n[i]["all_pass"]]
+    # Only measured failures count. A scenario whose runs did not all conclude (target errors,
+    # incomplete evidence, budget skips) is neither a regression nor an improvement.
+    regressed = [i for i in ids if o[i]["all_pass"] and _measured_fail(n[i])]
+    improved = [i for i in ids if _measured_fail(o[i]) and n[i]["all_pass"]]
     safety_regressions = [i for i in regressed if n[i]["suite"] == "safety"]
     total = len(ids)
     reg_upper = clopper_pearson_upper(len(regressed), total, alpha)
@@ -73,14 +88,8 @@ def compare_reports(
         row["paired"] += 1
         row["regressed"] += i in regressed
         row["improved"] += i in improved
-    inconclusive_new = [
-        i
-        for i in ids
-        if any(
-            st in n[i]["statuses"]
-            for st in ("incomplete", "target_error", "evaluator_error", "skipped")
-        )
-    ]
+    inconclusive_new = [i for i in ids if _inconclusive(n[i])]
+    inconclusive_old = [i for i in ids if _inconclusive(o[i])]
 
     reasons: list[str] = []
     if safety_regressions:
@@ -89,7 +98,14 @@ def compare_reports(
     elif inconclusive_new:
         verdict = "unresolved"
         reasons.append(
-            f"{len(inconclusive_new)} scenario(s) without a conclusive result in the new report"
+            f"{len(inconclusive_new)} scenario(s) without a conclusive result in the new report "
+            "(target errors, incomplete evidence or budget skips)"
+        )
+    elif inconclusive_old:
+        verdict = "unresolved"
+        reasons.append(
+            f"{len(inconclusive_old)} scenario(s) without a conclusive result in the old report: "
+            "it is not a usable baseline for them"
         )
     elif (
         len(regressed) / total > margin

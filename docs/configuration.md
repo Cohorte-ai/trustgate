@@ -1,5 +1,8 @@
 # Configuration Reference
 
+> This page covers `trustgate.yaml` for `certify`. Agent qualification uses `qualify.yaml`,
+> documented in [Agent Qualification](agent-qualification.md#configuration).
+
 TrustGate is configured via a YAML file, typically named `trustgate.yaml` in your
 project root. The CLI looks for this file by default, but you can point to any
 path with `--config`.

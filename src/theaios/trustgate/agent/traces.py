@@ -32,10 +32,12 @@ def _user_turns(record: dict[str, Any]) -> list[str]:
         for m in messages:
             if isinstance(m, dict) and m.get("role") == "user":
                 content = m.get("content")
-                if isinstance(content, list):  # content parts
+                if isinstance(content, list):  # content parts: keep text, skip images etc.
                     content = " ".join(
-                        str(p.get("text", "")) for p in content if isinstance(p, dict)
-                    )
+                        str(p.get("text", "")).strip()
+                        for p in content
+                        if isinstance(p, dict) and p.get("type", "text") == "text"
+                    ).strip()
                 if content:
                     out.append(str(content))
         return out
@@ -56,8 +58,12 @@ def _tools_used(record: dict[str, Any]) -> list[str]:
     return sorted(set(names))
 
 
-def candidates_from_traces(path: Path, max_turns: int = 12) -> list[dict[str, Any]]:
-    """Distinct conversations (by their user turns) as scenario skeletons."""
+def candidates_from_traces(
+    path: Path, max_turns: int = 12, stats: dict[str, int] | None = None
+) -> list[dict[str, Any]]:
+    """Distinct conversations (by their user turns) as scenario skeletons. If given, ``stats``
+    is filled with counts of lines read, duplicates merged and lines without user turns."""
+    counts = {"lines": 0, "duplicates": 0, "no_user_turns": 0}
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
     for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
@@ -67,11 +73,14 @@ def candidates_from_traces(path: Path, max_turns: int = 12) -> list[dict[str, An
             record = json.loads(line)
         except json.JSONDecodeError as exc:
             raise ValueError(f"{path}:{n}: not JSON ({exc.msg})") from None
+        counts["lines"] += 1
         turns = _user_turns(record)[:max_turns]
         if not turns:
+            counts["no_user_turns"] += 1
             continue
         key = hashlib.sha256(json.dumps(turns).encode()).hexdigest()[:10]
         if key in seen:
+            counts["duplicates"] += 1
             continue
         seen.add(key)
         tools = _tools_used(record)
@@ -88,4 +97,6 @@ def candidates_from_traces(path: Path, max_turns: int = 12) -> list[dict[str, An
                 ),
             }
         )
+    if stats is not None:
+        stats.update(counts)
     return out

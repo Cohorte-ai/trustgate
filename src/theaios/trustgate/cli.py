@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import re
 import sys
 from typing import TYPE_CHECKING, Any
 from pathlib import Path
@@ -920,6 +922,11 @@ def _load_agent_setup(
         raise click.ClickException(str(exc)) from None
     if str(cfg.base_dir) not in sys.path:
         sys.path.insert(0, str(cfg.base_dir))  # python targets resolve next to the config
+    unset = _unset_env_vars(list((cfg.target.get("headers") or {}).values()))
+    if unset:
+        raise click.ClickException(
+            f"target.headers uses environment variable(s) that are not set: {', '.join(unset)}"
+        )
     try:
         target = target_from_config(cfg.target)
     except (ValueError, ImportError, AttributeError, KeyError) as exc:
@@ -942,6 +949,15 @@ def _load_agent_setup(
     return cfg, scenarios, target, envelope
 
 
+def _unset_env_vars(values: list[object]) -> list[str]:
+    """Names referenced as $NAME or ${NAME} in the values that are not set."""
+    names: set[str] = set()
+    for value in values:
+        for braced, bare in re.findall(r"\$\{(\w+)\}|\$(\w+)", str(value)):
+            names.add(braced or bare)
+    return sorted(n for n in names if n not in os.environ)
+
+
 def _judge_envelope(cfg: QualifyConfig) -> dict[str, Any] | None:
     """The judge's model, rubrics and current qualification are part of the grader."""
     from theaios.trustgate.agent.judge import card_path
@@ -961,8 +977,18 @@ def _judge_envelope(cfg: QualifyConfig) -> dict[str, Any] | None:
 
 @main.command()
 @click.option("-c", "--config", "config_path", default="qualify.yaml", show_default=True)
-@click.option("-k", type=int, default=None, help="Runs per scenario (overrides the config).")
-@click.option("--budget", type=float, default=None, help="Hard spending cap in USD.")
+@click.option(
+    "-k",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Runs per scenario, at least 1 (overrides the config).",
+)
+@click.option(
+    "--budget",
+    type=click.FloatRange(min=0),
+    default=None,
+    help="Spending cap in USD: no run starts once it is reached (runs in flight finish).",
+)
 @click.option(
     "--save-transcripts",
     is_flag=True,
@@ -991,6 +1017,13 @@ def qualify(config_path: str, k: int | None, budget: float | None, save_transcri
         }
         for r, (_, why) in statuses.items():
             click.echo(f"Judge rubric '{r}': {why}")
+        from theaios.trustgate.agent.judge import model_family
+
+        if cfg.model and model_family(cfg.model) == model_family(cfg.judge.model):
+            click.echo(
+                f"Warning: the judge ({cfg.judge.model}) and the agent ({cfg.model}) share a "
+                "model family; self-preference can inflate PASS verdicts"
+            )
     transcripts_path = cfg.report_path.parent / "transcripts.jsonl"
     sink_lock = threading.Lock()
     if save_transcripts:
@@ -1012,15 +1045,21 @@ def qualify(config_path: str, k: int | None, budget: float | None, save_transcri
         with sink_lock, open(transcripts_path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
 
-    k = k or cfg.k
+    k = k if k is not None else cfg.k
     budget = budget if budget is not None else cfg.budget_usd
     total = len(scenarios) * k
     done = 0
 
+    tty = sys.stdout.isatty()
+    step = max(1, total // 10)
+
     def progress(_record: object) -> None:
         nonlocal done
         done += 1
-        click.echo(f"\r  {done}/{total} runs", nl=False)
+        if tty:
+            click.echo(f"\r  {done}/{total} runs", nl=False)
+        elif done % step == 0 or done == total:
+            click.echo(f"  {done}/{total} runs")
 
     click.echo(f"Qualifying {cfg.name}: {len(scenarios)} scenarios x {k} runs")
     q = run_qualification(
@@ -1036,7 +1075,8 @@ def qualify(config_path: str, k: int | None, budget: float | None, save_transcri
         judge_qualified=qualified,
         on_transcript=sink if save_transcripts else None,
     )
-    click.echo("")
+    if tty:
+        click.echo("")
     meta: dict[str, Any] = {"name": cfg.name}
     if judge_meta is not None:
         meta["judge"] = judge_meta
@@ -1051,7 +1091,17 @@ def qualify(config_path: str, k: int | None, budget: float | None, save_transcri
     click.echo(f"Decision: {q.decision}")
     for r in q.reasons:
         click.echo(f"  - {r}")
-    click.echo(f"Cost ${q.cost_usd:.4f}" + ("  (stopped by budget)" if q.stopped_by_budget else ""))
+    if q.cost_reported:
+        click.echo(
+            f"Cost ${q.cost_usd:.4f}" + ("  (stopped by budget)" if q.stopped_by_budget else "")
+        )
+    else:
+        click.echo("Cost: not reported by the target")
+        if budget is not None:
+            click.echo(
+                "Warning: the target reports no cost_usd, so the budget cap could not limit "
+                "spending"
+            )
     click.echo(f"Report: {cfg.report_path}\nCard:   {cfg.card_path}")
     if save_transcripts:
         click.echo(f"Transcripts: {transcripts_path}")
@@ -1061,21 +1111,28 @@ def qualify(config_path: str, k: int | None, budget: float | None, save_transcri
 
 @main.command()
 @click.option("-c", "--config", "config_path", default="qualify.yaml", show_default=True)
-@click.option("-k", type=int, default=None, help="Runs per scenario (overrides the config).")
-@click.option("--budget", type=float, default=None, help="Budget in USD to size against.")
+@click.option(
+    "-k",
+    type=click.IntRange(min=1),
+    default=None,
+    help="Runs per scenario, at least 1 (overrides the config).",
+)
+@click.option(
+    "--budget", type=click.FloatRange(min=0), default=None, help="Budget in USD to size against."
+)
 @click.option(
     "--probe",
     type=int,
-    default=3,
+    default=6,
     show_default=True,
-    help="Scenarios to run once to measure cost and time.",
+    help="Scenarios to run once to measure cost and time, spread across suites.",
 )
 def plan(config_path: str, k: int | None, budget: float | None, probe: int) -> None:
     """Measure cost per run on a few scenarios, then size the full qualification."""
     from theaios.trustgate.agent import plan as make_plan
 
     cfg, scenarios, target, _ = _load_agent_setup(config_path)
-    k = k or cfg.k
+    k = k if k is not None else cfg.k
     budget = budget if budget is not None else cfg.budget_usd
     p = make_plan(
         target,
@@ -1086,15 +1143,25 @@ def plan(config_path: str, k: int | None, budget: float | None, probe: int) -> N
         probe,
         cfg.concurrency,
         safety_max_failure_share=cfg.safety_max_failure_share,
+        uses_judge=any(s.expect.judge for s in scenarios),
     )
-    click.echo(
-        f"Probe: {p.probe_runs} run(s), {p.seconds_per_run:.1f}s per run, "
-        + (f"${p.cost_per_run:.5f} per run" if p.cost_per_run is not None else "cost not reported")
-    )
-    click.echo(
-        f"Full run: {p.total_runs} runs (K={k}), about {p.estimated_minutes:.1f} min"
-        + (f", about ${p.estimated_cost:.2f}" if p.estimated_cost is not None else "")
-    )
+    probe_failed = p.probe_failures == p.probe_runs
+    if probe_failed:
+        click.echo(f"Probe: all {p.probe_runs} run(s) failed; no time or cost estimate")
+        click.echo(f"Full run: {p.total_runs} runs (K={k})")
+    else:
+        click.echo(
+            f"Probe: {p.probe_runs} run(s), {p.seconds_per_run:.1f}s per run, "
+            + (
+                f"${p.cost_per_run:.5f} per run"
+                if p.cost_per_run is not None
+                else "cost not reported"
+            )
+        )
+        click.echo(
+            f"Full run: {p.total_runs} runs (K={k}), about {p.estimated_minutes:.1f} min"
+            + (f", about ${p.estimated_cost:.2f}" if p.estimated_cost is not None else "")
+        )
     if p.max_k_within_budget is not None:
         click.echo(f"Budget ${budget:.2f} allows K up to {p.max_k_within_budget}")
     for suite, n in p.scenarios_per_suite.items():
@@ -1245,8 +1312,9 @@ def cases_from_traces(traces: str, output: str) -> None:
 
     from theaios.trustgate.agent.traces import candidates_from_traces
 
+    stats: dict[str, int] = {}
     try:
-        items = candidates_from_traces(Path(traces))
+        items = candidates_from_traces(Path(traces), stats=stats)
     except (ValueError, OSError) as exc:
         raise click.ClickException(str(exc)) from None
     header = (
@@ -1257,4 +1325,8 @@ def cases_from_traces(traces: str, output: str) -> None:
         header + yaml.safe_dump(items, sort_keys=False, allow_unicode=True, width=100),
         encoding="utf-8",
     )
-    click.echo(f"{len(items)} distinct conversation(s) written to {output}")
+    click.echo(
+        f"{len(items)} distinct conversation(s) written to {output} "
+        f"(from {stats['lines']} line(s); {stats['duplicates']} duplicate(s) merged, "
+        f"{stats['no_user_turns']} without user turns skipped)"
+    )

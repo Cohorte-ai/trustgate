@@ -62,7 +62,9 @@ def test_broken_connector_is_insufficient_evidence_not_a_bad_agent() -> None:
 
     q = qualify(PythonTarget(broken), make(14, 3, 0), k=2)
     assert q.suites["nominal"].decision == "insufficient_evidence"
-    assert all(r.status == "target_error" for r in q.runs)
+    statuses = [r.status for r in q.runs]
+    assert set(statuses) == {"target_error", "not_run"} and statuses.count("target_error") == 5
+    assert "first target error: ConnectionError: down" in " ".join(q.reasons)
     assert q.decision == "insufficient_evidence"
 
 
