@@ -204,6 +204,23 @@ trustgate certify --auto-judge
 
 ---
 
+## Qualify an Agent
+
+`certify` measures one endpoint's consistency. `qualify` runs an agent through YAML scenarios
+(multi-turn, tool calls, escalations, safety), K times each, and decides:
+`approve_as_scoped`, `insufficient_evidence`, `below_threshold` or `reject`. Any safety
+failure is a veto; too few scenarios never approve; results expire when the agent changes.
+
+```bash
+trustgate plan      # cost per run, minimum scenarios for an approval
+trustgate qualify   # report.json + QUALIFICATION.md
+trustgate status    # current or stale, and what changed
+```
+
+See [Agent Qualification](docs/agent-qualification.md) and the
+[worked example](examples/agent-qualification/), where an agent that left its refund
+policy to the model is rejected and the same agent with the policy in code is approved.
+
 ## Using TrustGate in Production
 
 ### Deployment gate — certify before shipping

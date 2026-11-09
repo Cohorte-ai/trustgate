@@ -5,6 +5,22 @@ All notable changes to TrustGate will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-11-09
+
+### Added
+
+- Agent qualification (`theaios.trustgate.agent`, commands `qualify`, `plan`, `status`):
+  multi-turn YAML scenarios with checks on outcomes, text, tool trajectories, tool
+  arguments, citations, grounded numbers and artifacts; HTTP and Python targets; K runs per
+  scenario; pass^K with exact lower bounds over scenarios; safety failures as vetoes;
+  typed decisions; a validity envelope that expires results when the agent, the scenarios or
+  the grader change; a budget planner and hard cap; `report.json` and a qualification card
+  that lists what it does not claim.
+- Optional `safety_max_failure_share`: require the safety failure bound to be under a level
+  you choose; `plan` reports how many failure-free safety scenarios that needs.
+- `trustgate qualify` exits 0 only on `approve_as_scoped`, so it can gate CI.
+- Example agent served over HTTP (`http_server.py`, `qualify-http.yaml`).
+
 ## [0.3.11] - 2026-11-08
 
 ### Changed

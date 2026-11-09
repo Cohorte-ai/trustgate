@@ -57,11 +57,13 @@ nav:
       - Configuration: configuration.md
       - CLI Reference: cli.md
   - Guides:
+      - Agent Qualification: agent-qualification.md
       - Canonicalization: canonicalization.md
       - Human Calibration: human-calibration.md
   - Reference:
       - Python API: api-reference.md
       - FAQ: faq.md
+      - "Design: agent qualification": design/agent-qualification.md
 
 extra:
   social:
